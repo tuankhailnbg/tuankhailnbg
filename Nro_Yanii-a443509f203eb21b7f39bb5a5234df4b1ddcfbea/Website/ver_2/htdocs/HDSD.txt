@@ -1,0 +1,16 @@
+Hãy tôn trọng quyền tác giả và không sửa đổi nguồn cre: Hoàng Việt Dũng ở bên trong, xin cảm ơn!
+----------------------------
+Hướng dẫn cài đặt:
+- Sửa kết nối và các cài đặt khác ở: /core/config.php
+- Up sql hoangvietdung.sql lên source server Noah, đảm bảo player của sql Noah phải có sotien để đổi hoặc kích hoạt sẽ ở đó.
+----------------------------
+Chức năng:
+- Bảng BXH TOP Đại Gia.
+- Kích hoạt thành viên bằng số tiền.
+- Nạp thẻ (Bảo trì vì tui không biết anh em dùng gì, nếu anh tự tích được thì xin mời).
+- Đổi mật khẩu.
+- HOT: Diễn đàn NRO.
+ + Đăng bài, cmt.
+ + Admin: xoá bài viết và đăng lên vùng dành cho admin.
+----------------------------
+Chúc trải nghiệm source website vui vẻ, sửa nguồn thì nghiệp nặng đấy.

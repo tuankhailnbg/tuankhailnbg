@@ -1,0 +1,34 @@
+Module: game, JAR: D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\target\TeaMobi-1.0-RELEASE-jar-with-dependencies.jar
+Working directory: D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server
+Startup output is recorded with configured secrets hidden.
+Normal console input is preserved. Type baotri for normal shutdown.
+[Gameconfig]: open.prisonplanet : true
+[Gameconfig]: open.supermarket : true
+SLF4J: No SLF4J providers were found.
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#noProviders for further details.
+[2026-10-21 20:36:23 DEBUG Log:31] Load part thành công (2042)
+[2026-10-21 20:36:23 DEBUG Log:31] Load map template thành công (163)
+[2026-10-21 20:36:23 DEBUG Log:31] Load skill thành công (4)
+[2026-10-21 20:36:23 DEBUG Log:31] Load head avatar thành công (351)
+[2026-10-21 20:36:23 DEBUG Log:31] Load flag bag thành công (112)
+[2026-10-21 20:36:23 DEBUG Log:31] Load cải trang thành công (361)
+[2026-10-21 20:36:23 DEBUG Log:31] Load intrinsic thành công (26)
+[2026-10-21 20:36:23 DEBUG Log:31] Load task thành công (33)
+[2026-10-21 20:36:23 DEBUG Log:31] Load side task thành công (59)
+[2026-10-21 20:36:23 DEBUG Log:31] Load map item template thành công (2154)
+[2026-10-21 20:36:23 DEBUG Log:31] Load map item option template thành công (251)
+[2026-10-21 20:36:24 DEBUG Log:31] Load shop thành công (22)
+[2026-10-21 20:36:24 DEBUG Log:31] Load reward lucky round thành công! 79.25999999999999
+[2026-10-21 20:36:24 DEBUG Log:31] Load reward lucky round thành công (82)
+[2026-10-21 20:36:24 DEBUG Log:31] Load mob template thành công (84)
+[2026-10-21 20:36:24 DEBUG Log:31] Load npc template thành công (80)
+[2026-10-21 20:36:24 DEBUG Log:31] Init map thành công!
+[2026-10-21 20:36:24 DEBUG Log:31] Thông báo tải dữ liệu images by name thành công (113)
+[2026-10-21 20:36:24 DEBUG Log:31] Load clan thành công (0), clan next id: 0
+[2026-10-21 20:36:24 DEBUG Log:22] Tổng thời gian load database: 1309(ms)
+[2026-10-21 20:36:24 DEBUG Log:22] Thread: 182
+----------Nro Yanii----------
+BOSS Rambo (-100025): Khe núi tử thần khu vực 5(75)
+BOSS Mập đầu đinh (-100024): Trại lính Fide khu vực 5(63)
+BOSS Kuku (-100023): Vực cấm khu vực 19(69)

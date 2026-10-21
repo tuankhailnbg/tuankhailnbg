@@ -1,0 +1,108 @@
+NRO DATABASE AND SERVER DIAGNOSTICS r1
+Time: 2026-10-21T20:37:29.153786
+Java: 21.0.12.1
+Project: D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea
+READ ONLY: no INSERT, UPDATE, DELETE, CREATE, GRANT or import is executed.
+
+[CONFIGURATION]
+Login port=3105, game port=14445
+Game connects to Login at 127.0.0.1:3105 (port fixed in source).
+Server ID=1, admin.mode=0
+OK   Login/Game database names match.
+OK   Login/Game database passwords match (values hidden).
+WARN Login/run.bat starts the old root JAR instead of the Maven target JAR.
+WARN Server/run.bat starts the old root JAR instead of the Maven target JAR.
+
+[JAR ServerLogin-1.0-RELEASE-jar-with-dependencies.jar]
+OK   Main-Class=server.Server
+OK   JAR readable, size=13372095, modified=2026-10-21T04:38:01.2393393Z
+
+[JAR TeaMobi-1.0-RELEASE-jar-with-dependencies.jar]
+OK   Main-Class=nro.server.ServerManager
+OK   JAR readable, size=14925336, modified=2026-10-21T04:45:07.8083771Z
+
+[SERVER RESOURCES]
+Checked=662, missing=0, changed=0
+OK   Required map/update resources match the pinned source.
+
+[NRO HANDSHAKE LOGIN 127.0.0.1:3105]
+OK   NRO key handshake received; no account login sent.
+
+[NRO HANDSHAKE GAME 127.0.0.1:14445]
+OK   NRO key handshake received; no account login sent.
+
+[DATABASE LOGIN]
+host=localhost, port=3306, schema=ngocrong, user=nro_app, password=[hidden]
+OK   Connected; DATABASE=ngocrong, VERSION=10.4.32-MariaDB
+OK   Login account table readable; rows=3
+
+[DATABASE GAME]
+host=localhost, port=3306, schema=ngocrong, user=nro_app, password=[hidden]
+OK   Connected; DATABASE=ngocrong, VERSION=10.4.32-MariaDB
+Expected tables=55, visible tables/views=55
+ROWS map_template=163
+ROWS skill_template=32
+ROWS item_template=2154
+ROWS item_option_template=251
+ROWS mob_template=84
+ROWS npc_template=80
+ROWS head_avatar=351
+ROWS flag_bag=112
+ROWS cai_trang=361
+ROWS caption=26
+ROWS power_limit=12
+ROWS attribute_template=5
+ROWS attribute_server=5
+ROWS task_main_template=33
+ROWS task_sub_template=137
+ROWS account=3
+ROWS player=2
+Eligible non-banned accounts for server=3
+OK   Account login timestamps are non-null/non-zero.
+
+RESULT: 0 FAIL, 2 WARN
+A successful socket/DB check does not prove client login or gameplay.
+Established Login/Game links and fresh startup logs must also be reviewed.
+
+[WINDOWS TCP CONNECTIONS]
+:::14445 -> :::0 Listen PID=11372 PROCESS=java
+:::3306 -> :::0 Listen PID=9376 PROCESS=mysqld
+:::3105 -> :::0 Listen PID=22152 PROCESS=java
+127.0.0.1:52370 -> 127.0.0.1:14445 TimeWait PID=0 PROCESS=Idle
+127.0.0.1:52369 -> 127.0.0.1:3105 TimeWait PID=0 PROCESS=Idle
+127.0.0.1:51667 -> 127.0.0.1:3105 Established PID=11372 PROCESS=java
+127.0.0.1:3306 -> 127.0.0.1:51665 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:52372 TimeWait PID=0 PROCESS=Idle
+127.0.0.1:3306 -> 127.0.0.1:51646 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51664 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51662 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:53468 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51656 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51663 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51649 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:53460 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51660 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51657 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51658 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:53466 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51653 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51652 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:53464 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51659 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51654 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:52371 TimeWait PID=0 PROCESS=Idle
+127.0.0.1:3306 -> 127.0.0.1:53462 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:53461 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:53467 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51661 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51650 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51651 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51666 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:53465 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51655 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51647 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:51648 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:53463 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3306 -> 127.0.0.1:53459 Established PID=9376 PROCESS=mysqld
+127.0.0.1:3105 -> 127.0.0.1:51667 Established PID=22152 PROCESS=java
+Established TCP links involving Login 3105: 2. This is transport status, not proof of server registration/authentication.

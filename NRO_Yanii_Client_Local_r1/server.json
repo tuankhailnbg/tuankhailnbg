@@ -1,0 +1,16 @@
+[
+  {
+    "nameServer": "NRO Local",
+    "address": "127.0.0.1",
+    "port": 14445,
+    "language": 0,
+    "typeSv": 0,
+    "homeUrl": "",
+    "logoUrl": "",
+    "isUnLockOptionTemplate": 0,
+    "listPorata": "454",
+    "typeReadHpMod": 0,
+    "typeGetParam": 0,
+    "isPaintRuby": 1
+  }
+]

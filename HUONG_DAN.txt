@@ -1,0 +1,13 @@
+SỬA LAUNCHER CHO WINDOWS POWERSHELL 5.1
+
+1. Đóng cửa sổ CHOI_GAME/client cũ. Giữ MariaDB và hai server Java đang chạy.
+2. Chép file Start-Client.ps1 trong ZIP này vào:
+   D:\NRO DATA\NRO_Yanii_Client_Local_r1\
+3. Chọn thay thế file Start-Client.ps1 cũ.
+4. Mở lại CHOI_GAME.cmd.
+
+Launcher đã sửa cách đọc JSON gây nhầm address thành Address(int).
+Bản sửa chỉ thay launcher, không sửa database hoặc các JAR server.
+Đã tái hiện lỗi mảng lồng và kiểm tra IP được truyền là 127.0.0.1:14445.
+Chưa kiểm thử giao diện Unity hoặc đăng nhập trên máy Windows của bạn.
+Nếu còn lỗi, gửi launcher-last.log và client-...log mới nhất trong Logs.

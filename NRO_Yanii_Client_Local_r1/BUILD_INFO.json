@@ -1,0 +1,145 @@
+{
+  "build": "NRO_Yanii_Client_Local_r1",
+  "source_repository": "https://github.com/yanii7905/Nro_Yanii",
+  "source_commit": "a443509f203eb21b7f39bb5a5234df4b1ddcfbea",
+  "validation": "Static asset, binary, configuration and launcher checks; Windows gameplay still requires testing against the user server.",
+  "changes": [
+    "Replace the dead remote WebIP configuration URL with a loopback-only JSON service.",
+    "Use the bundled Hidden/Internal-Colored shader instead of the absent Lines/Colored Blended shader.",
+    "Configure line shader for alpha blending, no depth writes, always-pass depth test.",
+    "Omit only the premature startup notification in ModFunc.LoadGame.",
+    "Keep original level0 and all game networking methods.",
+    "Include both real Git LFS texture resource files, verified by SHA256."
+  ],
+  "files": [
+    {
+      "path": "AppLocal/Data/Resources/unity default resources",
+      "size": 1551312,
+      "sha256": "af8117338302b71e535f5677ebe586aa7e4369755a01af27276b2d94069299a2"
+    },
+    {
+      "path": "AppLocal/Data/Resources/unity_builtin_extra",
+      "size": 381572,
+      "sha256": "e0c2363a248f5812f228b60bdb6414e34a7b899b1264b85c7546adb8cb080f61"
+    },
+    {
+      "path": "AppLocal/Data/RuntimeInitializeOnLoads.json",
+      "size": 217,
+      "sha256": "5ee7c9d9ae8d521b224692203ea41e7ca01d473e0b1ca37759a1845d51629136"
+    },
+    {
+      "path": "AppLocal/Data/ScriptingAssemblies.json",
+      "size": 2876,
+      "sha256": "616ebf5a2ab5df79e82f7209c8c0739d5fdf03d2171bc4b499f4cf6105845906"
+    },
+    {
+      "path": "AppLocal/Data/app.info",
+      "size": 21,
+      "sha256": "0178d48cd538b9337caea1802576d6bd0dbb379adb86bd31246a97ea54e49fba"
+    },
+    {
+      "path": "AppLocal/Data/boot.config",
+      "size": 120,
+      "sha256": "a05cf3b1fafc1c4329cdca3195f333d6f6fef025e519bcdcbe5e2020caee8e66"
+    },
+    {
+      "path": "AppLocal/Data/globalgamemanagers",
+      "size": 245684,
+      "sha256": "93e80275877232f92ec4d750c5f059ec1f901034e6c6cd98ee2a72693ea3ed8d"
+    },
+    {
+      "path": "AppLocal/Data/globalgamemanagers.assets",
+      "size": 174920,
+      "sha256": "dbc72462ab598af0259dc5e9106a783d608d4367361ac0af3bc039002b64e961"
+    },
+    {
+      "path": "AppLocal/Data/globalgamemanagers.assets.resS",
+      "size": 2796240,
+      "sha256": "39dd38fcd8dd95d41d6d55fe16a448d29fe2c31d9a162c825c24c6d99a893d7a"
+    },
+    {
+      "path": "AppLocal/Data/il2cpp_data/Metadata/global-metadata.dat",
+      "size": 5381572,
+      "sha256": "f34cf41098cc3036711cde97102b47136a96b3fce3f129674e87a6918137d15a"
+    },
+    {
+      "path": "AppLocal/Data/il2cpp_data/Resources/mscorlib.dll-resources.dat",
+      "size": 337563,
+      "sha256": "c5baa176a5b72cd545266340e42102d393a5e43d38c95796bc828918bb95277f"
+    },
+    {
+      "path": "AppLocal/Data/level0",
+      "size": 1416,
+      "sha256": "a4c3ec4739f9a151b763d87cc936f346895146ce2a31b8687ed783e1f7f8d79c"
+    },
+    {
+      "path": "AppLocal/Data/level1",
+      "size": 1416,
+      "sha256": "eb0bad4848bdd89e316c90b68e06884f4090dc5ef4e3f778a23747f654ef8335"
+    },
+    {
+      "path": "AppLocal/Data/resources.assets",
+      "size": 51082364,
+      "sha256": "ba501484a07034ef1bd96f6bdf02736622d7241f930473022d38b8ec75589ac3"
+    },
+    {
+      "path": "AppLocal/Data/resources.assets.resS",
+      "size": 126002016,
+      "sha256": "e9b36eede181f8041999b5687c4a9a5fc8936928439057be8e426cf22c141d7e"
+    },
+    {
+      "path": "AppLocal/Data/resources.resource",
+      "size": 435936,
+      "sha256": "0082058f1fd7389898591dc56063b643edd36cba083099408af9b5b13993edb9"
+    },
+    {
+      "path": "AppLocal/Data/sharedassets0.assets",
+      "size": 277,
+      "sha256": "575bc397c21d8cc81800b82f89e1318cce959eaf25d8dce5b046007cae639a38"
+    },
+    {
+      "path": "AppLocal/Data/sharedassets1.assets",
+      "size": 277,
+      "sha256": "01cb4bb4e7e3ade231047356389f34c2f5ef8955c3e6675460dc55d8521c3254"
+    },
+    {
+      "path": "AppLocal/GameAssembly.dll",
+      "size": 25470464,
+      "sha256": "ad87acca417232273f70de5d87a2826310c3ba25f4e90877a72ae04bb83d250b"
+    },
+    {
+      "path": "AppLocal/NroYanii.exe",
+      "size": 666624,
+      "sha256": "731ad932a5004d36d1c19c42e5699cbef7aa3b0f2efc610b05d7104d5590633d"
+    },
+    {
+      "path": "AppLocal/UnityCrashHandler64.exe",
+      "size": 1112768,
+      "sha256": "568f62a32cc660cb488a6def162c03e7915a5209dd61da3899feccbec5ab4dff"
+    },
+    {
+      "path": "AppLocal/UnityPlayer.dll",
+      "size": 30894784,
+      "sha256": "56138336fd3c7e52e99b99b5f74fe4c10df72bed34e57fc7715da50282da45f2"
+    },
+    {
+      "path": "AppLocal/baselib.dll",
+      "size": 417984,
+      "sha256": "3288f2771a350745e66f6567718313585c5d37eb26e30ae25ab1a6c07bd924bd"
+    }
+  ],
+  "checks": {
+    "all_upstream_files_verified": true,
+    "real_git_lfs_textures_verified": true,
+    "unchanged_native_method_map_entries": 75355,
+    "changed_metadata_literals": 2,
+    "modified_native_instruction_bytes": 5,
+    "shader_roundtrip_verified": true,
+    "launcher_syntax_checked_with_powershell": "7.6.7 on Linux; Windows PowerShell 5.1-compatible APIs used",
+    "local_http_json_200_test": "passed",
+    "unknown_path_404_test": "passed",
+    "closed_port_detection_test": "passed",
+    "windows_unity_gameplay": "not tested",
+    "user_server_login": "not tested"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "source_commit": "a443509f203eb21b7f39bb5a5234df4b1ddcfbea",
+  "java_bytecode_target": 17,
+  "checks_completed": [
+    "Java sources compiled",
+    "PowerShell syntax parsed",
+    "Startup wrapper retained stdin",
+    "Configured password/API key omitted from console and startup log",
+    "Valid fragmented NRO key reply accepted",
+    "Non-NRO service and truncated reply rejected",
+    "Real Connector/J attempted both DB profiles and reported a closed DB port",
+    "Read-only report excluded configured secrets"
+  ],
+  "not_tested": [
+    "Windows execution",
+    "Connection/schema queries against the user database",
+    "Actual Login/Game startup on user PC",
+    "Client login and gameplay"
+  ],
+  "schema_tables": 55,
+  "schema_columns": 474,
+  "resource_manifest_entries": 662
+}

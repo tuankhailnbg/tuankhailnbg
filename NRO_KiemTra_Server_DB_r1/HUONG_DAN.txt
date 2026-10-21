@@ -1,0 +1,54 @@
+KIỂM TRA DATABASE VÀ KHỞI ĐỘNG SERVER NRO YANII
+
+1. Giải nén toàn bộ ZIP vào ổ D. Không cần chép vào thư mục game.
+2. Bật MySQL/MariaDB trong XAMPP. Apache không cần cho bước kiểm tra này.
+3. Nhấp đúp 1_KIEM_TRA.cmd. Có thể để các server hiện tại chạy trong lần kiểm tra đầu.
+4. Gửi file kiem-tra-...txt vừa tạo trong thư mục BAO_CAO để đọc lỗi.
+
+Công cụ tự tìm đúng thư mục dự án đã dùng:
+D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea
+Nếu đã đổi vị trí, công cụ sẽ hỏi thư mục chứa CẢ Login và Server.
+Cũng có thể kéo thư mục dự án thả lên file CMD tương ứng.
+
+KHI CẦN KHỞI ĐỘNG LẠI ĐỂ LẤY LOG MỚI
+
+- Nếu đang có cửa sổ Java cũ: gõ baotri ở cửa sổ Game Server, chờ tắt xong;
+  sau đó gõ baotri ở cửa sổ Login và chờ tắt xong.
+- Mở 2_CHAY_LOGIN.cmd. Chờ dòng listening port: 3105.
+- Mở 3_CHAY_SERVER.cmd. Giữ cả hai cửa sổ mở.
+- Mở lại 1_KIEM_TRA.cmd để lấy báo cáo sau khởi động.
+- Gửi báo cáo mới cùng login-khoi-dong-...txt và game-khoi-dong-...txt trong BAO_CAO.
+- Nếu cổng đang có tiến trình sử dụng, bộ chạy sẽ không chủ động tắt tiến trình đó.
+- Không chạy run.bat gốc đồng thời với bộ chạy này.
+
+BỘ KIỂM TRA LÀM GÌ
+
+- Đọc cấu hình Login và Game hiện có, không in mật khẩu.
+- Kết nối database riêng theo thông tin của từng module bằng JDBC trong JAR đã build.
+- Đối chiếu 55 bảng và tên cột từ SQL đi kèm bộ mã, đếm dữ liệu quan trọng.
+- Kiểm tra tài khoản có server_login khớp server.sv bằng số lượng, không xuất tài khoản/mật khẩu.
+- Kiểm tra các tài nguyên map/update, file JAR và Main-Class.
+- Thử gói bắt tay lấy khóa NRO tại cổng Login và Game, không gửi đăng nhập tài khoản.
+- Ghi trạng thái TCP để phân biệt cổng mở và kết nối Login/Game đang tồn tại.
+
+CÁC ĐIỂM ĐÃ XÁC NHẬN TỪ NGUỒN
+
+- Login gốc vẫn mở cổng dù DbManager.start() báo tạo kết nối database thất bại.
+- run.bat gốc mở Login.jar/Server.jar; bộ này dùng hai JAR trong target đã build.
+- Server đọc resources/config/server.properties theo thư mục hiện tại; Login đọc server.ini.
+- Server load database lỗi có thể gọi System.exit(0); mã thoát 0 chưa chứng minh chạy thành công.
+- Bộ chạy giữ đúng thư mục làm việc và lưu đầu ra khởi động đã che các mật khẩu/khóa trong cấu hình.
+
+PHẠM VI
+
+1_KIEM_TRA chỉ thực hiện truy vấn đọc, không import/reset database, không tạo tài khoản,
+không tự sửa cấu hình và không khởi động lại server.
+2_CHAY_LOGIN và 3_CHAY_SERVER chạy ứng dụng thật; ứng dụng có hoạt động ghi dữ liệu
+bình thường của chính nó. Không dùng hai bước này khi đang có phiên server cần giữ.
+Các log chia sẻ nên là log trong BAO_CAO; không cần gửi server.ini/server.properties.
+
+Các kiểm tra tĩnh/cổng/database không thay thế việc đăng nhập và vào map bằng client.
+Chưa có truy cập tới máy Windows hay database của bạn; cần báo cáo mới để kết luận lỗi.
+
+Nguồn đối chiếu: https://github.com/yanii7905/Nro_Yanii
+Commit: a443509f203eb21b7f39bb5a5234df4b1ddcfbea

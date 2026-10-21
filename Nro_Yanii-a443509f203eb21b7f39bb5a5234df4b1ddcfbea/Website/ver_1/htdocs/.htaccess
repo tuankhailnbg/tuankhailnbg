@@ -1,0 +1,20 @@
+﻿
+
+
+RewriteEngine On
+
+#Đường dẫn rút gọn...
+RewriteRule dangnhap$ /pages/dangnhap.php
+RewriteRule dangky$ /pages/dangky.php
+RewriteRule dangxuat$ /pages/dangxuat.php
+RewriteRule doimatkhau$ /pages/doimatkhau.php
+RewriteRule napthe$ /pages/napthe.php
+RewriteRule active$ /pages/kichhoat.php
+RewriteRule forum$ /pages/diendan.php
+RewriteRule post_forum$ /pages/dangbai_diendan.php
+RewriteRule atm_bank$ /pages/atmbank.php
+
+#Đường link cron!
+RewriteRule cron_atm$ /pages/mbbank.php
+
+

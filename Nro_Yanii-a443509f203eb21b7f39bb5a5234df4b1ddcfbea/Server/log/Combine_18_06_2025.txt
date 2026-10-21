@@ -1,0 +1,18 @@
+Player: admin1- Item: Áo thun Kame 7 Sao - Time : 16:38:54
+Player: admin1- Item: Áo thun Kame 8 Sao - Time : 16:39:15
+Player: admin1- Item: Quần thun Kame 7 Sao - Time : 16:39:33
+Player: admin1- Item: Quần thun Kame 8 Sao - Time : 16:39:37
+Player: admin1- Item: Rada cấp 7 7 Sao - Time : 16:39:49
+Player: admin1- Item: Giày cao su đế dày 7 Sao - Time : 16:40:35
+Player: admin1- Item: Giày cao su đế dày 8 Sao - Time : 16:40:36
+Player: admin1- Item: Găng vải dày 7 Sao - Time : 16:40:52
+Player: frieza- Item: Áo sợi len 7 Sao - Time : 17:16:35
+Player: frieza- Item: Rada cấp 1 7 Sao - Time : 17:22:08
+Player: devil- Item: Áo vải 3 lỗ 7 Sao - Time : 23:47:18
+Player: devil- Item: Áo vải 3 lỗ 8 Sao - Time : 23:47:26
+Player: devil- Item: Quần vải đen 7 Sao - Time : 23:47:57
+Player: devil- Item: Quần vải đen 8 Sao - Time : 23:49:24
+Player: devil- Item: Giầy nhựa 7 Sao - Time : 23:50:23
+Player: devil- Item: Giầy nhựa 8 Sao - Time : 23:51:17
+Player: devil- Item: Rada cấp 1 7 Sao - Time : 23:52:01
+Player: devil- Item: Rada cấp 1 8 Sao - Time : 23:52:03

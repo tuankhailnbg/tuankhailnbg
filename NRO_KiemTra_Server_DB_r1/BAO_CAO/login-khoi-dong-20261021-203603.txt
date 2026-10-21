@@ -1,0 +1,23 @@
+Module: login, JAR: D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Login\target\ServerLogin-1.0-RELEASE-jar-with-dependencies.jar
+Working directory: D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Login
+Startup output is recorded with configured secrets hidden.
+Normal console input is preserved. Type baotri for normal shutdown.
+load config
+Config - db.driver: com.mysql.cj.jdbc.Driver
+Config - db.user: nro_app
+Config - db.password: [hidden]
+Config - db.port: 3306
+Config - server.port: 3105
+Config - db.host: localhost
+Config - admin.mode: 0
+Config - db.name: ngocrong
+SLF4J: No SLF4J providers were found.
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#noProviders for further details.
+DB Connection Pool has created.
+listening port: 3105
+client /127.0.0.1:51667 connected!
+set server: 1
+remove all user
+client /127.0.0.1:52369 connected!
+client /127.0.0.1:52369 ket noi thanh cong!

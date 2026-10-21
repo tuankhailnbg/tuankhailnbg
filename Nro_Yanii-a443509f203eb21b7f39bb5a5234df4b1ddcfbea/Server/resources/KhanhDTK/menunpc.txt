@@ -1,0 +1,31 @@
+24|10|Tàu Vũ Trụ của ta có thể đưa cậu đến hành tinh khác chỉ trong 3 giây. Cậu muốn đi đâu?|Đến<>Namếc|Đến<>Xayda|Siêu thị
+25|11|Tàu vũ trụ Namếc tuy cũ nhưng tốc độ không hề kém bất kỳ loại tàu nào khác. Cậu muốn đi đâu?|Đến<>Trái Đất|Đến<>Xayda|Siêu thị
+26|12|Tàu vũ trụ Xayda sử dụng công nghệ mới nhất, có thể đưa ngươi đi bất kỳ đâu, chỉ cần trả tiền là được.|Đến<>Trái Đất|Đến<>Namếc|Siêu thị
+0|7|Cậu cần trang bị gì cứ đến chỗ tôi nhé|Cửa<>hàng
+7|8|Cậu cần trang bị gì cứ đến chỗ tôi nhé|Cửa<>hàng
+14|9|Cậu cần trang bị gì cứ đến chỗ tôi nhé|Cửa<>hàng
+84|7|Cậu cần trang bị gì cứ đến chỗ tôi nhé|Cửa<>hàng
+84|8|Cậu cần trang bị gì cứ đến chỗ tôi nhé|Cửa<>hàng
+84|9|Cậu cần trang bị gì cứ đến chỗ tôi nhé|Cửa<>hàng
+5|21|Ngươi tìm ta có việc gì ?|Ép sao<>trang bị|Pha lê<>hóa<>trang bị|Chuyển hóa<>Trang bị|Võ đài<>Sinh Tử
+42|21|Ngươi tìm ta có việc gì ?|Cửa hàng<>Bùa|Nâng cấp<>Vật phẩm|Nâng cấp<>Bông tai<>Porata|Làm phép<>Nhập đá|Nhập<>Ngọc Rồng
+43|21|Ngươi tìm ta có việc gì ?|Cửa hàng<>Bùa|Nâng cấp<>Vật phẩm|Nâng cấp<>Bông tai<>Porata|Làm phép<>Nhập đá|Nhập<>Ngọc Rồng
+84|21|Ngươi tìm ta có việc gì ?|Cửa hàng<>Bùa|Nâng cấp<>Vật phẩm|Nâng cấp<>Bông tai<>Porata|Làm phép<>Nhập đá|Nhập<>Ngọc Rồng
+112|21|Ngươi muốn đăng ký thi đấu võ đài?<>nhiều phần thưởng giá trị đang đợi ngươi đó|Top 100|Đồng ý<>0 ngọc|Từ chối|Về<>đảo rùa
+5|39|Xin chào, ta có một số vật phẩm đặt biệt cậu có muốn xem không?|Cửa<>hàng|Tiệm<>Hớt tóc
+13|39|Xin chào, ta có một số vật phẩm đặt biệt cậu có muốn xem không?|Cửa<>hàng|Tiệm<>Hớt tóc
+20|39|Xin chào, ta có một số vật phẩm đặt biệt cậu có muốn xem không?|Cửa<>hàng|Tiệm<>Hớt tóc
+44|21|Ngươi tìm ta có việc gì ?|Cửa hàng<>Bùa|Nâng cấp<>Vật phẩm|Nâng cấp<>Bông tai<>Porata|Làm phép<>Nhập đá|Nhập<>Ngọc Rồng
+102|38|Chào chú, cháu có thể giúp gì?|Kể<>Chuyện|Quay về<>Quá khứ
+24|63|Gô Tên, Calích và Monaka đang gặp chuyện ở hành tinh Potaufeu<>Hãy đến đó ngay|Đến<>Potaufeu|Từ chối
+139|63|Tàu Vũ Trụ của ta có thể đưa cậu đến hành tinh khác chỉ trong 3 giây. Cậu muốn đi đâu?|Đến<>Trái Đất|Đến<>Namếc|Đến<>Xayda|Từ chối
+19|12|Đội quân của Fide đang ở Thung lũng Nappa, ta sẽ đưa ngươi đến đó|Đến Code|Đến<>Nappa|Từ chối
+68|12|Ngươi muốn về Thành Phố Vegeta|Đồng ý|Từ chối
+45|19|Con đã mạnh hơn ta, ta sẽ chỉ đường cho con đến Kaio để gặp thần Vũ Trụ Phương Bắc<>Ngài là thần cai quản vũ trụ này, hãy theo ngài ấy học võ công|Đến Kaio|Quay ngọc may mắn
+48|20|Con mạnh nhất phía bắc vũ trụ này rồi đấy<>nhưng ngoài vũ trụ bao la kia vẫn có những kẻ mạnh hơn nhìn<>con cần phải luyện tập để mạnh hơn nữa|Di chuyển
+50|44|Ta có thể giúp gì cho ngươi ?|Đến<>Kaio|Đến<>hành tinh<>Bill|Từ chối
+50|45|Ta có thể giúp gì cho ngươi ?|Đến<>Kaio|Từ chối
+21|0|Con cố gắng theo Quy Lão học thành tài, đừng lo lắng cho ta.|Nhận quà<>tân thủ
+22|2|Con cố gắng theo Trưởng lão Guru học thành tài, đừng lo lắng cho ta.|Nhận quà<>tân thủ
+23|1|Con cố gắng theo Trưởng lão Guru học thành tài, đừng lo lắng cho ta.|Nhận quà<>tân thủ
+43|42|Con muốn nâng giới hạn sức mạnh cho bản thân hay đệ tử?|Bản thân|Đệ tử|Từ chối

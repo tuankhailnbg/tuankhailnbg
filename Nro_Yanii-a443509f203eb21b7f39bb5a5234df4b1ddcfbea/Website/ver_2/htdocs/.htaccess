@@ -1,0 +1,14 @@
+RewriteEngine On
+RewriteBase /
+
+# Chuyển yêu cầu không phải là tập tin hoặc thư mục đến file có .php theo đường dẫn gốc
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ $1.php [L,QSA]
+
+
+Options -Indexes
+
+
+# Thêm .IPA vào trang
+AddType application/octet-stream .ipa

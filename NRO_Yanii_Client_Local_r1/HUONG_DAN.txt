@@ -1,0 +1,60 @@
+NRO YANII - CLIENT LOCAL r1
+
+Đây là bản sửa client Windows đi kèm đúng bộ Nro_Yanii mà bạn đã cài.
+Gói có đủ app, DLL và dữ liệu hình ảnh. Không cần chép đè lên AppLocal cũ.
+
+CÁCH CHẠY TRÊN MÁY WINDOWS
+
+1. Giải nén toàn bộ ZIP vào ổ D, ví dụ:
+   D:\NRO_Yanii_Client_Local_r1
+   Không mở app trực tiếp bên trong cửa sổ ZIP.
+
+2. Đóng client game cũ.
+
+3. Bật MySQL/MariaDB trong XAMPP.
+   Giữ hai cửa sổ Java Login và Server đã chạy thành công mở.
+   Server game cần đang lắng nghe tại 127.0.0.1:14445.
+
+4. Nhấp đúp CHOI_GAME.cmd, không cần Run as administrator.
+   Gói tự kiểm tra file và mở app. Giữ cửa sổ CMD này mở khi chơi.
+   Hãy luôn dùng CHOI_GAME.cmd, vì client cần dịch vụ cấu hình cục bộ.
+
+5. Khi vào màn hình đăng nhập, dùng tài khoản đã tạo trong database ngocrong.
+   Gói này không tự tạo tài khoản và không thay đổi database.
+
+NẾU CÒN LỖI
+
+- Chạy KIEM_TRA.cmd để kiểm tra file tải về/giải nén.
+- Nếu báo không kết nối được 14445: xem lại cửa sổ Java Server và MariaDB.
+- Nếu báo cổng 18888 đang dùng: đóng cửa sổ CHOI_GAME cũ rồi mở lại.
+- Nếu game đứng, đóng cửa sổ game rồi gửi file client-...log mới nhất và
+  launcher-last.log trong thư mục Logs. Không cần gửi mật khẩu database.
+- Thư mục cũ không bị sửa. Để quay lại bản cũ, đóng bản này và dùng thư mục cũ.
+
+NHỮNG ĐIỂM ĐÃ SỬA
+
+- Khởi động bằng scene level0 gốc, giữ đúng bước khởi tạo WebIP.
+- Chuyển nguồn danh sách server từ đường dẫn GitHub trả 404 sang cấu hình
+  server.json trên máy, qua 127.0.0.1:18888. Chỉ phục vụ trên máy hiện tại.
+- Thay yêu cầu shader Lines/Colored Blended không có trong bản đóng gói bằng
+  Hidden/Internal-Colored có sẵn; đặt chế độ vẽ đường 2D phù hợp.
+- Bỏ riêng thông báo bật tự hồi sinh lúc khởi động, vốn gọi InfoMe quá sớm
+  và gây lỗi Info.getInfo. Giữ chức năng tự hồi sinh của client.
+- Kèm hai file dữ liệu texture thật của Git LFS, đã đối chiếu SHA256.
+
+PHẠM VI KIỂM TRA
+
+Đã kiểm tra nguồn, toàn vẹn dữ liệu, cấu trúc metadata/PE, shader,
+cấu hình và hoạt động HTTP của launcher trong môi trường kiểm thử.
+Chưa chạy giao diện Unity Windows hoặc đăng nhập vào máy chủ trên máy bạn.
+Đây là bản sửa để kiểm thử; cần xác nhận đăng nhập, tạo nhân vật và vào map.
+Các tùy chọn đọc giao thức trong server.json có thể cần chỉnh tiếp nếu xuất
+hiện lỗi sau khi kết nối. Gói này chưa cấu hình kết nối từ xa/VPS.
+
+NGUỒN
+
+https://github.com/yanii7905/Nro_Yanii
+Commit a443509f203eb21b7f39bb5a5234df4b1ddcfbea
+Xem BUILD_INFO.json và LICENSE-ORIGINAL.txt để biết nguồn và thay đổi.
+Các chỉnh sửa trong gói này là bản sửa độc lập, không phải bản phát hành
+chính thức của tác giả kho mã hay nhà phát hành Ngọc Rồng Online.
