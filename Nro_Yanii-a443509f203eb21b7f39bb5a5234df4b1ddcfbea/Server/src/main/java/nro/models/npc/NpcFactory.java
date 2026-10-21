@@ -889,6 +889,12 @@ public class NpcFactory {
                             }
                         }
 
+                        private boolean isHouseNpc() {
+                            return this.mapId == ConstMap.NHA_GOHAN
+                                    || this.mapId == ConstMap.NHA_MOORI
+                                    || this.mapId == ConstMap.NHA_BROLY;
+                        }
+
                         @Override
                         public void openBaseMenu(Player player) {
                             // if (player.getSession().vndBar > 500000) {
@@ -899,11 +905,20 @@ public class NpcFactory {
                             // }
                             if (canOpenNpc(player)) {
                                 if (!TaskService.gI().checkDoneTaskTalkNpc(player, this)) {
-                                    this.createOtherMenu(player, ConstNpc.BASE_MENU,
-                                            "|7|Thành công là một hành trình, không phải là đích đến.\n"
-                                                    + "|7|-----Nro Yanii-----",
-                                            "Mã Quà Tặng", "Nhận Ngọc Xanh\n(Miễn phí)",
-                                            "Hỗ trợ\nnhiệm vụ", "Từ chối");
+                                    if (isHouseNpc()) {
+                                        this.createOtherMenu(player, ConstNpc.BASE_MENU,
+                                                "|7|Thành công là một hành trình, không phải là đích đến.\n"
+                                                        + "|7|-----Nro Yanii-----",
+                                                "Mã Quà Tặng", "Nhận Ngọc Xanh\n(Miễn phí)",
+                                                "Nhận đệ tử miễn phí",
+                                                "Hỗ trợ\nnhiệm vụ", "Từ chối");
+                                    } else {
+                                        this.createOtherMenu(player, ConstNpc.BASE_MENU,
+                                                "|7|Thành công là một hành trình, không phải là đích đến.\n"
+                                                        + "|7|-----Nro Yanii-----",
+                                                "Mã Quà Tặng", "Nhận Ngọc Xanh\n(Miễn phí)",
+                                                "Hỗ trợ\nnhiệm vụ", "Từ chối");
+                                    }
                                 }
                             }
                         }
@@ -912,21 +927,55 @@ public class NpcFactory {
                         public void confirmMenu(Player player, int select) {
                             if (canOpenNpc(player)) {
                                 if (player.iDMark.isBaseMenu()) {
-                                    switch (select) {
-                                        case 0 ->
-                                            Input.gI().createFormGiftCode(player);
-                                        case 1 -> {
-                                            if (player.inventory.gem >= 2000000) {
-                                                Service.getInstance().sendThongBao(player,
-                                                        "Tiêu bớt ngọc xanh đi bạn ơi");
-                                                return;
-                                            } else {
-                                                player.inventory.gem += 500000;
-                                                Service.getInstance().sendMoney(player);
+                                    if (isHouseNpc()) {
+                                        switch (select) {
+                                            case 0 ->
+                                                Input.gI().createFormGiftCode(player);
+                                            case 1 -> {
+                                                if (player.inventory.gem >= 2000000) {
+                                                    Service.getInstance().sendThongBao(player,
+                                                            "Tiêu bớt ngọc xanh đi bạn ơi");
+                                                    return;
+                                                } else {
+                                                    player.inventory.gem += 500000;
+                                                    Service.getInstance().sendMoney(player);
+                                                }
+                                            }
+                                            case 2 -> {
+                                                synchronized (player) {
+                                                    if (player.pet != null) {
+                                                        Service.getInstance().sendThongBao(player, "Bạn đã có đệ tử rồi.");
+                                                    } else {
+                                                        boolean success = PetService.gI().createPetForPlayer(player);
+                                                        if (success) {
+                                                            Service.getInstance().sendThongBao(player, "Bạn đã nhận đệ tử thành công!");
+                                                        } else {
+                                                            Service.getInstance().sendThongBao(player, "Bạn đã có đệ tử rồi.");
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            case 3 -> {
+                                                hotroNv(player);
                                             }
                                         }
-                                        case 2 -> {
-                                            hotroNv(player);
+                                    } else {
+                                        switch (select) {
+                                            case 0 ->
+                                                Input.gI().createFormGiftCode(player);
+                                            case 1 -> {
+                                                if (player.inventory.gem >= 2000000) {
+                                                    Service.getInstance().sendThongBao(player,
+                                                            "Tiêu bớt ngọc xanh đi bạn ơi");
+                                                    return;
+                                                } else {
+                                                    player.inventory.gem += 500000;
+                                                    Service.getInstance().sendMoney(player);
+                                                }
+                                            }
+                                            case 2 -> {
+                                                hotroNv(player);
+                                            }
                                         }
                                     }
                                 }

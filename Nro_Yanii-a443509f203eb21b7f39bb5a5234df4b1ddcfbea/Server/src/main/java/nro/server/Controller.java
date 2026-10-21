@@ -803,8 +803,7 @@ public class Controller {
         }
     }*/
     public void login2(Session session, Message msg) {
-        //  Service.gI().switchToRegisterScr(session);
-        Service.gI().sendThongBaoOK(session, "Vui lòng đăng ký tài khoản tại www.nronotbuff.com!");
+        Service.gI().switchToRegisterScr(session);
     }
 
     public void sendInfo(Session session) {

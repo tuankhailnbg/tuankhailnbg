@@ -1,10 +1,14 @@
 package nro.services;
 
 import nro.consts.ConstPlayer;
+import nro.jdbc.DBService;
+import nro.jdbc.daos.PlayerDAO;
 import nro.models.player.Pet;
 import nro.models.player.Player;
+import nro.utils.Log;
 import nro.utils.SkillUtil;
 import nro.utils.Util;
+import java.sql.Connection;
 
 /**
  *
@@ -21,6 +25,29 @@ public class PetService {
             i = new PetService();
         }
         return i;
+    }
+
+    public synchronized boolean createPetForPlayer(Player player) {
+        if (player == null) {
+            return false;
+        }
+        synchronized (player) {
+            if (player.pet != null) {
+                return false;
+            }
+            createNewPet(player, false, false, false, false, false, false);
+            if (player.pet != null) {
+                player.pet.joinMapMaster();
+                Service.getInstance().sendHavePet(player);
+                try (Connection con = DBService.gI().getConnectionForGame()) {
+                    PlayerDAO.updatePlayer(player, con);
+                } catch (Exception e) {
+                    Log.error(PetService.class, e, "Lỗi lưu đệ tử mới cho player");
+                }
+                return true;
+            }
+            return false;
+        }
     }
 
     public void createNormalPet(Player player, int gender, byte... limitPower) {

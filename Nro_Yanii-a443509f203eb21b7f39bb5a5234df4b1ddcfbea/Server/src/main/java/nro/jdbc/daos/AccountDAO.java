@@ -92,35 +92,57 @@ public class AccountDAO {
         }
     }
 
+    public static final int CREATE_ACCOUNT_ERROR = -1;
+    public static final int CREATE_ACCOUNT_EXISTS = -2;
+
     public static int createAccount(String user, String password) {
-        int key = -1;
-        PreparedStatement ps = null;
-        try (Connection con = DBService.gI().getConnectionForGetPlayer();) {
-            ps = con.prepareStatement("select * from account where username = ?");
-            ps.setString(1, user);
-            if (ps.executeQuery().next()) {
-                System.out.println("Tạo thất bại do tài khoản đã tồn tại");
-            } else {
-                ps = con.prepareStatement("insert into account(username,password) values (?,?)",
-                        Statement.RETURN_GENERATED_KEYS);
-                ps.setString(1, user);
-                ps.setString(2, password);
-                ps.executeUpdate();
-                ResultSet rs = ps.getGeneratedKeys();
-                rs.next();
-                key = rs.getInt(1);
-                System.out.println("Tạo tài khoản thành công!");
+        if (user == null || password == null) {
+            return CREATE_ACCOUNT_ERROR;
+        }
+
+        final String checkSql = "SELECT id FROM account WHERE username = ? LIMIT 1";
+        final String insertSql = "INSERT INTO account (username, password) VALUES (?, ?)";
+
+        try (Connection con = DBService.gI().getConnectionForGame();
+                PreparedStatement checkPs = con.prepareStatement(checkSql)) {
+
+            checkPs.setString(1, user);
+            try (ResultSet rs = checkPs.executeQuery()) {
+                if (rs.next()) {
+                    return CREATE_ACCOUNT_EXISTS;
+                }
             }
+
+            try (PreparedStatement insertPs = con.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+                insertPs.setString(1, user);
+                insertPs.setString(2, password);
+
+                int affectedRows = insertPs.executeUpdate();
+                if (affectedRows <= 0) {
+                    return CREATE_ACCOUNT_ERROR;
+                }
+
+                try (ResultSet generatedKeys = insertPs.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        return generatedKeys.getInt(1);
+                    }
+                }
+
+                // INSERT thành công nhưng driver không trả generated key.
+                // Trả 1 để Service vẫn nhận diện là thành công.
+                return 1;
+            }
+        } catch (SQLException e) {
+            // MariaDB/MySQL duplicate key. Hữu ích nếu hai request đăng ký cùng lúc.
+            if (e.getErrorCode() == 1062) {
+                return CREATE_ACCOUNT_EXISTS;
+            }
+            Log.error(AccountDAO.class, e);
+            return CREATE_ACCOUNT_ERROR;
         } catch (Exception e) {
             Log.error(AccountDAO.class, e);
-        } finally {
-            try {
-                ps.close();
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
+            return CREATE_ACCOUNT_ERROR;
         }
-        return key;
     }
 
 }

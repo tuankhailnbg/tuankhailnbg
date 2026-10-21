@@ -445,49 +445,59 @@ public class Service {
     // }
     public void regisAccount(Session session, Message _msg) {
         try {
-            _msg.reader().readUTF();
-            _msg.reader().readUTF();
-            _msg.reader().readUTF();
-            _msg.reader().readUTF();
-            _msg.reader().readUTF();
-            _msg.reader().readUTF();
-            _msg.reader().readUTF();
+            // Client NRO gửi 7 trường thông tin phụ trước username/password.
+            // Giữ nguyên thứ tự đọc để không làm lệch packet.
+            for (int i = 0; i < 7; i++) {
+                _msg.reader().readUTF();
+            }
+
             String user = _msg.reader().readUTF();
-            ;
             String pass = _msg.reader().readUTF();
-            ;
-            if (!(user.length() >= 4 && user.length() <= 18)) {
+
+            if (user == null || pass == null) {
+                sendThongBaoOK(session, "Dữ liệu đăng ký không hợp lệ");
+                return;
+            }
+
+            user = user.trim();
+            pass = pass.trim();
+
+            if (user.length() < 4 || user.length() > 18) {
                 sendThongBaoOK(session, "Tài khoản phải có độ dài 4-18 ký tự");
                 return;
             }
-            if (!(pass.length() >= 5 && pass.length() <= 18)) {
+            if (pass.length() < 5 || pass.length() > 18) {
                 sendThongBaoOK(session, "Mật khẩu phải có độ dài 5-18 ký tự");
                 return;
             }
-            Connection connection = null;
-            PreparedStatement preparedStatement = null;
-            ResultSet resultSet = null;
-            try {
-                connection = DBService.gI().getConnectionForGame();
-                String sql = "SELECT * FROM `account` WHERE username = ?";
-                preparedStatement = connection.prepareStatement(sql);
-                preparedStatement.setString(1, user);
-                resultSet = preparedStatement.executeQuery();
-                if (resultSet.first()) {
-                    sendThongBaoOK(session, "Tài khoản đã tồn tại");
-                } else {
-                    Connection con = DBService.gI().getConnectionForGame();
-                    PreparedStatement ps = con
-                            .prepareStatement("INSERT INTO account (username, password) VALUES (?, ?)");
-                    ps.setString(1, user);
-                    ps.setString(2, pass);
-                    ps.executeUpdate();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
+            if (user.indexOf(' ') >= 0 || pass.indexOf(' ') >= 0) {
+                sendThongBaoOK(session, "Tài khoản và mật khẩu không được chứa khoảng trắng");
+                return;
+            }
+
+            int result = AccountDAO.createAccount(user, pass);
+            if (result > 0) {
+                System.out.println("[REGISTER] Đã tạo tài khoản: " + user + " (id=" + result + ")");
+                sendThongBaoOK(session, "Đăng ký tài khoản thành công!");
+            } else if (result == AccountDAO.CREATE_ACCOUNT_EXISTS) {
+                sendThongBaoOK(session, "Tài khoản đã tồn tại.");
+            } else {
+                sendThongBaoOK(session, "Không thể tạo tài khoản. Vui lòng thử lại.");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.error(Service.class, e);
+            sendThongBaoOK(session, "Có lỗi khi đăng ký tài khoản");
+        }
+    }
+
+    public void switchToRegisterScr(Session session) {
+        try {
+            Message message = new Message(42);
+            message.writer().writeByte(0);
+            session.sendMessage(message);
+            message.cleanup();
+        } catch (Exception e) {
+            Log.error(Service.class, e);
         }
     }
 
