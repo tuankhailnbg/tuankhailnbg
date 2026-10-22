@@ -58,7 +58,6 @@ nro\services\ItemMapService.class
 nro\models\npc\NpcFactory$17.class
 nro\manager\AchiveManager.class
 nro\models\npc\NpcFactory$50.class
-nro\services\func\ShopService.class
 nro\models\pvp\martialCongressPVP.class
 nro\consts\ConstTextColor.class
 nro\consts\ConstAchive.class
@@ -198,6 +197,7 @@ nro\server\AutoMaintenance.class
 nro\event\SummerEvent.class
 nro\models\npc\NpcFactory$25.class
 nro\models\skill\Hit.class
+nro\services\func\webadmin\AdminWebPage.class
 nro\models\boss\robotsatthu\Android15.class
 nro\models\boss\mapoffline\Boss_ThanMeo.class
 nro\models\pvp\PVP.class
@@ -303,7 +303,6 @@ nro\jdbc\daos\GodGK$1.class
 nro\models\boss\bosstuonglai\Blackgoku.class
 nro\models\boss\dhvt\PonPut.class
 nro\models\boss\mapoffline\Boss_ThuongDe.class
-nro\services\func\Input.class
 nro\models\npc\NpcFactory$9.class
 nro\models\item\MinipetTemplate.class
 nro\models\map\ItemMap.class
@@ -346,6 +345,7 @@ nro\models\player\Charms.class
 nro\resources\Resources.class
 nro\models\intrinsic\IntrinsicPlayer.class
 nro\models\player\Referee.class
+nro\services\func\webadmin\AdminWebAuth$AdminSession.class
 nro\models\npc\NpcFactory$13.class
 nro\models\boss\iboss\BossInterface.class
 nro\models\npc\NpcFactory$43.class
@@ -416,6 +416,7 @@ nro\models\npc\BaseMenu.class
 nro\jdbc\DBService.class
 nro\models\boss\BossFactory.class
 nro\models\boss\dhvt\SoiHecQuyn.class
+nro\services\func\webadmin\AdminWebAuth$OneTimeToken.class
 nro\models\npc\NpcFactory$46.class
 nro\power\Caption.class
 nro\models\map\war\NamekBallWar.class
@@ -466,7 +467,6 @@ nro\models\boss\cell\XenBoHung1.class
 nro\models\boss\td\TuanLocEvent.class
 nro\server\Manager.class
 nro\models\player\Player.class
-nro\services\func\Input$SubInput.class
 nro\login\LoginSession$MessageCollector.class
 nro\models\map\DaiHoiVoThuat\DaiHoiVoThuatService$4.class
 nro\services\SubMenuService.class
@@ -476,6 +476,7 @@ nro\models\map\dungeon\Dungeon.class
 nro\services\ItemTimeService.class
 nro\resources\entity\MobData.class
 nro\server\TruyVanSQL.class
+nro\services\func\webadmin\AdminWebAuth.class
 nro\jdbc\daos\PlayerDAO.class
 nro\models\boss\huydiet\Thiensu.class
 nro\models\map\phoban\BanDoKhoBau.class

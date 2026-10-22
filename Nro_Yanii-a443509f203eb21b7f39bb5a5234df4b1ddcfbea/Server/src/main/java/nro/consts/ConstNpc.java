@@ -260,6 +260,7 @@ public class ConstNpc {
         public static final int BUFF_ITEM_PREVIEW = 528;
         public static final int BUFF_ITEM_SELECT_OPTION_SEARCH = 529;
         public static final int BUFF_ITEM_DELETE_OPTION = 530;
+        public static final int ADMIN_CONFIRM_CREDIT = 531;
 
         // index menu rong thieng
         public static final int SHENRON_CONFIRM = 501;

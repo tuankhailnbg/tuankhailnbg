@@ -325,7 +325,7 @@ public class GodGK {
                         Item item = null;
                         dataObject = (JSONObject) dataArray.get(i);
                         short tempId = Short.parseShort(String.valueOf(dataObject.get("temp_id")));
-                        if (tempId != -1) {
+                        if (tempId != -1 && tempId != 2011) {
                             item = ItemService.gI().createNewItem(tempId,
                                     Integer.parseInt(String.valueOf(dataObject.get("quantity"))));
                             JSONArray options = (JSONArray) dataObject.get("option");
@@ -355,7 +355,7 @@ public class GodGK {
                             Item item = null;
                             dataObject = (JSONObject) dataArray.get(i);
                             short tempId = Short.parseShort(String.valueOf(dataObject.get("temp_id")));
-                            if (tempId != -1) {
+                            if (tempId != -1 && tempId != 2011) {
                                 item = ItemService.gI().createNewItem(tempId,
                                         Integer.parseInt(String.valueOf(dataObject.get("quantity"))));
                                 JSONArray options = (JSONArray) dataObject.get("option");
@@ -386,7 +386,7 @@ public class GodGK {
                         Item item = null;
                         dataObject = (JSONObject) dataArray.get(i);
                         short tempId = Short.parseShort(String.valueOf(dataObject.get("temp_id")));
-                        if (tempId != -1) {
+                        if (tempId != -1 && tempId != 2011) {
                             item = ItemService.gI().createNewItem(tempId,
                                     Integer.parseInt(String.valueOf(dataObject.get("quantity"))));
                             JSONArray options = (JSONArray) dataObject.get("option");
@@ -414,7 +414,7 @@ public class GodGK {
                         Item item = null;
                         dataObject = (JSONObject) dataArray.get(i);
                         short tempId = Short.parseShort(String.valueOf(dataObject.get("temp_id")));
-                        if (tempId != -1) {
+                        if (tempId != -1 && tempId != 2011) {
                             item = ItemService.gI().createNewItem(tempId,
                                     Integer.parseInt(String.valueOf(dataObject.get("quantity"))));
                             JSONArray options = (JSONArray) dataObject.get("option");

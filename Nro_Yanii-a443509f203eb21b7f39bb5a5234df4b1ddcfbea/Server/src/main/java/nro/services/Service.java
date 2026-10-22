@@ -793,7 +793,7 @@ public class Service {
                                 + "|1|Số người chơi đang online: " + Client.gI().getPlayers().size() + "\n"
                                 + "|8|Current thread server: " + Thread.activeCount() + "\n"
                                 + "|6|Time start server: " + ServerManager.timeStart,
-                        "Buff\nvật phẩm", "Ngọc rồng", "Đệ tử", "Bảo trì", "Tìm kiếm\nngười chơi", "Đóng");
+                        "Buff\nvật phẩm", "Cộng\nsố dư", "Ngọc rồng", "Đệ tử", "Bảo trì", "Tìm kiếm\nngười chơi", "Đóng");
                 return;
             }
             if (text.equals("quanct")) {
@@ -822,6 +822,12 @@ public class Service {
                 return;
             } else if (text.equals("buff") || text.equals("buffitem") || text.equals("adminbuff")) {
                 AdminBuffItemService.gI().openMenuBuffItem(player);
+                return;
+            } else if (text.equals("congsodu") || text.equals("napsodu") || text.equals("buffvnd") || text.equals("buffsodu")) {
+                AdminBuffItemService.gI().openMenuCreditBalance(player);
+                return;
+            } else if (text.equals("adminweb") || text.equals("webadmin") || text.equals("buffweb")) {
+                AdminBuffItemService.gI().sendWebAdminLink(player);
                 return;
             } else if (text.equals("quanct1")) {
                 AdminBuffItemService.gI().openMenuBuffItem(player);

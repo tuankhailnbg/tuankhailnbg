@@ -24,6 +24,10 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
+import nro.services.func.webadmin.AdminWebAuth;
+import nro.services.func.webadmin.AdminWebServer;
+import nro.services.func.AdminBalanceService;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -52,6 +56,16 @@ public class AdminBuffItemService {
 
     // Set để chống xử lý đồng thời deliverPendingGrants cho cùng một Player ID
     private final Set<Long> deliveringPlayers = ConcurrentHashMap.newKeySet();
+
+    public static class PendingCredit {
+        public String recipient;
+        public int amount;
+        public String transCode;
+        public String note;
+        public AdminBalanceService.AccountInfo acc;
+    }
+
+    private final Map<Long, PendingCredit> pendingCredits = new ConcurrentHashMap<>();
 
     private AdminBuffItemService() {
         initTable();
@@ -161,7 +175,7 @@ public class AdminBuffItemService {
     }
 
     /**
-     * Bắt đầu luồng: mở form tìm kiếm người chơi
+     * Bắt đầu luồng: mở bảng nhập vật phẩm (Bước 1: ID vật phẩm, Số lượng, Người nhận)
      */
     public void openMenuBuffItem(Player admin) {
         if (admin == null || admin.getSession() == null || !admin.isAdmin()) {
@@ -170,7 +184,173 @@ public class AdminBuffItemService {
             }
             return;
         }
-        Input.gI().createFormBuffFindPlayer(admin);
+        Input.gI().createFormBuffStep1(admin);
+    }
+
+    /**
+     * Mở form cộng số dư nạp tiền cho người chơi
+     */
+    public void openMenuCreditBalance(Player admin) {
+        if (admin == null || admin.getSession() == null || !admin.isAdmin()) {
+            if (admin != null) {
+                Service.getInstance().sendThongBao(admin, "Bạn không có quyền thực hiện chức năng này!");
+            }
+            return;
+        }
+        Input.gI().createFormAdminCredit(admin);
+    }
+
+    /**
+     * Gửi liên kết truy cập Web Admin Checkbox & Param trực quan cho Admin
+     */
+    public void sendWebAdminLink(Player admin) {
+        if (admin == null || admin.getSession() == null || !admin.isAdmin()) {
+            if (admin != null) {
+                Service.getInstance().sendThongBao(admin, "Bạn không có quyền thực hiện chức năng này!");
+            }
+            return;
+        }
+        String token = nro.services.func.webadmin.AdminWebAuth.gI().createOneTimeLoginToken(admin);
+        if (token == null) {
+            Service.getInstance().sendThongBao(admin, "Không thể tạo liên kết Web Admin!");
+            return;
+        }
+        String link = "http://localhost:8888/auth-token?token=" + token;
+        Service.getInstance().sendThongBao(admin, "Đã tạo link Web Admin (hạn 5 phút, dùng 1 lần):\n" + link);
+        NpcService.gI().createMenuConMeo(admin, ConstNpc.IGNORE_MENU, 17997,
+                "|7|-----WEB ADMIN BUFF ĐỒ TRỰC QUAN-----\n"
+                        + "|1|Truy cập bảng Checkbox & Param qua trình duyệt:\n"
+                        + "|2|" + link + "\n"
+                        + "|8|Link dùng 1 lần và có hiệu lực trong 5 phút.\n"
+                        + "|6|Mở trình duyệt trên máy chạy server để thao tác trực quan!",
+                "Đã hiểu");
+    }
+
+    /**
+     * Xử lý dữ liệu từ Form Bước 1 (ID vật phẩm, Số lượng, Người nhận)
+     */
+    public void handleStep1Input(Player admin, int itemId, int quantity, String recipientQuery) {
+        if (admin == null || admin.getSession() == null || !admin.isAdmin()) return;
+
+        ItemTemplate template = getItemTemplate(itemId);
+        if (template == null || template.name == null || template.name.contains("[Vô hiệu hóa]")) {
+            Service.getInstance().sendThongBao(admin, "Vật phẩm ID " + itemId + " không tồn tại hoặc đã bị vô hiệu hóa!");
+            return;
+        }
+
+        if (quantity <= 0 || quantity > 2_000_000_000) {
+            Service.getInstance().sendThongBao(admin, "Số lượng không hợp lệ (nhập từ 1 đến 2,000,000,000)!");
+            return;
+        }
+
+        if (recipientQuery == null || recipientQuery.trim().isEmpty()) {
+            Service.getInstance().sendThongBao(admin, "Vui lòng nhập tên hoặc ID người nhận!");
+            return;
+        }
+
+        AdminBalanceService.AccountInfo acc = AdminBalanceService.gI().lookupAccount(recipientQuery.trim());
+        if (acc == null) {
+            Service.getInstance().sendThongBao(admin, "Không tìm thấy người nhận: " + recipientQuery);
+            return;
+        }
+
+        BuffSession session = getOrCreateSession(admin);
+        session.customOptions.clear();
+        session.selectedTemplate = template;
+        session.quantity = quantity;
+        session.keepDefaultOptions = true;
+        session.targetPlayerId = acc.playerId != null ? acc.playerId : 0;
+        session.targetPlayerName = acc.playerName != null ? acc.playerName : acc.username;
+        session.targetIsOnline = acc.isOnline;
+        session.targetGender = acc.gender;
+        session.targetPower = acc.power;
+
+        showMenuOptions(admin);
+    }
+
+    /**
+     * Xử lý khi Admin nhập Form Cộng số dư nạp tiền
+     */
+    public void handleAdminCreditFormInput(Player admin, String recipient, int amount, String transCode, String note) {
+        if (admin == null || admin.getSession() == null || !admin.isAdmin()) return;
+
+        if (amount <= 0 || amount > 2_000_000_000) {
+            Service.getInstance().sendThongBao(admin, "Số tiền nạp phải là số nguyên dương từ 1 đến 2,000,000,000 VNĐ!");
+            return;
+        }
+
+        AdminBalanceService.AccountInfo acc = AdminBalanceService.gI().lookupAccount(recipient);
+        if (acc == null) {
+            Service.getInstance().sendThongBao(admin, "Không tìm thấy tài khoản hoặc người chơi: " + recipient);
+            return;
+        }
+
+        if (transCode == null || transCode.trim().isEmpty()) {
+            transCode = AdminBalanceService.gI().generateDefaultTransCode();
+        }
+
+        PendingCredit pc = new PendingCredit();
+        pc.recipient = recipient;
+        pc.amount = amount;
+        pc.transCode = transCode.trim();
+        pc.note = note != null ? note.trim() : "";
+        pc.acc = acc;
+        pendingCredits.put(admin.id, pc);
+
+        String info = "|7|----- XÁC NHẬN CỘNG SỐ DƯ -----\n"
+                + "|0|Tài khoản: |2|" + acc.username + " (ID: " + acc.accountId + ")\n"
+                + "|0|Nhân vật: |2|" + (acc.playerName != null ? acc.playerName : "N/A") + "\n"
+                + "|0|Trạng thái: " + (acc.isOnline ? "|1|ONLINE" : "|7|OFFLINE") + "\n"
+                + "|0|Số dư hiện tại: |2|" + Util.numberToMoney(acc.currentVnd) + " VNĐ\n"
+                + "|0|Tổng nạp hiện tại: |2|" + Util.numberToMoney(acc.currentTongnap) + " VNĐ\n"
+                + "|0|Số tiền cộng: |1|+" + Util.numberToMoney(amount) + " VNĐ\n"
+                + "|0|Mã giao dịch: |6|" + pc.transCode + "\n"
+                + "|0|Ghi chú: |5|" + (pc.note.isEmpty() ? "Không có" : pc.note);
+
+        NpcService.gI().createMenuConMeo(admin, ConstNpc.ADMIN_CONFIRM_CREDIT, 17997,
+                info,
+                "Xác nhận nạp\n(Chế độ A)",
+                "Điều chỉnh ví\n(Chế độ B)",
+                "Mở Web\nAdmin",
+                "Hủy");
+    }
+
+    /**
+     * Xử lý xác nhận cộng số dư từ menu
+     */
+    public void handleConfirmCreditMenu(Player admin, int select) {
+        if (admin == null || !admin.isAdmin()) return;
+        PendingCredit pc = pendingCredits.remove(admin.id);
+        if (pc == null) {
+            Service.getInstance().sendThongBao(admin, "Phiên giao dịch đã hết hạn!");
+            return;
+        }
+
+        if (select == 0) {
+            // Chế độ A: Xác nhận nạp tiền
+            AdminBalanceService.CreditResult res = AdminBalanceService.gI().creditBalance(
+                    admin.name, pc.recipient, pc.amount, pc.transCode, pc.note, "DEPOSIT");
+            if (res.success) {
+                Service.getInstance().sendThongBao(admin, res.message);
+            } else {
+                Service.getInstance().sendThongBao(admin, "|7|[THẤT BẠI] " + res.message);
+            }
+        } else if (select == 1) {
+            // Chế độ B: Điều chỉnh số dư
+            AdminBalanceService.CreditResult res = AdminBalanceService.gI().creditBalance(
+                    admin.name, pc.recipient, pc.amount, pc.transCode, pc.note, "ADJUST");
+            if (res.success) {
+                Service.getInstance().sendThongBao(admin, res.message);
+            } else {
+                Service.getInstance().sendThongBao(admin, "|7|[THẤT BẠI] " + res.message);
+            }
+        } else if (select == 2) {
+            // Mở Web Admin
+            String token = AdminWebAuth.gI().createOneTimeLoginToken(admin);
+            Service.getInstance().sendThongBaoOK(admin, "Mở trình duyệt truy cập Web Admin tại:\nhttp://localhost:" + AdminWebServer.gI().getPort() + "/auth-token?t=" + token);
+        } else {
+            Service.getInstance().sendThongBao(admin, "Đã hủy thao tác cộng số dư.");
+        }
     }
 
     /**
@@ -500,6 +680,7 @@ public class AdminBuffItemService {
 
         NpcService.gI().createMenuConMeo(admin, ConstNpc.BUFF_ITEM_OPTIONS, 17997,
                 sb.toString(),
+                "Mở Web\n(Checkbox)",
                 "Chỉ số\nphổ biến",
                 "Tìm & Thêm\nOption",
                 "Nhập chuỗi\nOption",
@@ -1550,5 +1731,156 @@ public class AdminBuffItemService {
         String nfdNormalizedString = Normalizer.normalize(str, Normalizer.Form.NFD);
         Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
         return pattern.matcher(nfdNormalizedString).replaceAll("").replaceAll("đ", "d").replaceAll("Đ", "D");
+    }
+
+    /**
+     * Buff vật phẩm trực tiếp từ Web Admin API hoặc command
+     */
+    public JSONObject buffItemDirect(String adminName, String recipientQuery, int itemTemplateId, int quantity,
+                                    Map<Integer, Integer> customOptions, boolean keepDefaultOptions) {
+        JSONObject res = new JSONObject();
+        if (quantity <= 0 || quantity > 2_000_000_000) {
+            res.put("success", false);
+            res.put("message", "Số lượng không hợp lệ (nhập từ 1 đến 2,000,000,000)!");
+            return res;
+        }
+
+        ItemTemplate template = getItemTemplate(itemTemplateId);
+        if (template == null || template.name == null || template.name.contains("[Vô hiệu hóa]")) {
+            res.put("success", false);
+            res.put("message", "Vật phẩm ID " + itemTemplateId + " không tồn tại hoặc đã bị vô hiệu hóa!");
+            return res;
+        }
+
+        AdminBalanceService.AccountInfo acc = AdminBalanceService.gI().lookupAccount(recipientQuery);
+        if (acc == null) {
+            res.put("success", false);
+            res.put("message", "Không tìm thấy người nhận: " + recipientQuery);
+            return res;
+        }
+
+        // Tạo danh sách options gộp
+        Map<Integer, Integer> merged = new LinkedHashMap<>();
+        if (keepDefaultOptions) {
+            Item sample = ItemService.gI().createNewItem(template.id);
+            RewardService.gI().initBaseOptionClothes(template.id, template.type, sample.itemOptions);
+            for (ItemOption io : sample.itemOptions) {
+                if (io != null && io.optionTemplate != null) {
+                    merged.put(io.optionTemplate.id, io.param);
+                }
+            }
+        }
+        if (customOptions != null) {
+            merged.putAll(customOptions);
+        }
+
+        List<ItemOption> finalOptions = new ArrayList<>();
+        for (Map.Entry<Integer, Integer> entry : merged.entrySet()) {
+            ItemOptionTemplate iot = getItemOptionTemplate(entry.getKey());
+            if (iot != null) {
+                finalOptions.add(new ItemOption(entry.getKey(), entry.getValue()));
+            }
+        }
+        if (finalOptions.isEmpty()) {
+            finalOptions.add(new ItemOption(73, 0));
+        }
+
+        // 1. Kiểm tra ONLINE trước
+        Player onlinePl = null;
+        if (acc.playerId != null) {
+            onlinePl = Client.gI().getPlayer(acc.playerId);
+        }
+        if (onlinePl == null && acc.playerName != null) {
+            onlinePl = Client.gI().getPlayer(acc.playerName);
+        }
+
+        if (onlinePl != null) {
+            Item item = ItemService.gI().createNewItem(template.id, quantity);
+            item.itemOptions = finalOptions;
+            item.quantity = quantity;
+
+            boolean added = InventoryService.gI().addItemBag(onlinePl, item, 0);
+            if (added) {
+                InventoryService.gI().sendItemBags(onlinePl);
+                Service.getInstance().sendThongBao(onlinePl, "Bạn nhận được " + quantity + "x " + item.template.name + " từ Admin.");
+                logAuditDirect(adminName, onlinePl.name, onlinePl.id, "ONLINE", item.template.id, item.template.name, quantity, item.itemOptions);
+                res.put("success", true);
+                res.put("message", "Đã buff thành công " + quantity + "x " + item.template.name + " cho " + onlinePl.name + " (ONLINE)!");
+                return res;
+            } else {
+                res.put("success", false);
+                res.put("message", "Hành trang của người chơi " + onlinePl.name + " đã đầy!");
+                return res;
+            }
+        } else {
+            // 2. OFFLINE: Lưu vào admin_item_grant
+            JSONArray jsonArray = new JSONArray();
+            for (ItemOption io : finalOptions) {
+                if (io != null && io.optionTemplate != null) {
+                    JSONObject obj = new JSONObject();
+                    obj.put("id", io.optionTemplate.id);
+                    obj.put("param", io.param);
+                    jsonArray.add(obj);
+                }
+            }
+            String optionsJson = jsonArray.toJSONString();
+
+            long targetPId = acc.playerId != null ? acc.playerId : 0;
+            if (targetPId == 0) {
+                res.put("success", false);
+                res.put("message", "Tài khoản chưa tạo nhân vật, không thể lưu vật phẩm!");
+                return res;
+            }
+
+            long grantId = -1;
+            String insertSql = "INSERT INTO admin_item_grant (target_player_id, admin_player_id, item_template_id, quantity, options_json, status, created_at) VALUES (?, ?, ?, ?, ?, 'PENDING', NOW())";
+            try (Connection con = DBService.gI().getConnectionForSaveData();
+                 PreparedStatement ps = con.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setLong(1, targetPId);
+                ps.setLong(2, 0); // Web Admin
+                ps.setInt(3, template.id);
+                ps.setInt(4, quantity);
+                ps.setString(5, optionsJson);
+                ps.executeUpdate();
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) grantId = rs.getLong(1);
+                }
+                logAuditQueued(grantId, adminName, acc.playerName, targetPId, template.id, template.name, quantity, optionsJson);
+                res.put("success", true);
+                res.put("message", "Đã lưu yêu cầu buff " + quantity + "x " + template.name + " cho " + acc.playerName + " (OFFLINE - Sẽ nhận khi đăng nhập)!");
+                return res;
+            } catch (Exception e) {
+                Log.error(AdminBuffItemService.class, e, "Lỗi tạo pending grant từ Web Admin: " + acc.playerName);
+                res.put("success", false);
+                res.put("message", "Lỗi lưu CSDL: " + e.getMessage());
+                return res;
+            }
+        }
+    }
+
+    private void logAuditDirect(String adminName, String targetName, long targetId, String status,
+                                int itemId, String itemName, int quantity, List<ItemOption> options) {
+        StringBuilder optSb = new StringBuilder("[");
+        for (int i = 0; i < options.size(); i++) {
+            ItemOption io = options.get(i);
+            optSb.append(io.optionTemplate != null ? io.optionTemplate.id : -1).append(":").append(io.param);
+            if (i < options.size() - 1) optSb.append(",");
+        }
+        optSb.append("]");
+
+        String timeStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+        String logMsg = String.format("[ADMIN_GIVE_ITEM] Admin=%s Target=%s(%d) Status=%s Item=%d(%s) Quantity=%d Options=%s Timestamp=%s",
+                adminName, targetName, targetId, status, itemId, itemName, quantity, optSb.toString(), timeStr);
+        Log.success(logMsg);
+        System.out.println(logMsg);
+    }
+
+    private void logAuditQueued(long grantId, String adminName, String targetName, long targetId,
+                                int itemId, String itemName, int quantity, String optionsJson) {
+        String timeStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+        String logMsg = String.format("[ADMIN_ITEM_QUEUED] GrantID=%d Admin=%s Target=%s(%d) Item=%d(%s) Quantity=%d Options=%s Timestamp=%s",
+                grantId, adminName, targetName, targetId, itemId, itemName, quantity, optionsJson, timeStr);
+        Log.success(logMsg);
+        System.out.println(logMsg);
     }
 }

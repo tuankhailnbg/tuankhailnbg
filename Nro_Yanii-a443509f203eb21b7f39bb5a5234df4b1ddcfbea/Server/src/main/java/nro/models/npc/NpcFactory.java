@@ -6302,13 +6302,16 @@ public class NpcFactory {
                                 AdminBuffItemService.gI().openMenuBuffItem(player);
                                 break;
                             case 1:
+                                AdminBuffItemService.gI().openMenuCreditBalance(player);
+                                break;
+                            case 2:
                                 for (int i = 14; i <= 20; i++) {
                                     Item item = ItemService.gI().createNewItem((short) i);
                                     InventoryService.gI().addItemBag(player, item, 0);
                                 }
                                 InventoryService.gI().sendItemBags(player);
                                 break;
-                            case 2:
+                            case 3:
                                 if (player.pet == null) {
                                     PetService.gI().createNormalPet(player);
                                 } else {
@@ -6320,11 +6323,11 @@ public class NpcFactory {
                                     PetService.gI().changeSuperPet(player, player.gender, 1);
                                 }
                                 break;
-                            case 3:
+                            case 4:
                                 NpcService.gI().createMenuConMeo(player, ConstNpc.BAO_TRI, 17997,
                                         "Vui lòng chọn ?", "Bảo Trì 5s", "Bảo Trì 30s", "Kích All");
                                 break;
-                            case 4:
+                            case 5:
                                 Input.gI().createFormFindPlayer(player);
                                 break;
                         }
@@ -6421,15 +6424,18 @@ public class NpcFactory {
                     case ConstNpc.BUFF_ITEM_OPTIONS:
                         switch (select) {
                             case 0:
-                                AdminBuffItemService.gI().showPopularOptions(player);
+                                AdminBuffItemService.gI().sendWebAdminLink(player);
                                 break;
                             case 1:
-                                Input.gI().createFormBuffOption(player);
+                                AdminBuffItemService.gI().showPopularOptions(player);
                                 break;
                             case 2:
+                                Input.gI().createFormBuffOption(player);
+                                break;
+                            case 3:
                                 Input.gI().createFormBuffOptionString(player);
                                 break;
-                            case 3: {
+                            case 4: {
                                 AdminBuffItemService.BuffSession session = AdminBuffItemService.gI().getSession(player);
                                 if (session != null) {
                                     session.keepDefaultOptions = !session.keepDefaultOptions;
@@ -6437,13 +6443,13 @@ public class NpcFactory {
                                 }
                                 break;
                             }
-                            case 4:
+                            case 5:
                                 AdminBuffItemService.gI().showDeleteOptionMenu(player);
                                 break;
-                            case 5:
+                            case 6:
                                 AdminBuffItemService.gI().showPreview(player);
                                 break;
-                            case 6:
+                            case 7:
                                 AdminBuffItemService.gI().removeSession(player);
                                 break;
                         }
@@ -6459,6 +6465,9 @@ public class NpcFactory {
                         break;
                     case ConstNpc.BUFF_ITEM_DELETE_OPTION:
                         AdminBuffItemService.gI().handleDeleteOptionMenu(player, select);
+                        break;
+                    case ConstNpc.ADMIN_CONFIRM_CREDIT:
+                        AdminBuffItemService.gI().handleConfirmCreditMenu(player, select);
                         break;
                 }
             }

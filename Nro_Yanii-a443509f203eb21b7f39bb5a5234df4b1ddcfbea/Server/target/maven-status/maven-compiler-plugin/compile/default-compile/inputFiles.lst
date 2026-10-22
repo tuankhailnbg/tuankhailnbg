@@ -375,6 +375,8 @@ D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\j
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\EffSkinService.java
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\FlagBagService.java
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\FriendAndEnemyService.java
+D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\func\AdminBalanceService.java
+D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\func\AdminBuffItemService.java
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\func\ChangeMapService.java
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\func\CombineNew.java
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\func\CombineServiceNew.java
@@ -393,6 +395,9 @@ D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\j
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\func\Trade.java
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\func\TransactionService.java
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\func\UseItem.java
+D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\func\webadmin\AdminWebAuth.java
+D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\func\webadmin\AdminWebPage.java
+D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\func\webadmin\AdminWebServer.java
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\GiftService.java
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\IntrinsicService.java
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\services\InventoryService.java
@@ -417,3 +422,4 @@ D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\j
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\utils\SkillUtil.java
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\utils\TimeUtil.java
 D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\nro\utils\Util.java
+D:\NRO DATA\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server\src\main\java\scratch\TestVisualBuffAndBalanceSuites.java

@@ -1243,7 +1243,9 @@ public class ConstItem {
     public static final int PHIEU_CAI_TRANG_HAI_TAC_2008 = 2008;
     public static final int MANH_KICH_HOAT = 2009;
     public static final int BUA_BAO_VE_VE = 2010;
-    public static final int THOI_VANG_2011 = 2011;
+    @Deprecated
+    public static final int THOI_VANG_2011 = 2011; // Da vo hieu hoa
+    public static final int HOP_SET_KICH_HOAT_THAN_LINH = 2083;
     public static final int HOP_QUA_HALLOWEEN = 2012;
     public static final int KEO_HALLOWEEN = 2013;
     public static final int BANH_QUY_HALLOWEEN = 2014;
@@ -1271,6 +1273,14 @@ public class ConstItem {
     public static final int HOP_QUA_TET_2023 = 2039;
 
     public static final int[] LIST_ITEM_NLSK_TET_2023 = { 2027, 2028, 2029, 2030, 2030, 2037, 2038 };
+
+    // Trang bị Thần Linh theo hành tinh: Áo, Quần, Găng, Giày, Nhẫn Thần Linh (561 dùng chung)
+    public static final int[][] THAN_LINH_CLOTHES = {
+            { 555, 556, 562, 563, 561 }, // Trái Đất (gender 0)
+            { 557, 558, 564, 565, 561 }, // Namếc (gender 1)
+            { 559, 560, 566, 567, 561 }  // Xayda (gender 2)
+    };
+
     public static final int[][][] LIST_ITEM_CLOTHES = {
             // áo , quần , găng ,giày,rada
             // td -> nm -> xd

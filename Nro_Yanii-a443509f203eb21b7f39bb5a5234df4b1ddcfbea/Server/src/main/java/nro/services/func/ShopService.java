@@ -980,7 +980,7 @@ public class ShopService {
                 msg.writer().writeShort(index);
                 msg.writer()
                         .writeUTF("Bạn có muốn bán\n x"
-                                + (item.template.id == 457 || item.template.id == 2011 ? 1 : item.quantity) + " "
+                                + (item.template.id == 457 ? 1 : item.quantity) + " "
                                 + item.template.name
                                 + "\nvới giá là " + Util.numberToMoney(goldReceive) + " vàng?");
                 pl.sendMessage(msg);
@@ -1017,7 +1017,7 @@ public class ShopService {
                     InventoryService.gI().sendItemBody(pl);
                     Service.getInstance().Send_Caitrang(pl);
                 } else {
-                    if (item.template.id == 457 || item.template.id == 2011) {
+                    if (item.template.id == 457) {
                         InventoryService.gI().subQuantityItemsBag(pl, item, 1);
                     } else {
                         InventoryService.gI().subQuantityItemsBag(pl, item, item.quantity);

@@ -140,6 +140,9 @@ public class Session {
         return this.sender.getNumMessage();
     }
 
+    public Session() {
+    }
+
     public Session(Socket socket, Controller controller, String ip) {
         try {
             socket.setTcpNoDelay(true);

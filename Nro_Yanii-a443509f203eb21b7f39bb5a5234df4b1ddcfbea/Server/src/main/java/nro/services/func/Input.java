@@ -53,6 +53,8 @@ public class Input {
     public static final int BUFF_INPUT_OPTION = 523;
     public static final int BUFF_INPUT_OPTION_STRING = 524;
     public static final int BUFF_INPUT_PARAM = 525;
+    public static final int BUFF_STEP_1 = 528;
+    public static final int ADMIN_CREDIT_FORM = 529;
     public static final byte NUMERIC = 0;
     public static final byte ANY = 1;
     public static final byte PASSWORD = 2;
@@ -110,6 +112,31 @@ public class Input {
                 case BUFF_INPUT_PARAM:
                     if (player.isAdmin()) {
                         AdminBuffItemService.gI().handleParamInput(player, text[0]);
+                    }
+                    break;
+                case BUFF_STEP_1:
+                    if (player.isAdmin()) {
+                        try {
+                            int itemId = Integer.parseInt(text[0].trim());
+                            int qty = (text.length > 1 && !text[1].trim().isEmpty()) ? Integer.parseInt(text[1].trim()) : 1;
+                            String recipient = text.length > 2 ? text[2].trim() : "";
+                            AdminBuffItemService.gI().handleStep1Input(player, itemId, qty, recipient);
+                        } catch (NumberFormatException e) {
+                            Service.getInstance().sendThongBao(player, "ID vật phẩm hoặc số lượng phải là số!");
+                        }
+                    }
+                    break;
+                case ADMIN_CREDIT_FORM:
+                    if (player.isAdmin()) {
+                        try {
+                            String recipient = text[0].trim();
+                            int amount = Integer.parseInt(text[1].trim());
+                            String transCode = (text.length > 2 && !text[2].trim().isEmpty()) ? text[2].trim() : AdminBalanceService.gI().generateDefaultTransCode();
+                            String note = text.length > 3 ? text[3].trim() : "";
+                            AdminBuffItemService.gI().handleAdminCreditFormInput(player, recipient, amount, transCode, note);
+                        } catch (NumberFormatException e) {
+                            Service.getInstance().sendThongBao(player, "Số tiền nạp phải là số hợp lệ!");
+                        }
                     }
                     break;
 
@@ -447,6 +474,21 @@ public class Input {
         createForm(pl, BUFF_INPUT_PARAM, "NHẬP PARAM", new SubInput("Param cho " + optName + " (" + optId + ")", NUMERIC));
     }
 
+    public void createFormBuffStep1(Player pl) {
+        createForm(pl, BUFF_STEP_1, "BUFF VẬT PHẨM",
+                new SubInput("ID vật phẩm", NUMERIC),
+                new SubInput("Số lượng (Mặc định 1)", NUMERIC),
+                new SubInput("Người nhận (Tên hoặc ID)", ANY));
+    }
+
+    public void createFormAdminCredit(Player pl) {
+        createForm(pl, ADMIN_CREDIT_FORM, "CỘNG SỐ DƯ NẠP TIỀN",
+                new SubInput("Tên hoặc ID người nhận", ANY),
+                new SubInput("Số tiền nạp (VNĐ)", NUMERIC),
+                new SubInput("Mã giao dịch (trống = tự tạo)", ANY),
+                new SubInput("Ghi chú / Lý do", ANY));
+    }
+
     public void createFormChangePassword(Player pl) {
         createForm(pl, CHANGE_PASSWORD, "Đổi mật khẩu", new SubInput("Mật khẩu cũ", PASSWORD),
                 new SubInput("Mật khẩu mới", PASSWORD),
@@ -511,7 +553,7 @@ public class Input {
     }
 
     public void createFormBanThoiVang(Player pl) {
-        createForm(pl, BAN_THOI_VANG, "Bạn muốn bán bao nhiêu [Thỏi vàng] ?", new SubInput("Số lượng", NUMERIC));
+        createForm(pl, BAN_THOI_VANG, "Bạn muốn bán bao nhiêu [Thỏi Vàng] ?", new SubInput("Số lượng", NUMERIC));
     }
 
     public void createFormAddItem(Player pl) {

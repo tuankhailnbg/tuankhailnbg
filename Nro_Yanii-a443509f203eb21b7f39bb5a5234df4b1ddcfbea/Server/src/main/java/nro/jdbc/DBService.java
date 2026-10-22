@@ -15,9 +15,9 @@ public class DBService {
     public static String URL = "jdbc:#0://#1:#2/#3";
     public static String DB_HOST = "localhost";
     public static int DB_PORT = 3306;
-    public static String DB_NAME = "";
-    public static String DB_USER = "root";
-    public static String DB_PASSWORD = "123456";
+    public static String DB_NAME = "ngocrong";
+    public static String DB_USER = "nro_app";
+    public static String DB_PASSWORD = "tkdeptrai";
     public static int MAX_CONN = 2;
     private static final Connection[] connections = new Connection[10];
 

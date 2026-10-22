@@ -97,6 +97,7 @@ public class ServerManager {
             activeGame();
             activeLogin();
             autoTask();
+            nro.services.func.webadmin.AdminWebServer.gI().start();
 
           //  new Thread(AutoMaintenance.gI(), "Thread Bảo Trì Định Kỳ").start();
 
@@ -288,6 +289,11 @@ public class ServerManager {
         }
         try {
             KiGuiManager.getInstance().close();
+        } catch (Exception e) {
+            Log.error(ServerManager.class, e);
+        }
+        try {
+            nro.services.func.webadmin.AdminWebServer.gI().stop();
         } catch (Exception e) {
             Log.error(ServerManager.class, e);
         }

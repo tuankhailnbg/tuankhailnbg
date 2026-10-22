@@ -1361,11 +1361,18 @@ public class PlayerDAO {
             ps.setInt(1, num);
             ps.setInt(2, player.getSession().userId);
             ps.executeUpdate();
+            player.soDuVND -= num;
+            if (player.getSession() != null) {
+                player.getSession().vnd = player.soDuVND;
+                player.getSession().vndBar = player.soDuVND;
+            }
         } catch (Exception e) {
             Log.error(PlayerDAO.class, e, "Lỗi update vnd " + player.name);
         } finally {
             try {
-                ps.close();
+                if (ps != null) {
+                    ps.close();
+                }
             } catch (SQLException ex) {
                 java.util.logging.Logger.getLogger(PlayerDAO.class.getName()).log(Level.SEVERE, null, ex);
             }

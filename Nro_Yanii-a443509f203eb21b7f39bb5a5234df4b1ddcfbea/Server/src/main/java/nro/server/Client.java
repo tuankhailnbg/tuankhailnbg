@@ -107,10 +107,12 @@ public class Client implements Runnable {
         }
     }
 
-    private void remove(Player player) {
+    public void remove(Player player) {
         this.players_id.remove(player.id);
         this.players_name.remove(player.name);
-        this.players_userId.remove(player.getSession().userId);
+        if (player.getSession() != null) {
+            this.players_userId.remove(player.getSession().userId);
+        }
         this.players.remove(player);
         dispose(player);
     }
@@ -121,7 +123,9 @@ public class Client implements Runnable {
                 NamekBallWar.gI().dropBall(player);
             }
             player.beforeDispose = true;
-            player.mapIdBeforeLogout = player.zone.map.mapId;
+            if (player.zone != null && player.zone.map != null) {
+                player.mapIdBeforeLogout = player.zone.map.mapId;
+            }
             MapService.gI().exitMap(player);
             TransactionService.gI().cancelTrade(player);
             PVPServcice.gI().finishPVP(player, PVP.TYPE_LEAVE_MAP);

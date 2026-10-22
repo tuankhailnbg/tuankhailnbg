@@ -16,6 +16,7 @@ import nro.models.item.ItemOption;
 import nro.models.map.ItemMap;
 import nro.models.mob.Mob;
 import nro.models.player.Player;
+import nro.models.player.Pet;
 import nro.server.Manager;
 import nro.server.ServerLog;
 import nro.server.ServerManager;
@@ -29,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -37,6 +39,8 @@ import java.util.logging.Logger;
  * 
  */
 public class RewardService {
+
+    public static final int SKH_DROP_RATE = 8;
 
     // id option set kich hoat (tên set, hiệu ứng set, tỉ lệ, type tỉ lệ)
     public static final int[][][] ACTIVATION_SET = {
@@ -109,6 +113,42 @@ public class RewardService {
     public List<ItemMap> getRewardItems(Player player, Mob mob, int x, int yEnd) {
         int mapid = player.zone.map.mapId;
         List<ItemMap> list = new ArrayList<>();
+
+        // Rơi Set Kích Hoạt (SKH) chính xác 8% độc lập cho quái thường
+        if (player != null && mob != null && mob.tempId != ConstMob.MOC_NHAN
+                && mob.tempId != ConstMob.HIRUDEGARN
+                && mob.tempId != ConstMob.VUA_BACH_TUOC
+                && mob.tempId != ConstMob.ROBOT_BAO_VE) {
+            Player killer = player.isPet ? ((Pet) player).master : player;
+            if (killer != null && !killer.isBoss) {
+                if (ThreadLocalRandom.current().nextInt(100) < SKH_DROP_RATE) {
+                    int gender = killer.gender;
+                    if (gender < 0 || gender > 2) {
+                        gender = 0;
+                    }
+                    // Random 1 trong 5 món đồ (Áo, Quần, Găng, Giày, Rada) với tỷ lệ 20% mỗi món
+                    int slot = Util.nextInt(0, 4);
+                    int tempId = ConstItem.LIST_ITEM_CLOTHES[gender][slot][0];
+
+                    ItemMap itemMap = new ItemMap(mob.zone, tempId, 1, x, yEnd, killer.id);
+                    initBaseOptionClothes(itemMap.itemTemplate.id, itemMap.itemTemplate.type, itemMap.options);
+
+                    // Random 1 trong 3 set kích hoạt của hành tinh với tỷ lệ 1/3 mỗi set
+                    int setIdx = Util.nextInt(0, 2);
+                    int[] idOption = ACTIVATION_SET[gender][setIdx];
+
+                    itemMap.options.add(new ItemOption(idOption[0], 1)); // tên set
+                    itemMap.options.add(new ItemOption(idOption[1], 100)); // hiệu ứng set
+                    itemMap.options.add(new ItemOption(30, 0)); // không thể giao dịch
+                    itemMap.options.add(new ItemOption(73, 0)); // option 73
+
+                    list.add(itemMap);
+                    ServerNotify.gI().notify(killer.name + " vừa nhặt được " + itemMap.itemTemplate.name
+                            + " Set Kích Hoạt");
+                }
+            }
+        }
+
         MobReward mobReward = getMobReward(mob);
         if (mobReward != null) {
             int itemSize = mobReward.itemRewards.size();
@@ -133,26 +173,7 @@ public class RewardService {
                     if (ir.forAllGender || ItemService.gI().getTemplate(ir.tempId).gender == player.gender
                             || ItemService.gI().getTemplate(ir.tempId).gender > 2) {
 
-                        // up SKH
-                        if (Util.isTrue(1, 1000000)) {
-                            ItemMap itemMap = null;
-                            if (Util.isTrue(90, 100)) {
-                                itemMap = new ItemMap(mob.zone,
-                                        ConstItem.LIST_ITEM_CLOTHES[player.gender][Util.nextInt(0, 3)][0],
-                                        1, x, yEnd, player.id);
-                            } else {
-                                itemMap = new ItemMap(mob.zone,
-                                        ConstItem.LIST_ITEM_CLOTHES[player.gender][4][0],
-                                        1, x, yEnd, player.id);
-                            }
-
-                            initBaseOptionClothes(itemMap.itemTemplate.id, itemMap.itemTemplate.type,
-                                    itemMap.options);
-                            initActivationOption(player.gender, 4, itemMap.options);
-                            list.add(itemMap);
-                            ServerNotify.gI().notify(player.name + " vừa nhặt được " + itemMap.itemTemplate.name
-                                    + " Set Kích Hoạt");
-                        } else if (Util.isTrue(ir.ratio, ir.typeRatio)) {
+                        if (Util.isTrue(ir.ratio, ir.typeRatio)) {
                             ItemMap itemMap = new ItemMap(mob.zone, ir.tempId, 1, x, yEnd, player.id);
                             // init option
                             switch (itemMap.itemTemplate.type) {
@@ -1129,28 +1150,8 @@ public class RewardService {
 
     // set kích hoạt
     public void initActivationOption(int gender, int type, List<ItemOption> list) {
-        if (type <= 4) {
-            int[] idOption;
-            if (gender == 0) {
-                if (Util.isTrue(80, 100)) {
-                    idOption = ACTIVATION_SET[gender][Util.nextInt(1, 2)];
-                } else {
-                    idOption = ACTIVATION_SET[gender][0];
-                }
-            } else if (gender == 1) {
-                if (Util.isTrue(80, 100)) {
-                    idOption = ACTIVATION_SET[gender][1];
-                } else {
-                    idOption = ACTIVATION_SET[gender][Util.nextInt(0, 2)];
-                }
-            } else {
-                if (Util.isTrue(90, 100)) {
-                    idOption = ACTIVATION_SET[gender][Util.nextInt(1, 2)];
-                } else {
-                    idOption = ACTIVATION_SET[gender][1];
-                }
-            }
-
+        if (type <= 4 && gender >= 0 && gender < ACTIVATION_SET.length) {
+            int[] idOption = ACTIVATION_SET[gender][Util.nextInt(0, 2)];
             list.add(new ItemOption(idOption[0], 1)); // tên set
             list.add(new ItemOption(idOption[1], 100)); // hiệu ứng set
             list.add(new ItemOption(30, 0)); // không thể giao dịch

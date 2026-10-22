@@ -311,6 +311,12 @@ public class UseItem {
                 }
             } else {
                 switch (item.template.id) {
+                    case ConstItem.HOP_SET_KICH_HOAT_THAN_LINH: // 2083
+                        openHopSKHThanLinh(pl, item);
+                        break;
+                    case ConstItem.THOI_VANG_2011: // 2011
+                        Service.getInstance().sendThongBao(pl, "Vật phẩm này đã bị vô hiệu hóa.");
+                        break;
                     case ConstItem.GOI_10_RADA_DO_NGOC:
                         findNamekBall(pl, item);
                         break;
@@ -1667,6 +1673,75 @@ public class UseItem {
             CombineServiceNew.gI().sendEffectOpenItem(pl, item.template.iconID, ct.template.iconID);
         } else {
             Service.getInstance().sendThongBao(pl, "Hàng trang đã đầy");
+        }
+    }
+
+    private void openHopSKHThanLinh(Player pl, Item item) {
+        if (pl == null || pl.inventory == null) {
+            return;
+        }
+        if (pl.gender < 0 || pl.gender > 2) {
+            Service.getInstance().sendThongBao(pl, "Hành tinh người chơi không hợp lệ.");
+            return;
+        }
+        synchronized (pl.inventory) {
+            if (InventoryService.gI().getCountEmptyBag(pl) <= 0) {
+                Service.getInstance().sendThongBao(pl, "Hành trang không đủ chỗ trống.");
+                return;
+            }
+            Item boxInBag = InventoryService.gI().findItemBagByTemp(pl, ConstItem.HOP_SET_KICH_HOAT_THAN_LINH);
+            if (boxInBag == null || boxInBag.quantity <= 0) {
+                Service.getInstance().sendThongBao(pl, "Không tìm thấy hộp trong hành trang.");
+                return;
+            }
+
+            int gender = pl.gender;
+            // Random 1 trong 5 vị trí trang bị Thần Linh (Áo, Quần, Găng, Giày, Nhẫn Thần Linh) - 20% mỗi món
+            int slot = Util.nextInt(0, 4);
+            int tempId = ConstItem.THAN_LINH_CLOTHES[gender][slot];
+
+            // Random 1 trong 3 Set Kích Hoạt của hành tinh - 1/3 mỗi set
+            int setIdx = Util.nextInt(0, 2);
+            int[] setOpt = RewardService.ACTIVATION_SET[gender][setIdx];
+
+            Item reward = ItemService.gI().createNewItem((short) tempId);
+            if (reward == null || reward.template == null) {
+                Service.getInstance().sendThongBao(pl, "Có lỗi xảy ra khi tạo trang bị.");
+                return;
+            }
+
+            // Chỉ số cơ bản của trang bị Thần Linh
+            RewardService.gI().initBaseOptionClothes(reward.template.id, reward.template.type, reward.itemOptions);
+
+            // Option Set Kích Hoạt
+            reward.itemOptions.add(new ItemOption(setOpt[0], 1)); // Tên set (127-135)
+            reward.itemOptions.add(new ItemOption(setOpt[1], 100)); // Hiệu ứng kích hoạt (136-144)
+            reward.itemOptions.add(new ItemOption(30, 0)); // Không thể giao dịch
+            reward.itemOptions.add(new ItemOption(73, 0)); // Không thể bán
+
+            // Trừ đúng 1 hộp
+            InventoryService.gI().subQuantityItemsBag(pl, boxInBag, 1);
+
+            // Thêm đúng 1 item thưởng
+            InventoryService.gI().addItemBag(pl, reward, 99);
+
+            // Cập nhật hành trang
+            InventoryService.gI().sendItemBags(pl);
+
+            // Hiển thị thông báo nhận thưởng
+            String setName = "";
+            try {
+                nro.models.item.ItemOptionTemplate optTemp = ItemService.gI().getItemOptionTemplate(setOpt[0]);
+                if (optTemp != null && optTemp.name != null) {
+                    setName = optTemp.name;
+                }
+            } catch (Exception ignored) {
+            }
+            if (setName.isEmpty()) {
+                setName = "Set Kích Hoạt";
+            }
+            Service.getInstance().sendThongBao(pl, "Bạn nhận được " + reward.template.name + " (" + setName + ")");
+            CombineServiceNew.gI().sendEffectOpenItem(pl, boxInBag.template.iconID, reward.template.iconID);
         }
     }
 
