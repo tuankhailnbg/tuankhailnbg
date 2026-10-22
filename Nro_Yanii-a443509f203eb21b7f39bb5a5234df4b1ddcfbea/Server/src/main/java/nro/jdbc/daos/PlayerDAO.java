@@ -345,11 +345,29 @@ public class PlayerDAO {
 
     }
 
+    public static boolean tryAcquireSaving(Player player) {
+        if (player == null) return false;
+        synchronized (player) {
+            if (player.isDisposed() || player.isSaving()) {
+                return false;
+            }
+            player.setSaving(true);
+            return true;
+        }
+    }
+
+    public static void releaseSaving(Player player) {
+        if (player != null) {
+            synchronized (player) {
+                player.setSaving(false);
+            }
+        }
+    }
+
     public static void updatePlayer(Player player, Connection connection) {
-        if (player.isDisposed() || player.isSaving()) {
+        if (!tryAcquireSaving(player)) {
             return;
         }
-        player.setSaving(true);
         try {
             int n1s = 0;
             int n2s = 0;
@@ -1000,7 +1018,190 @@ public class PlayerDAO {
                 }
             }
         } finally {
-            player.setSaving(false);
+            releaseSaving(player);
+        }
+    }
+
+    /**
+     * Persist các state mà Admin Item Grant có thể thay đổi trong cùng Connection/Transaction với grant.
+     * KHÔNG commit/rollback connection (caller chịu trách nhiệm).
+     * KHÔNG nuốt ngoại lệ: ném SQLException khi có bất kỳ lỗi nào hoặc số dòng bị ảnh hưởng != 1.
+     */
+    public static void updateAdminGrantStateOrThrow(Player player, Connection con) throws SQLException {
+        if (player == null || con == null) {
+            throw new SQLException("Player hoặc Connection null khi lưu trạng thái Admin Grant");
+        }
+
+        int n1s = 0;
+        int n2s = 0;
+        int n3s = 0;
+        int tv = 0;
+
+        try {
+            // 1. data_inventory: [gold, gem, ruby, goldLimit]
+            JSONArray dataInventory = new JSONArray();
+            dataInventory.add(player.inventory.gold);
+            dataInventory.add(player.inventory.gem);
+            dataInventory.add(player.inventory.ruby);
+            dataInventory.add(player.inventory.goldLimit);
+            String inventoryJson = dataInventory.toJSONString();
+
+            // 2. data_point: [nangDong, mp, mpg, critg, limitPower, stamina, hp, defg, tiemNang, maxStamina, dameg, power, hpg]
+            JSONArray dataPoint = new JSONArray();
+            dataPoint.add(0);
+            dataPoint.add(player.nPoint != null ? player.nPoint.mp : 0);
+            dataPoint.add(player.nPoint != null ? player.nPoint.mpg : 0);
+            dataPoint.add(player.nPoint != null ? player.nPoint.critg : 0);
+            dataPoint.add(player.nPoint != null ? player.nPoint.limitPower : 0);
+            dataPoint.add(player.nPoint != null ? player.nPoint.stamina : 0);
+            dataPoint.add(player.nPoint != null ? player.nPoint.hp : 0);
+            dataPoint.add(player.nPoint != null ? player.nPoint.defg : 0);
+            dataPoint.add(player.nPoint != null ? player.nPoint.tiemNang : 0);
+            dataPoint.add(player.nPoint != null ? player.nPoint.maxStamina : 0);
+            dataPoint.add(player.nPoint != null ? player.nPoint.dameg : 0);
+            dataPoint.add(player.nPoint != null ? player.nPoint.power : 0);
+            dataPoint.add(player.nPoint != null ? player.nPoint.hpg : 0);
+            String pointJson = dataPoint.toJSONString();
+
+            // 3. items_bag
+            JSONArray dataBag = new JSONArray();
+            if (player.inventory.itemsBag != null) {
+                for (Item item : player.inventory.itemsBag) {
+                    JSONObject dataItem = new JSONObject();
+                    if (item != null && item.isNotNullItem()) {
+                        switch (item.template.id) {
+                            case 14:
+                                n1s += item.quantity;
+                                break;
+                            case 15:
+                                n2s += item.quantity;
+                                break;
+                            case 16:
+                                n3s += item.quantity;
+                                break;
+                            case 457:
+                                tv += item.quantity;
+                                break;
+                        }
+                        dataItem.put("temp_id", item.template.id);
+                        dataItem.put("quantity", item.quantity);
+                        dataItem.put("create_time", item.createTime);
+
+                        JSONArray options = new JSONArray();
+                        if (item.itemOptions != null) {
+                            for (ItemOption io : item.itemOptions) {
+                                if (io != null && io.optionTemplate != null) {
+                                    JSONArray option = new JSONArray();
+                                    option.add(io.optionTemplate.id);
+                                    option.add(io.param);
+                                    options.add(option);
+                                }
+                            }
+                        }
+                        dataItem.put("option", options);
+                    } else {
+                        JSONArray options = new JSONArray();
+                        dataItem.put("temp_id", -1);
+                        dataItem.put("quantity", 0);
+                        dataItem.put("create_time", 0);
+                        dataItem.put("option", options);
+                    }
+                    dataBag.add(dataItem);
+                }
+            }
+            String itemsBagJson = dataBag.toJSONString();
+
+            // 4. items_box
+            JSONArray dataBox = new JSONArray();
+            if (player.inventory.itemsBox != null) {
+                for (Item item : player.inventory.itemsBox) {
+                    JSONObject dataItem = new JSONObject();
+                    if (item != null && item.isNotNullItem()) {
+                        switch (item.template.id) {
+                            case 14:
+                                n1s += item.quantity;
+                                break;
+                            case 15:
+                                n2s += item.quantity;
+                                break;
+                            case 16:
+                                n3s += item.quantity;
+                                break;
+                            case 457:
+                                tv += item.quantity;
+                                break;
+                        }
+                        dataItem.put("temp_id", item.template.id);
+                        dataItem.put("quantity", item.quantity);
+                        dataItem.put("create_time", item.createTime);
+
+                        JSONArray options = new JSONArray();
+                        if (item.itemOptions != null) {
+                            for (ItemOption io : item.itemOptions) {
+                                if (io != null && io.optionTemplate != null) {
+                                    JSONArray option = new JSONArray();
+                                    option.add(io.optionTemplate.id);
+                                    option.add(io.param);
+                                    options.add(option);
+                                }
+                            }
+                        }
+                        dataItem.put("option", options);
+                    } else {
+                        JSONArray options = new JSONArray();
+                        dataItem.put("temp_id", -1);
+                        dataItem.put("quantity", 0);
+                        dataItem.put("create_time", 0);
+                        dataItem.put("option", options);
+                    }
+                    dataBox.add(dataItem);
+                }
+            }
+            String itemsBoxJson = dataBox.toJSONString();
+
+            // 5. data_mabu_egg
+            JSONObject dataMaBu = new JSONObject();
+            if (player.mabuEgg != null) {
+                dataMaBu.put("create_time", player.mabuEgg.lastTimeCreate);
+                dataMaBu.put("time_done", player.mabuEgg.timeDone);
+            }
+            String mabuEggJson = dataMaBu.toJSONString();
+
+            String sql = "UPDATE player SET "
+                    + "data_inventory = ?, "
+                    + "items_bag = ?, "
+                    + "items_box = ?, "
+                    + "data_point = ?, "
+                    + "have_tennis_space_ship = ?, "
+                    + "data_mabu_egg = ?, "
+                    + "thoi_vang = ?, "
+                    + "`1sao` = ?, "
+                    + "`2sao` = ?, "
+                    + "`3sao` = ? "
+                    + "WHERE id = ?";
+
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, inventoryJson);
+                ps.setString(2, itemsBagJson);
+                ps.setString(3, itemsBoxJson);
+                ps.setString(4, pointJson);
+                ps.setBoolean(5, player.haveTennisSpaceShip);
+                ps.setString(6, mabuEggJson);
+                ps.setInt(7, tv);
+                ps.setInt(8, n1s);
+                ps.setInt(9, n2s);
+                ps.setInt(10, n3s);
+                ps.setLong(11, player.id);
+
+                int affected = ps.executeUpdate();
+                if (affected != 1) {
+                    throw new SQLException("Update player admin grant state affected " + affected + " rows for player " + player.id);
+                }
+            }
+        } catch (SQLException sqle) {
+            throw sqle;
+        } catch (Exception e) {
+            throw new SQLException("Lỗi serialize/lưu trạng thái Admin Grant cho player " + player.id, e);
         }
     }
 

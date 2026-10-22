@@ -15,6 +15,7 @@ import nro.services.InventoryService;
 import nro.services.ItemMapService;
 import nro.services.ItemService;
 import nro.services.NpcService;
+import nro.services.PlayerService;
 import nro.services.RewardService;
 import nro.services.Service;
 import nro.utils.Log;
@@ -26,6 +27,7 @@ import org.json.simple.parser.JSONParser;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.Normalizer;
 import java.text.SimpleDateFormat;
@@ -1140,6 +1142,19 @@ public class AdminBuffItemService {
             player.mabuEgg = this.mabuEgg;
         }
 
+        public void resyncClient(Player player) {
+            if (player == null || player.getSession() == null) {
+                return;
+            }
+            try {
+                InventoryService.gI().sendItemBags(player);
+                Service.getInstance().sendMoney(player);
+                PlayerService.gI().sendInfoHpMp(player);
+            } catch (Exception e) {
+                // Bỏ qua lỗi gửi packet trong unit test / mock session
+            }
+        }
+
         private static Item copyItemSafe(Item it) {
             if (it == null) {
                 return null;
@@ -1156,7 +1171,7 @@ public class AdminBuffItemService {
 
     /**
      * Nhận các vật phẩm Admin đang ở trạng thái PENDING khi player đăng nhập hoặc gọi chat "nhanqua".
-     * Mỗi grant được xử lý trong một DB transaction độc lập kết hợp lưu dữ liệu Player (PlayerDAO.updatePlayer)
+     * Mỗi grant được xử lý trong một DB transaction độc lập kết hợp lưu dữ liệu Player (PlayerDAO.updateAdminGrantStateOrThrow)
      * và cập nhật trạng thái DELIVERED trên cùng Connection.
      * Có cơ chế RAM Snapshot & Rollback nếu DB transaction bị lỗi.
      */
@@ -1195,6 +1210,8 @@ public class AdminBuffItemService {
             int deliveredCount = 0;
 
             for (long grantId : pendingIds) {
+                boolean acquiredSavingLock = false;
+                PlayerStateSnapshot snapshot = null;
                 try (Connection con = DBService.gI().getConnectionForSaveData()) {
                     con.setAutoCommit(false);
 
@@ -1223,7 +1240,14 @@ public class AdminBuffItemService {
                         continue;
                     }
 
-                    // 3. Validate ItemTemplate & Quantity
+                    // 3. Chống concurrent normal save: cố gắng acquire saving lock của Player
+                    if (!PlayerDAO.tryAcquireSaving(player)) {
+                        con.rollback();
+                        break;
+                    }
+                    acquiredSavingLock = true;
+
+                    // 4. Validate ItemTemplate & Quantity
                     ItemTemplate template = getItemTemplate(itemTemplateId);
                     if (template == null || quantity <= 0 || quantity > 2_000_000_000) {
                         try (PreparedStatement psFail = con.prepareStatement(
@@ -1235,7 +1259,10 @@ public class AdminBuffItemService {
                         continue;
                     }
 
-                    // 4. Update status PENDING -> PROCESSING atomically
+                    // 5. Tạo snapshot trạng thái Player trước khi thay đổi RAM
+                    snapshot = new PlayerStateSnapshot(player);
+
+                    // 6. Update status PENDING -> PROCESSING atomically
                     try (PreparedStatement psProc = con.prepareStatement(
                             "UPDATE admin_item_grant SET status = 'PROCESSING' WHERE id = ? AND status = 'PENDING'")) {
                         psProc.setLong(1, grantId);
@@ -1245,26 +1272,24 @@ public class AdminBuffItemService {
                         }
                     }
 
-                    // 5. Tạo snapshot trạng thái Player trước khi thay đổi
-                    PlayerStateSnapshot snapshot = new PlayerStateSnapshot(player);
-
-                    // 6. Tạo Item và khôi phục options
+                    // 7. Tạo Item và khôi phục options
                     Item item = ItemService.gI().createNewItem((short) itemTemplateId, quantity);
                     item.itemOptions = parseOptionsJson(optionsJson);
                     item.quantity = quantity;
 
-                    // 7. Gọi InventoryService.gI().addItemBag(player, item, 0)
+                    // 8. Gọi InventoryService.gI().addItemBag(player, item, 0)
                     boolean added = false;
                     try {
                         added = InventoryService.gI().addItemBag(player, item, 0);
-                    } catch (Exception t) {
-                        Log.error(AdminBuffItemService.class, t, "Lỗi addItemBag cho grant " + grantId);
+                    } catch (Throwable t) {
+                        Log.error(AdminBuffItemService.class.getName() + ": Lỗi addItemBag cho grant " + grantId + ": " + t.getMessage());
                         added = false;
                     }
 
                     if (!added) {
                         // Khôi phục RAM nếu có mutation dở dang
                         snapshot.restore(player);
+                        snapshot.resyncClient(player);
 
                         // Trả trạng thái về PENDING
                         try (PreparedStatement psRevert = con.prepareStatement(
@@ -1280,14 +1305,17 @@ public class AdminBuffItemService {
                         break;
                     }
 
-                    // 8. Đã thêm vào RAM thành công -> persist Player và update DELIVERED trong CÙNG transaction!
+                    // 9. Đã thêm vào RAM thành công -> persist Player bằng updateAdminGrantStateOrThrow và update DELIVERED trong CÙNG transaction!
                     try {
-                        PlayerDAO.updatePlayer(player, con);
+                        PlayerDAO.updateAdminGrantStateOrThrow(player, con);
 
                         try (PreparedStatement psDelivered = con.prepareStatement(
                                 "UPDATE admin_item_grant SET status = 'DELIVERED', delivered_at = NOW() WHERE id = ?")) {
                             psDelivered.setLong(1, grantId);
-                            psDelivered.executeUpdate();
+                            int delAffected = psDelivered.executeUpdate();
+                            if (delAffected != 1) {
+                                throw new SQLException("Update DELIVERED affected " + delAffected + " rows for grant " + grantId);
+                            }
                         }
 
                         // COMMIT CẢ DỮ LIỆU PLAYER VÀ TRẠNG THÁI GRANT CÙNG NHAU
@@ -1295,21 +1323,24 @@ public class AdminBuffItemService {
 
                         logAuditDelivered(grantId, player.name, player.id, item.template.id, item.template.name, quantity);
                         deliveredCount++;
-                    } catch (Exception t) {
+                    } catch (Throwable t) {
                         // Lỗi ghi DB: rollback cả player data và trạng thái grant
                         con.rollback();
 
                         // QUAN TRỌNG: Khôi phục RAM về snapshot để không bị dirty memory!
                         snapshot.restore(player);
-                        InventoryService.gI().sendItemBags(player);
-                        Service.getInstance().sendMoney(player);
+                        snapshot.resyncClient(player);
 
-                        Log.error(AdminBuffItemService.class, t, "Lỗi commit grant " + grantId + ", đã khôi phục RAM và DB!");
+                        Log.error(AdminBuffItemService.class.getName() + ": Lỗi commit grant " + grantId + ", đã khôi phục RAM và DB: " + t.getMessage());
                         break;
                     }
                 } catch (Throwable e) {
                     Log.error(AdminBuffItemService.class.getName() + ": Lỗi transaction cho grant " + grantId + ": " + e.getMessage());
                     break;
+                } finally {
+                    if (acquiredSavingLock) {
+                        PlayerDAO.releaseSaving(player);
+                    }
                 }
             }
 

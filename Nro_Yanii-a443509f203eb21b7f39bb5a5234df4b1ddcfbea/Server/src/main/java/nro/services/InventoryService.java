@@ -238,45 +238,90 @@ public class InventoryService {
 
         // item tăng số lượng
         if (isItemIncremental(item)) {
-            for (Item it : items) {
-                if (it.isNotNullItem() && it.template.id == item.template.id && areItemOptionsEqual(it.itemOptions, item.itemOptions)) {
-                    long effectiveMax = 2_000_000_000L;
-                    if (maxQuantity > 0
-                            && item.template.id != 457
-                            && item.template.type != 14
-                            && item.template.id != 590
-                            && item.template.id != 462
-                            && item.template.id != 472
-                            && item.template.id != 903
-                            && item.template.id != 900
-                            && item.template.id != 2144
-                            && item.template.id != 2138
-                            && item.template.id != 1071
-                            && item.template.id != 1072
-                            && item.template.id != 1073
-                            && item.template.id != 934
-                            && item.template.id != 2130
-                            && item.template.id != 2013
-                            && item.template.id != 2014
-                            && item.template.id != 2015) {
-                        effectiveMax = maxQuantity;
-                    }
+            boolean isExempt = isExemptFromMaxQuantity(item);
 
-                    long totalQty = (long) it.quantity + (long) item.quantity;
-                    if (totalQty <= effectiveMax) {
-                        it.quantity = (int) totalQty;
-                        if (maxQuantity > 0) {
-                            item.quantity = 0;
+            if (maxQuantity > 0 && !isExempt) {
+                // Mode A: maxQuantity > 0 (ví dụ 999, 99)
+                // PREFLIGHT:
+                long matchingFreeCapacity = 0;
+                int emptySlotCount = 0;
+
+                for (Item it : items) {
+                    if (it != null && it.isNotNullItem()) {
+                        if (it.template.id == item.template.id && areItemOptionsEqual(it.itemOptions, item.itemOptions)) {
+                            if (it.quantity < maxQuantity) {
+                                matchingFreeCapacity += (maxQuantity - it.quantity);
+                            }
                         }
+                    } else {
+                        emptySlotCount++;
+                    }
+                }
+
+                long totalCapacity = matchingFreeCapacity + ((long) emptySlotCount * maxQuantity);
+                if ((long) item.quantity > totalCapacity) {
+                    // Không đủ sức chứa cho toàn bộ incoming quantity -> giữ nguyên toàn bộ inventory
+                    return false;
+                }
+
+                // APPLY ALLOCATION PLAN (All-or-Nothing):
+                long remaining = item.quantity;
+
+                // Bước 1: lấp đầy các stack đã có cùng template và options
+                for (Item it : items) {
+                    if (remaining <= 0) break;
+                    if (it != null && it.isNotNullItem() && it.template.id == item.template.id && areItemOptionsEqual(it.itemOptions, item.itemOptions)) {
+                        if (it.quantity < maxQuantity) {
+                            long canTake = Math.min(remaining, maxQuantity - it.quantity);
+                            it.quantity += (int) canTake;
+                            remaining -= canTake;
+                        }
+                    }
+                }
+
+                // Bước 2: nếu còn dư, phân bổ vào các ô trống mới, mỗi ô tối đa maxQuantity
+                for (int i = 0; i < items.size() && remaining > 0; i++) {
+                    if (items.get(i) == null || !items.get(i).isNotNullItem()) {
+                        long take = Math.min(remaining, maxQuantity);
+                        Item newItem = ItemService.gI().copyItem(item);
+                        newItem.quantity = (int) take;
+                        items.set(i, newItem);
+                        remaining -= take;
+                    }
+                }
+
+                item.quantity = 0;
+                return true;
+            } else {
+                // Mode B: maxQuantity == 0 hoặc vật phẩm được miễn giới hạn (effectiveMax = 2_000_000_000)
+                // 1. Tìm stack cùng item + cùng options có thể chứa trọn vẹn incoming quantity
+                for (Item it : items) {
+                    if (it != null && it.isNotNullItem() && it.template.id == item.template.id && areItemOptionsEqual(it.itemOptions, item.itemOptions)) {
+                        long totalQty = (long) it.quantity + (long) item.quantity;
+                        if (totalQty <= 2_000_000_000L) {
+                            it.quantity = (int) totalQty;
+                            item.quantity = 0;
+                            return true;
+                        }
+                        // Nếu vượt 2 tỷ: KHÔNG chỉnh sửa stack hiện tại, tiếp tục tìm stack khác hoặc ô trống mới!
+                    }
+                }
+
+                // 2. Không có stack nào chứa vừa: tìm ô trống mới để đặt toàn bộ incoming quantity
+                for (int i = 0; i < items.size(); i++) {
+                    if (items.get(i) == null || !items.get(i).isNotNullItem()) {
+                        items.set(i, ItemService.gI().copyItem(item));
+                        item.quantity = 0;
                         return true;
                     }
-                    // Nếu vượt quá effectiveMax (ví dụ 1.9B + 200M > 2B):
-                    // KHÔNG chỉnh sửa stack hiện tại, tiếp tục tìm stack khác còn đủ chỗ hoặc ô trống mới!
                 }
+
+                // Không còn ô trống: trả về false, inventory giữ nguyên
+                return false;
             }
         }
 
-        // add item vào ô mới
+        // add item vào ô mới cho item không tăng số lượng (equipment, ...)
         for (int i = 0; i < items.size(); i++) {
             if (!items.get(i).isNotNullItem()) {
                 items.set(i, ItemService.gI().copyItem(item));
@@ -285,6 +330,31 @@ public class InventoryService {
             }
         }
         return false;
+    }
+
+    public static boolean isExemptFromMaxQuantity(Item item) {
+        if (item == null || item.template == null) {
+            return false;
+        }
+        int id = item.template.id;
+        int type = item.template.type;
+        return (id == 457
+                || type == 14
+                || id == 590
+                || id == 462
+                || id == 472
+                || id == 903
+                || id == 900
+                || id == 2144
+                || id == 2138
+                || id == 1071
+                || id == 1072
+                || id == 1073
+                || id == 934
+                || id == 2130
+                || id == 2013
+                || id == 2014
+                || id == 2015);
     }
 
     public boolean isItemIncremental(int tempId) {
