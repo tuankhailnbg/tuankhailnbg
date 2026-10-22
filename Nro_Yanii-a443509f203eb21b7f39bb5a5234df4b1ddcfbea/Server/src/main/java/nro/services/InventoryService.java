@@ -12,11 +12,15 @@ import nro.models.player.PetFollow;
 import nro.models.player.Player;
 import nro.server.io.Message;
 import nro.utils.Util;
+import nro.models.item.ItemTemplate;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -49,6 +53,20 @@ public class InventoryService {
 
     public boolean existItemBag(Player player, int tempId) {
         return existItemInList(player.inventory.itemsBag, tempId);
+    }
+
+    public boolean existItemBagWithSameOptions(Player player, Item item) {
+        if (player == null || player.inventory == null || player.inventory.itemsBag == null || item == null || item.template == null) {
+            return false;
+        }
+        for (Item it : player.inventory.itemsBag) {
+            if (it != null && it.isNotNullItem() && it.template.id == item.template.id) {
+                if (areItemOptionsEqual(it.itemOptions, item.itemOptions)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private boolean existItemInList(List<Item> list, int tempId) {
@@ -217,7 +235,7 @@ public class InventoryService {
         // item tăng số lượng
         if (isItemIncremental(item)) {
             for (Item it : items) {
-                if (it.isNotNullItem() && it.template.id == item.template.id) {
+                if (it.isNotNullItem() && it.template.id == item.template.id && areItemOptionsEqual(it.itemOptions, item.itemOptions)) {
                     if (item.template.id != 457
                             && item.template.type != 14
                             && item.template.id != 590
@@ -266,11 +284,19 @@ public class InventoryService {
         return false;
     }
 
-    private boolean isItemIncremental(Item item) { // item cộng dồn số lượng
-        if (item.template.id == 454 || item.template.id == 921) {
+    public boolean isItemIncremental(int tempId) {
+        ItemTemplate template = ItemService.gI().getTemplate(tempId);
+        return isItemIncremental(template);
+    }
+
+    public boolean isItemIncremental(ItemTemplate template) {
+        if (template == null) {
             return false;
         }
-        switch (item.template.type) {
+        if (template.id == 454 || template.id == 921) {
+            return false;
+        }
+        switch (template.type) {
             case 99: // vật phẩm hỗ trợ
             case 8: // vật phẩm nhiệm vụ
             case 12: // ngọc rồng
@@ -279,7 +305,7 @@ public class InventoryService {
             case 29: // item time, đồ ăn
             case 25: // rađa dò ngọc namếc
             case 27: // đồ tạp
-                if (isminipet(item.template.id)) {
+                if (isminipet(template.id)) {
                     return false;
                 }
             case 33: // mảnh rada
@@ -289,6 +315,56 @@ public class InventoryService {
             default:
                 return false;
         }
+    }
+
+    public boolean isItemIncremental(Item item) { // item cộng dồn số lượng
+        if (item == null || item.template == null) {
+            return false;
+        }
+        return isItemIncremental(item.template);
+    }
+
+    public boolean areItemOptionsEqual(List<ItemOption> list1, List<ItemOption> list2) {
+        List<ItemOption> clean1 = cleanOptions(list1);
+        List<ItemOption> clean2 = cleanOptions(list2);
+
+        if (clean1.size() != clean2.size()) {
+            return false;
+        }
+
+        Map<String, Integer> counts1 = new HashMap<>();
+        for (ItemOption io : clean1) {
+            int optId = (io != null && io.optionTemplate != null) ? io.optionTemplate.id : -1;
+            int param = (io != null) ? io.param : 0;
+            String key = optId + ":" + param;
+            counts1.put(key, counts1.getOrDefault(key, 0) + 1);
+        }
+
+        Map<String, Integer> counts2 = new HashMap<>();
+        for (ItemOption io : clean2) {
+            int optId = (io != null && io.optionTemplate != null) ? io.optionTemplate.id : -1;
+            int param = (io != null) ? io.param : 0;
+            String key = optId + ":" + param;
+            counts2.put(key, counts2.getOrDefault(key, 0) + 1);
+        }
+
+        return counts1.equals(counts2);
+    }
+
+    public List<ItemOption> cleanOptions(List<ItemOption> list) {
+        List<ItemOption> result = new ArrayList<>();
+        if (list != null) {
+            for (ItemOption io : list) {
+                if (io != null) {
+                    int optId = (io.optionTemplate != null) ? io.optionTemplate.id : -1;
+                    if (optId == 73 && io.param == 0) {
+                        continue;
+                    }
+                    result.add(io);
+                }
+            }
+        }
+        return result;
     }
 
     private byte isItemIncrementalOption(Item item) { // trả về id option template

@@ -947,10 +947,10 @@ public class AdminBuffItemService {
         item.itemOptions = buildFinalOptions(session);
         item.quantity = session.quantity;
 
-        // Kiểm tra túi đồ người chơi
+        // Kiểm tra túi đồ người chơi: chỉ cho phép khi còn ô trống hoặc có item cộng dồn cùng options
         if (InventoryService.gI().getCountEmptyBag(target) <= 0) {
             boolean canStack = false;
-            if (InventoryService.gI().existItemBag(target, item.template.id) && isItemIncremental(item)) {
+            if (InventoryService.gI().isItemIncremental(item) && InventoryService.gI().existItemBagWithSameOptions(target, item)) {
                 canStack = true;
             }
             if (!canStack) {
@@ -978,6 +978,16 @@ public class AdminBuffItemService {
      * Buff cho người chơi OFFLINE (Mục 7, 18, 19, 20)
      */
     private void buffOfflinePlayer(Player admin, BuffSession session) {
+        // Race condition check 1: Kiểm tra xem player có vừa online hay không trước khi mở kết nối DB
+        Player onlineTarget = Client.gI().getPlayer(session.targetPlayerId);
+        if (onlineTarget == null && session.targetPlayerName != null) {
+            onlineTarget = Client.gI().getPlayer(session.targetPlayerName);
+        }
+        if (onlineTarget != null) {
+            buffOnlinePlayer(admin, session, onlineTarget);
+            return;
+        }
+
         List<ItemOption> finalOptions = buildFinalOptions(session);
 
         try (Connection con = DBService.gI().getConnectionForSaveData()) {
@@ -991,21 +1001,36 @@ public class AdminBuffItemService {
                         return;
                     }
 
+                    // Race condition check 2: Kiểm tra lại khi đang giữ row lock FOR UPDATE
+                    onlineTarget = Client.gI().getPlayer(session.targetPlayerId);
+                    if (onlineTarget == null && session.targetPlayerName != null) {
+                        onlineTarget = Client.gI().getPlayer(session.targetPlayerName);
+                    }
+                    if (onlineTarget != null) {
+                        con.rollback();
+                        buffOnlinePlayer(admin, session, onlineTarget);
+                        return;
+                    }
+
                     String itemsBagStr = rs.getString("items_bag");
                     JSONParser parser = new JSONParser();
                     JSONArray dataBag = (JSONArray) parser.parse(itemsBagStr);
 
                     boolean stacked = false;
-                    // Kiểm tra xem item có cộng dồn được không
-                    if (isIncrementalTemplate(session.selectedTemplate)) {
+                    // Kiểm tra xem item có cộng dồn được không (sử dụng logic thống nhất từ InventoryService)
+                    if (InventoryService.gI().isItemIncremental(session.selectedTemplate)) {
                         for (int i = 0; i < dataBag.size(); i++) {
                             JSONObject obj = (JSONObject) dataBag.get(i);
                             int tempId = Integer.parseInt(String.valueOf(obj.get("temp_id")));
                             if (tempId == session.selectedTemplate.id) {
-                                int currentQty = Integer.parseInt(String.valueOf(obj.get("quantity")));
-                                obj.put("quantity", currentQty + session.quantity);
-                                stacked = true;
-                                break;
+                                JSONArray jsonOpts = (JSONArray) obj.get("option");
+                                List<ItemOption> existOpts = parseJsonOptions(jsonOpts);
+                                if (InventoryService.gI().areItemOptionsEqual(existOpts, finalOptions)) {
+                                    int currentQty = Integer.parseInt(String.valueOf(obj.get("quantity")));
+                                    obj.put("quantity", currentQty + session.quantity);
+                                    stacked = true;
+                                    break;
+                                }
                             }
                         }
                     }
@@ -1036,11 +1061,22 @@ public class AdminBuffItemService {
                         JSONArray optionsArr = new JSONArray();
                         for (ItemOption io : finalOptions) {
                             JSONArray optPair = new JSONArray();
-                            optPair.add(io.optionTemplate.id);
+                            optPair.add(io.optionTemplate != null ? io.optionTemplate.id : -1);
                             optPair.add(io.param);
                             optionsArr.add(optPair);
                         }
                         slotObj.put("option", optionsArr);
+                    }
+
+                    // Race condition check 3: Kiểm tra lần cuối ngay trước khi UPDATE items_bag
+                    onlineTarget = Client.gI().getPlayer(session.targetPlayerId);
+                    if (onlineTarget == null && session.targetPlayerName != null) {
+                        onlineTarget = Client.gI().getPlayer(session.targetPlayerName);
+                    }
+                    if (onlineTarget != null) {
+                        con.rollback();
+                        buffOnlinePlayer(admin, session, onlineTarget);
+                        return;
                     }
 
                     // Cập nhật lại vào DB
@@ -1130,32 +1166,21 @@ public class AdminBuffItemService {
     }
 
     /**
-     * Helper kiểm tra item có cộng dồn số lượng hay không
+     * Helper parse JSON options array thành List<ItemOption> để so sánh options chuẩn xác
      */
-    private boolean isItemIncremental(Item item) {
-        if (item == null || item.template == null) return false;
-        return isIncrementalTemplate(item.template);
-    }
-
-    private boolean isIncrementalTemplate(ItemTemplate template) {
-        if (template == null) return false;
-        if (template.id == 454 || template.id == 921) {
-            return false;
+    public List<ItemOption> parseJsonOptions(JSONArray options) {
+        List<ItemOption> list = new ArrayList<>();
+        if (options != null) {
+            for (int j = 0; j < options.size(); j++) {
+                JSONArray opt = (JSONArray) options.get(j);
+                if (opt != null && opt.size() >= 2) {
+                    int optId = Integer.parseInt(String.valueOf(opt.get(0)));
+                    int param = Integer.parseInt(String.valueOf(opt.get(1)));
+                    list.add(new ItemOption(optId, param));
+                }
+            }
         }
-        switch (template.type) {
-            case 99: // vật phẩm hỗ trợ
-            case 8: // vật phẩm nhiệm vụ
-            case 12: // ngọc rồng
-            case 30: // sao pha lê
-            case 6: // đậu thần
-            case 29: // item time, đồ ăn
-            case 25: // rađa dò ngọc namếc
-            case 27: // đồ tạp
-            case 33: // mảnh rada
-                return true;
-            default:
-                return false;
-        }
+        return list;
     }
 
     /**
