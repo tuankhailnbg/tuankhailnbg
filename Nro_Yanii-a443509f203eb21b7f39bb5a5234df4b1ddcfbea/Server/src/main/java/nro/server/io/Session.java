@@ -362,6 +362,9 @@ public class Session {
             // send current task
             TaskService.gI().sendInfoCurrentTask(player);
 
+            // Giao các vật phẩm Admin đang chờ nhận (pending grants)
+            nro.services.func.AdminBuffItemService.gI().deliverPendingGrants(player);
+
             // nhận quà đăng nhập hàng ngày
 //            if (Manager.EVENT_SEVER == 3) {
 //                RewardService.gI().rewardFirstTimeLoginPerDay(player);

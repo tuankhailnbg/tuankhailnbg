@@ -263,7 +263,12 @@ public class InventoryService {
                             return false;
                         }
                     } else {
-                        it.quantity += item.quantity;
+                        long totalQty = (long) it.quantity + (long) item.quantity;
+                        if (totalQty > 2_000_000_000L) {
+                            it.quantity = 2_000_000_000;
+                        } else {
+                            it.quantity = (int) totalQty;
+                        }
                         if (maxQuantity > 0) {
                             item.quantity = 0;
                         }

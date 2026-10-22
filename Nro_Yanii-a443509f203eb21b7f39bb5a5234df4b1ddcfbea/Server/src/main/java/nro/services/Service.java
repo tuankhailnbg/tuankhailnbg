@@ -823,6 +823,9 @@ public class Service {
             } else if (text.equals("buff") || text.equals("buffitem") || text.equals("adminbuff")) {
                 AdminBuffItemService.gI().openMenuBuffItem(player);
                 return;
+            } else if (text.equals("nhanqua") || text.equals("nhanitem") || text.equals("nhanvatpham")) {
+                AdminBuffItemService.gI().deliverPendingGrants(player);
+                return;
             } else if (text.equals("quanct1")) {
                 AdminBuffItemService.gI().openMenuBuffItem(player);
                 return;

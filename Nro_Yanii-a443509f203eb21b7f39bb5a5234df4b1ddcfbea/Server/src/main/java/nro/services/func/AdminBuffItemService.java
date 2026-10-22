@@ -23,6 +23,7 @@ import org.json.simple.parser.JSONParser;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.text.Normalizer;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -44,7 +45,32 @@ public class AdminBuffItemService {
     // Lưu phiên làm việc của từng Admin theo Admin Player ID
     private final Map<Long, BuffSession> sessions = new ConcurrentHashMap<>();
 
+    // Set để chống xử lý đồng thời deliverPendingGrants cho cùng một Player ID
+    private final Set<Long> deliveringPlayers = ConcurrentHashMap.newKeySet();
+
     private AdminBuffItemService() {
+        initTable();
+    }
+
+    private void initTable() {
+        try (Connection con = DBService.gI().getConnectionForGame();
+             Statement stmt = con.createStatement()) {
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS `admin_item_grant` ("
+                    + "`id` BIGINT AUTO_INCREMENT PRIMARY KEY, "
+                    + "`target_player_id` BIGINT NOT NULL, "
+                    + "`admin_player_id` BIGINT DEFAULT NULL, "
+                    + "`item_template_id` INT NOT NULL, "
+                    + "`quantity` INT NOT NULL, "
+                    + "`options_json` TEXT, "
+                    + "`status` VARCHAR(20) NOT NULL DEFAULT 'PENDING', "
+                    + "`created_at` DATETIME NOT NULL, "
+                    + "`delivered_at` DATETIME DEFAULT NULL, "
+                    + "KEY `idx_target_player_status` (`target_player_id`, `status`), "
+                    + "KEY `idx_status` (`status`)"
+                    + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+        } catch (Throwable e) {
+            // Log.error(AdminBuffItemService.class, e, "Lỗi kiểm tra/tạo bảng admin_item_grant");
+        }
     }
 
     public static AdminBuffItemService gI() {
@@ -419,16 +445,16 @@ public class AdminBuffItemService {
         BuffSession session = getSession(admin);
         if (session == null) return;
         try {
-            int qty = Integer.parseInt(qtyStr);
-            if (qty <= 0) {
-                Service.getInstance().sendThongBao(admin, "Số lượng không hợp lệ (phải >= 1).");
+            long qty = Long.parseLong(qtyStr.trim());
+            if (qty <= 0 || qty > 2_000_000_000L) {
+                Service.getInstance().sendThongBao(admin, "Số lượng không hợp lệ. Vui lòng nhập từ 1 đến 2,000,000,000.");
                 Input.gI().createFormBuffQuantity(admin, session.selectedTemplate.id, session.selectedTemplate.name);
                 return;
             }
-            session.quantity = qty;
+            session.quantity = (int) qty;
             showMenuOptions(admin);
         } catch (Exception e) {
-            Service.getInstance().sendThongBao(admin, "Số lượng phải là số nguyên dương.");
+            Service.getInstance().sendThongBao(admin, "Số lượng vượt quá giới hạn cho phép hoặc không đúng định dạng.");
             Input.gI().createFormBuffQuantity(admin, session.selectedTemplate.id, session.selectedTemplate.name);
         }
     }
@@ -940,24 +966,17 @@ public class AdminBuffItemService {
     }
 
     /**
-     * Buff cho người chơi ONLINE (Mục 6, 17, 19)
+     * Buff cho người chơi ONLINE
      */
     private void buffOnlinePlayer(Player admin, BuffSession session, Player target) {
+        if (session.quantity <= 0 || session.quantity > 2_000_000_000) {
+            Service.getInstance().sendThongBao(admin, "Số lượng vượt quá giới hạn cho phép.");
+            return;
+        }
+
         Item item = ItemService.gI().createNewItem(session.selectedTemplate.id, session.quantity);
         item.itemOptions = buildFinalOptions(session);
         item.quantity = session.quantity;
-
-        // Kiểm tra túi đồ người chơi: chỉ cho phép khi còn ô trống hoặc có item cộng dồn cùng options
-        if (InventoryService.gI().getCountEmptyBag(target) <= 0) {
-            boolean canStack = false;
-            if (InventoryService.gI().isItemIncremental(item) && InventoryService.gI().existItemBagWithSameOptions(target, item)) {
-                canStack = true;
-            }
-            if (!canStack) {
-                Service.getInstance().sendThongBao(admin, "Túi đồ người chơi đã đầy.");
-                return;
-            }
-        }
 
         boolean success = InventoryService.gI().addItemBag(target, item, 0);
         if (success) {
@@ -970,15 +989,16 @@ public class AdminBuffItemService {
             logAudit(admin, target.name, target.id, "ONLINE", item.template.id, item.template.name, session.quantity, item.itemOptions);
             removeSession(admin);
         } else {
-            Service.getInstance().sendThongBao(admin, "Túi đồ người chơi đã đầy.");
+            Service.getInstance().sendThongBao(admin, "Túi đồ người chơi đã đầy (hoặc đạt giới hạn).");
         }
     }
 
     /**
-     * Buff cho người chơi OFFLINE (Mục 7, 18, 19, 20)
+     * Buff cho người chơi OFFLINE: Lưu vào hàng đợi PENDING (admin_item_grant)
+     * Tuyệt đối không can thiệp trực tiếp items_bag trong DB khi player offline để chống race condition.
      */
     private void buffOfflinePlayer(Player admin, BuffSession session) {
-        // Race condition check 1: Kiểm tra xem player có vừa online hay không trước khi mở kết nối DB
+        // Kiểm tra xem player có vừa online hay không trước khi lưu grant
         Player onlineTarget = Client.gI().getPlayer(session.targetPlayerId);
         if (onlineTarget == null && session.targetPlayerName != null) {
             onlineTarget = Client.gI().getPlayer(session.targetPlayerName);
@@ -988,119 +1008,171 @@ public class AdminBuffItemService {
             return;
         }
 
+        if (session.quantity <= 0 || session.quantity > 2_000_000_000) {
+            Service.getInstance().sendThongBao(admin, "Số lượng vượt quá giới hạn cho phép.");
+            return;
+        }
+
         List<ItemOption> finalOptions = buildFinalOptions(session);
 
-        try (Connection con = DBService.gI().getConnectionForSaveData()) {
-            con.setAutoCommit(false);
-            try (PreparedStatement psSelect = con.prepareStatement("SELECT items_bag FROM player WHERE id = ? FOR UPDATE")) {
-                psSelect.setLong(1, session.targetPlayerId);
-                try (ResultSet rs = psSelect.executeQuery()) {
-                    if (!rs.next()) {
-                        con.rollback();
-                        Service.getInstance().sendThongBao(admin, "Không tìm thấy dữ liệu người chơi trong database.");
-                        return;
-                    }
+        JSONArray jsonArray = new JSONArray();
+        for (ItemOption io : finalOptions) {
+            if (io != null && io.optionTemplate != null) {
+                JSONObject obj = new JSONObject();
+                obj.put("id", io.optionTemplate.id);
+                obj.put("param", io.param);
+                jsonArray.add(obj);
+            }
+        }
+        String optionsJson = jsonArray.toJSONString();
 
-                    // Race condition check 2: Kiểm tra lại khi đang giữ row lock FOR UPDATE
-                    onlineTarget = Client.gI().getPlayer(session.targetPlayerId);
-                    if (onlineTarget == null && session.targetPlayerName != null) {
-                        onlineTarget = Client.gI().getPlayer(session.targetPlayerName);
-                    }
-                    if (onlineTarget != null) {
-                        con.rollback();
-                        buffOnlinePlayer(admin, session, onlineTarget);
-                        return;
-                    }
+        long grantId = -1;
+        String insertSql = "INSERT INTO admin_item_grant (target_player_id, admin_player_id, item_template_id, quantity, options_json, status, created_at) "
+                + "VALUES (?, ?, ?, ?, ?, 'PENDING', NOW())";
 
-                    String itemsBagStr = rs.getString("items_bag");
-                    JSONParser parser = new JSONParser();
-                    JSONArray dataBag = (JSONArray) parser.parse(itemsBagStr);
+        try (Connection con = DBService.gI().getConnectionForSaveData();
+             PreparedStatement ps = con.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setLong(1, session.targetPlayerId);
+            ps.setLong(2, admin.id);
+            ps.setInt(3, session.selectedTemplate.id);
+            ps.setInt(4, session.quantity);
+            ps.setString(5, optionsJson);
+            ps.executeUpdate();
 
-                    boolean stacked = false;
-                    // Kiểm tra xem item có cộng dồn được không (sử dụng logic thống nhất từ InventoryService)
-                    if (InventoryService.gI().isItemIncremental(session.selectedTemplate)) {
-                        for (int i = 0; i < dataBag.size(); i++) {
-                            JSONObject obj = (JSONObject) dataBag.get(i);
-                            int tempId = Integer.parseInt(String.valueOf(obj.get("temp_id")));
-                            if (tempId == session.selectedTemplate.id) {
-                                JSONArray jsonOpts = (JSONArray) obj.get("option");
-                                List<ItemOption> existOpts = parseJsonOptions(jsonOpts);
-                                if (InventoryService.gI().areItemOptionsEqual(existOpts, finalOptions)) {
-                                    int currentQty = Integer.parseInt(String.valueOf(obj.get("quantity")));
-                                    obj.put("quantity", currentQty + session.quantity);
-                                    stacked = true;
-                                    break;
-                                }
-                            }
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    grantId = rs.getLong(1);
+                }
+            }
+
+            logAuditQueued(grantId, admin, session.targetPlayerName, session.targetPlayerId,
+                    session.selectedTemplate.id, session.selectedTemplate.name, session.quantity, optionsJson);
+
+            Service.getInstance().sendThongBao(admin,
+                    "Đã tạo yêu cầu buff " + session.quantity + "x " + session.selectedTemplate.name
+                            + " cho " + session.targetPlayerName + " (OFFLINE - Đang chờ nhận khi đăng nhập)!");
+            removeSession(admin);
+        } catch (Exception e) {
+            Log.error(AdminBuffItemService.class, e, "Lỗi tạo pending grant cho player " + session.targetPlayerName);
+            Service.getInstance().sendThongBao(admin, "Lỗi khi lưu yêu cầu buff offline: " + e.getMessage());
+        }
+    }
+
+    private static class PendingGrant {
+        long id;
+        int itemTemplateId;
+        int quantity;
+        String optionsJson;
+    }
+
+    /**
+     * Nhận các vật phẩm Admin đang ở trạng thái PENDING khi player đăng nhập hoặc gọi chat "nhanqua".
+     * Chạy toàn bộ qua InventoryService.addItemBag() để đảm bảo mọi logic item đặc biệt (vàng, ngọc, ruby, Mabư egg, v.v.)
+     * đều hoạt động chuẩn xác như khi online.
+     */
+    public void deliverPendingGrants(Player player) {
+        if (player == null || player.inventory == null || player.getSession() == null) {
+            return;
+        }
+
+        // Chống đồng thời xử lý 2 lần trong bộ nhớ
+        if (!deliveringPlayers.add(player.id)) {
+            return;
+        }
+
+        try {
+            List<PendingGrant> grants = new ArrayList<>();
+            // Mở transaction với row lock FOR UPDATE
+            try (Connection con = DBService.gI().getConnectionForSaveData()) {
+                con.setAutoCommit(false);
+                String selectSql = "SELECT id, item_template_id, quantity, options_json FROM admin_item_grant "
+                        + "WHERE target_player_id = ? AND status = 'PENDING' ORDER BY id ASC FOR UPDATE";
+                try (PreparedStatement ps = con.prepareStatement(selectSql)) {
+                    ps.setLong(1, player.id);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            PendingGrant g = new PendingGrant();
+                            g.id = rs.getLong("id");
+                            g.itemTemplateId = rs.getInt("item_template_id");
+                            g.quantity = rs.getInt("quantity");
+                            g.optionsJson = rs.getString("options_json");
+                            grants.add(g);
                         }
                     }
+                }
 
-                    if (!stacked) {
-                        // Tìm 1 slot trống (temp_id == -1)
-                        int emptyIndex = -1;
-                        for (int i = 0; i < dataBag.size(); i++) {
-                            JSONObject obj = (JSONObject) dataBag.get(i);
-                            int tempId = Integer.parseInt(String.valueOf(obj.get("temp_id")));
-                            if (tempId == -1) {
-                                emptyIndex = i;
-                                break;
-                            }
-                        }
-
-                        if (emptyIndex == -1) {
-                            con.rollback();
-                            Service.getInstance().sendThongBao(admin, "Túi đồ người chơi đã đầy.");
-                            return;
-                        }
-
-                        JSONObject slotObj = (JSONObject) dataBag.get(emptyIndex);
-                        slotObj.put("temp_id", (int) session.selectedTemplate.id);
-                        slotObj.put("quantity", session.quantity);
-                        slotObj.put("create_time", System.currentTimeMillis());
-
-                        JSONArray optionsArr = new JSONArray();
-                        for (ItemOption io : finalOptions) {
-                            JSONArray optPair = new JSONArray();
-                            optPair.add(io.optionTemplate != null ? io.optionTemplate.id : -1);
-                            optPair.add(io.param);
-                            optionsArr.add(optPair);
-                        }
-                        slotObj.put("option", optionsArr);
-                    }
-
-                    // Race condition check 3: Kiểm tra lần cuối ngay trước khi UPDATE items_bag
-                    onlineTarget = Client.gI().getPlayer(session.targetPlayerId);
-                    if (onlineTarget == null && session.targetPlayerName != null) {
-                        onlineTarget = Client.gI().getPlayer(session.targetPlayerName);
-                    }
-                    if (onlineTarget != null) {
-                        con.rollback();
-                        buffOnlinePlayer(admin, session, onlineTarget);
-                        return;
-                    }
-
-                    // Cập nhật lại vào DB
-                    try (PreparedStatement psUpdate = con.prepareStatement("UPDATE player SET items_bag = ? WHERE id = ?")) {
-                        psUpdate.setString(1, dataBag.toJSONString());
-                        psUpdate.setLong(2, session.targetPlayerId);
-                        psUpdate.executeUpdate();
-                    }
-
+                if (grants.isEmpty()) {
                     con.commit();
-                    Service.getInstance().sendThongBao(admin,
-                            "Buff thành công " + session.quantity + "x " + session.selectedTemplate.name + " cho " + session.targetPlayerName + " (OFFLINE)!");
+                    return;
+                }
 
-                    logAudit(admin, session.targetPlayerName, session.targetPlayerId, "OFFLINE",
-                            session.selectedTemplate.id, session.selectedTemplate.name, session.quantity, finalOptions);
-                    removeSession(admin);
+                boolean hasBagFull = false;
+                int deliveredCount = 0;
+
+                for (PendingGrant g : grants) {
+                    ItemTemplate template = getItemTemplate(g.itemTemplateId);
+                    if (template == null || g.quantity <= 0 || g.quantity > 2_000_000_000) {
+                        try (PreparedStatement psUpdate = con.prepareStatement("UPDATE admin_item_grant SET status = 'FAILED' WHERE id = ?")) {
+                            psUpdate.setLong(1, g.id);
+                            psUpdate.executeUpdate();
+                        }
+                        continue;
+                    }
+
+                    // Tạm chuyển sang PROCESSING atomically
+                    try (PreparedStatement psProcessing = con.prepareStatement("UPDATE admin_item_grant SET status = 'PROCESSING' WHERE id = ? AND status = 'PENDING'")) {
+                        psProcessing.setLong(1, g.id);
+                        if (psProcessing.executeUpdate() == 0) {
+                            // Đã được xử lý ở transaction khác
+                            continue;
+                        }
+                    }
+
+                    // Tạo Item và khôi phục options
+                    Item item = ItemService.gI().createNewItem((short) g.itemTemplateId, g.quantity);
+                    item.itemOptions = parseOptionsJson(g.optionsJson);
+                    item.quantity = g.quantity;
+
+                    // Thêm vật phẩm vào túi bằng CHÍNH InventoryService.addItemBag
+                    boolean success = InventoryService.gI().addItemBag(player, item, 0);
+
+                    if (success) {
+                        try (PreparedStatement psDelivered = con.prepareStatement("UPDATE admin_item_grant SET status = 'DELIVERED', delivered_at = NOW() WHERE id = ?")) {
+                            psDelivered.setLong(1, g.id);
+                            psDelivered.executeUpdate();
+                        }
+                        logAuditDelivered(g.id, player.name, player.id, item.template.id, item.template.name, g.quantity);
+                        deliveredCount++;
+                    } else {
+                        // Túi đầy hoặc điều kiện không cho phép: hoàn trả về PENDING để nhận sau
+                        try (PreparedStatement psPending = con.prepareStatement("UPDATE admin_item_grant SET status = 'PENDING' WHERE id = ?")) {
+                            psPending.setLong(1, g.id);
+                            psPending.executeUpdate();
+                        }
+                        logAuditBagFull(g.id, player.name, player.id, item.template.id, item.template.name, g.quantity);
+                        hasBagFull = true;
+                        // Dừng xử lý các grant tiếp theo để đảm bảo FIFO và không skip item
+                        break;
+                    }
+                }
+
+                con.commit();
+
+                if (deliveredCount > 0) {
+                    InventoryService.gI().sendItemBags(player);
+                    Service.getInstance().sendThongBao(player,
+                            "Bạn đã nhận thành công " + deliveredCount + " phần quà/vật phẩm từ Admin!");
+                }
+
+                if (hasBagFull) {
+                    Service.getInstance().sendThongBao(player,
+                            "Bạn có vật phẩm Admin đang chờ nhận nhưng hành trang đã đầy. Vui lòng dọn túi rồi chat 'nhanqua' hoặc đăng nhập lại để nhận.");
                 }
             } catch (Exception e) {
-                con.rollback();
-                throw e;
+                Log.error(AdminBuffItemService.class, e, "Lỗi deliverPendingGrants cho player " + player.name);
             }
-        } catch (Exception e) {
-            Log.error(AdminBuffItemService.class, e, "Lỗi buff offline cho player " + session.targetPlayerName);
-            Service.getInstance().sendThongBao(admin, "Lỗi khi cập nhật dữ liệu người chơi offline: " + e.getMessage());
+        } finally {
+            deliveringPlayers.remove(player.id);
         }
     }
 
@@ -1163,6 +1235,78 @@ public class AdminBuffItemService {
 
         Log.success(logMsg);
         System.out.println(logMsg);
+    }
+
+    private void logAuditQueued(long grantId, Player admin, String targetName, long targetId,
+                                int itemId, String itemName, int quantity, String optionsJson) {
+        String timeStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+        String logMsg = String.format("[ADMIN_ITEM_QUEUED] GrantID=%d Admin=%s(%d) Target=%s(%d) Item=%d(%s) Quantity=%d Options=%s Timestamp=%s",
+                grantId, admin.name, admin.id, targetName, targetId, itemId, itemName, quantity, optionsJson, timeStr);
+        Log.success(logMsg);
+        System.out.println(logMsg);
+    }
+
+    private void logAuditDelivered(long grantId, String targetName, long targetId,
+                                   int itemId, String itemName, int quantity) {
+        String timeStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+        String logMsg = String.format("[ADMIN_ITEM_DELIVERED] GrantID=%d Target=%s(%d) Item=%d(%s) Quantity=%d Timestamp=%s",
+                grantId, targetName, targetId, itemId, itemName, quantity, timeStr);
+        Log.success(logMsg);
+        System.out.println(logMsg);
+    }
+
+    private void logAuditBagFull(long grantId, String targetName, long targetId,
+                                 int itemId, String itemName, int quantity) {
+        String timeStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+        String logMsg = String.format("[ADMIN_ITEM_PENDING_BAG_FULL] GrantID=%d Target=%s(%d) Item=%d(%s) Quantity=%d Timestamp=%s",
+                grantId, targetName, targetId, itemId, itemName, quantity, timeStr);
+        Log.warning(logMsg);
+        System.out.println(logMsg);
+    }
+
+    /**
+     * Helper parse JSON options array/object thành List<ItemOption>
+     */
+    public List<ItemOption> parseOptionsJson(String jsonStr) {
+        List<ItemOption> list = new ArrayList<>();
+        if (jsonStr == null || jsonStr.trim().isEmpty()) {
+            list.add(new ItemOption(73, 0));
+            return list;
+        }
+        try {
+            JSONParser parser = new JSONParser();
+            Object parsed = parser.parse(jsonStr);
+            if (parsed instanceof JSONArray) {
+                JSONArray arr = (JSONArray) parsed;
+                for (Object o : arr) {
+                    if (o instanceof JSONObject) {
+                        JSONObject obj = (JSONObject) o;
+                        int id = Integer.parseInt(String.valueOf(obj.get("id")));
+                        int param = Integer.parseInt(String.valueOf(obj.get("param")));
+                        ItemOptionTemplate iot = getItemOptionTemplate(id);
+                        if (iot != null) {
+                            list.add(new ItemOption(id, param));
+                        }
+                    } else if (o instanceof JSONArray) {
+                        JSONArray pair = (JSONArray) o;
+                        if (pair.size() >= 2) {
+                            int id = Integer.parseInt(String.valueOf(pair.get(0)));
+                            int param = Integer.parseInt(String.valueOf(pair.get(1)));
+                            ItemOptionTemplate iot = getItemOptionTemplate(id);
+                            if (iot != null) {
+                                list.add(new ItemOption(id, param));
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.error(AdminBuffItemService.class, e, "Lỗi parse options_json: " + jsonStr);
+        }
+        if (list.isEmpty()) {
+            list.add(new ItemOption(73, 0));
+        }
+        return list;
     }
 
     /**
