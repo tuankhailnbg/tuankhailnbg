@@ -7,6 +7,7 @@ import nro.models.item.ItemOption;
 import nro.models.map.war.BlackBallWar;
 import nro.models.npc.specialnpc.MabuEgg;
 import nro.models.npc.specialnpc.MagicTree;
+import nro.models.player.Inventory;
 import nro.models.player.Pet;
 import nro.models.player.PetFollow;
 import nro.models.player.Player;
@@ -157,7 +158,7 @@ public class InventoryService {
                 return false;
             }
         } else if (item.template.id == 988) {
-            if (player.inventory.getGoldLimit() < 10000000000L) {
+            if (player.inventory.getGoldLimit() < Inventory.MAX_GOLD_LIMIT) {
                 player.inventory.goldLimit += 100000000;
                 Service.getInstance().sendThongBao(player, "Giới hạn vàng của bạn đã tăng lên 100Tr\n"
                         + "Giới hạn vàng hiện tại của bạn là " + Util.numberToMoney(player.inventory.getGoldLimit()));

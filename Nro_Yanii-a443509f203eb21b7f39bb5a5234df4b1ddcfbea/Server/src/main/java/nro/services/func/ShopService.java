@@ -9,6 +9,7 @@ import nro.models.item.CaiTrang;
 import nro.models.item.Item;
 import nro.models.item.ItemOption;
 import nro.models.npc.Npc;
+import nro.models.player.Inventory;
 import nro.models.player.Player;
 import nro.models.shop.ItemShop;
 import nro.models.shop.Shop;
@@ -248,14 +249,20 @@ public class ShopService {
     // shop bùa
     public void openShopBua(Player player, int shopId, int order) {
         // player.iDMark.setShopId(shopId);
-        Shop shop = getShopBua(player, getShop(player, ConstNpc.BA_HAT_MIT, order, -1));
-        openShopType0(player, shop, shopId);
+        Shop s = getShop(player, ConstNpc.BA_HAT_MIT, order, -1);
+        if (s != null) {
+            Shop shop = getShopBua(player, s);
+            openShopType0(player, shop, shopId);
+        }
     }
 
     public void openShopDanhHieu(Player player, int shopId, int order) {
         // player.iDMark.setShopId(shopId);
-        Shop shop = getShoDanhHieu(player, getShop(player, ConstNpc.SANTA, order, -1));
-        openShopType0(player, shop, shopId);
+        Shop s = getShop(player, ConstNpc.SANTA, order, -1);
+        if (s != null) {
+            Shop shop = getShoDanhHieu(player, s);
+            openShopType0(player, shop, shopId);
+        }
     }
 
     // shop normal
@@ -356,17 +363,17 @@ public class ShopService {
     private void buyItemShopNormal(Player player, ItemShop is) {
         if (is != null) {
             int itemShopID = is.temp.id;
-            if (is.temp.id == 517 && player.inventory.itemsBag.size() >= 59) {
+            if (is.temp.id == 517 && player.inventory.itemsBag.size() >= 60) {
                 Service.getInstance().sendThongBao(player, "Đã đạt mức tối đa");
                 Service.getInstance().sendMoney(player);
                 return;
             }
-            if (is.temp.id == 518 && player.inventory.itemsBox.size() >= 59) {
+            if (is.temp.id == 518 && player.inventory.itemsBox.size() >= 60) {
                 Service.getInstance().sendThongBao(player, "Đã đạt mức tối đa");
                 Service.getInstance().sendMoney(player);
                 return;
             }
-            if (is.temp.id == 988 && player.inventory.getGoldLimit() >= 10000000000L) {
+            if (is.temp.id == 988 && player.inventory.getGoldLimit() >= Inventory.MAX_GOLD_LIMIT) {
                 Service.getInstance().sendThongBao(player, "Giới hạn vàng của bạn đã đạt tối đa");
                 Service.getInstance().sendMoney(player);
                 return;
@@ -377,10 +384,12 @@ public class ShopService {
                 return;
             }
 
-            if (InventoryService.gI().getCountEmptyBag(player) <= 0) {
-                Service.getInstance().sendThongBao(player, "Hành trang đã đầy");
-                Service.getInstance().sendMoney(player);
-                return;
+            if (requiresEmptyBagSlot(player, is)) {
+                if (InventoryService.gI().getCountEmptyBag(player) <= 0) {
+                    Service.getInstance().sendThongBao(player, "Hành trang đã đầy");
+                    Service.getInstance().sendMoney(player);
+                    return;
+                }
             }
 
             int gold = is.gold;
@@ -626,7 +635,9 @@ public class ShopService {
                 if (incBuyLimit) {
                     player.buyLimit[itemShopID - 1074]--;
                 }
-                Service.getInstance().sendThongBao(player, "Hành trang không đủ chỗ trống, giao dịch thất bại");
+                if (is.temp.id != 517 && is.temp.id != 518 && is.temp.id != 988) {
+                    Service.getInstance().sendThongBao(player, "Hành trang không đủ chỗ trống, giao dịch thất bại");
+                }
             }
             Service.getInstance().sendMoney(player);
         }
@@ -642,6 +653,29 @@ public class ShopService {
 
     private boolean isLimitItem(int id) {
         return id >= ConstItem.DA_NANG_CAP_CAP_1 && id <= ConstItem.CONG_THUC_VIP_1086;
+    }
+
+    private boolean requiresEmptyBagSlot(Player player, ItemShop is) {
+        if (is == null || is.temp == null) {
+            return true;
+        }
+        int shopId = player.iDMark.getShopId();
+        // 1. Shop bùa tác dụng trực tiếp lên charms, không tạo item trong bag
+        if (shopId == ConstNpc.SHOP_BA_HAT_MIT_0
+                || shopId == ConstNpc.SHOP_BA_HAT_MIT_1
+                || shopId == ConstNpc.SHOP_BA_HAT_MIT_2
+                || shopId == ConstNpc.SHOP_BA_HAT_MIT_3) {
+            return false;
+        }
+        // 2. Special item mở rộng hoặc tăng limit
+        if (is.temp.id == 517 || is.temp.id == 518 || is.temp.id == 988) {
+            return false;
+        }
+        // 3. Item loại tiền tệ (type 9: vàng, 10: ngọc, 34: ruby)
+        if (is.temp.type == 9 || is.temp.type == 10 || is.temp.type == 34) {
+            return false;
+        }
+        return true;
     }
 
     private int getBuyLimit(int id) {

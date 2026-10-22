@@ -13,6 +13,7 @@ import nro.models.item.Item;
 public class Inventory {
 
     public static final long LIMIT_GOLD = 500_000_000_000L;
+    public static final long MAX_GOLD_LIMIT = 1_000_000_000_000L;
 
     private Player player;
 
@@ -48,7 +49,14 @@ public class Inventory {
     }
 
     public long getGoldLimit() {
-        return goldLimit + LIMIT_GOLD;
+        if (this.goldLimit < 0) {
+            this.goldLimit = 0;
+        }
+        long total = goldLimit + LIMIT_GOLD;
+        if (total > MAX_GOLD_LIMIT) {
+            return MAX_GOLD_LIMIT;
+        }
+        return total;
     }
 
     public long getGoldDisplay() {
@@ -255,6 +263,9 @@ public class Inventory {
             nro.utils.Log.error(String.format("[RUBY_SANITIZE] PlayerId=%d PlayerName=%s OldRuby=%d NewRuby=0",
                     (player != null ? player.id : -1), (player != null ? player.name : "unknown"), this.ruby));
             this.ruby = 0;
+        }
+        if (this.goldLimit < 0) {
+            this.goldLimit = 0;
         }
     }
 
