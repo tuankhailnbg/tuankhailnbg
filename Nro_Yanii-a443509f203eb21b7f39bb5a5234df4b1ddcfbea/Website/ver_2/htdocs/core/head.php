@@ -1,4 +1,4 @@
-﻿<!--<?php
+<!--<?php
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ERROR);
@@ -510,8 +510,6 @@ $result = $config->query($sql);
     <?php } else { ?>
       <a href="/pages/dangnhap.php" class="btn btn-action m-1 text-black" style="border-radius: 10px;">
         <i class="fa fa-sign-in"></i> Đăng nhập </a>
-      <a href="/pages/dangky.php" class="btn btn-action m-1 text-black" style="border-radius: 10px;">
-        <i class="fa fa-user-plus"></i> Đăng ký </a>
     <?php } ?>
 
   </div>

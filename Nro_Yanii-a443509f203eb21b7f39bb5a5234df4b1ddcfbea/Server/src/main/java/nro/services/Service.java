@@ -455,8 +455,8 @@ public class Service {
             String user = _msg.reader().readUTF();
             String pass = _msg.reader().readUTF();
 
-            if (user == null || pass == null) {
-                sendThongBaoOK(session, "Dữ liệu đăng ký không hợp lệ");
+            if (user == null || pass == null || user.isEmpty() || pass.isEmpty()) {
+                sendThongBaoOK(session, "Thông tin đăng ký không hợp lệ.");
                 return;
             }
 
@@ -464,15 +464,19 @@ public class Service {
             pass = pass.trim();
 
             if (user.length() < 4 || user.length() > 18) {
-                sendThongBaoOK(session, "Tài khoản phải có độ dài 4-18 ký tự");
+                sendThongBaoOK(session, "Thông tin đăng ký không hợp lệ.");
                 return;
             }
             if (pass.length() < 5 || pass.length() > 18) {
-                sendThongBaoOK(session, "Mật khẩu phải có độ dài 5-18 ký tự");
+                sendThongBaoOK(session, "Thông tin đăng ký không hợp lệ.");
                 return;
             }
             if (user.indexOf(' ') >= 0 || pass.indexOf(' ') >= 0) {
-                sendThongBaoOK(session, "Tài khoản và mật khẩu không được chứa khoảng trắng");
+                sendThongBaoOK(session, "Thông tin đăng ký không hợp lệ.");
+                return;
+            }
+            if (!user.matches("^[a-zA-Z0-9_.-]+$")) {
+                sendThongBaoOK(session, "Thông tin đăng ký không hợp lệ.");
                 return;
             }
 
@@ -481,13 +485,13 @@ public class Service {
                 System.out.println("[REGISTER] Đã tạo tài khoản: " + user + " (id=" + result + ")");
                 sendThongBaoOK(session, "Đăng ký tài khoản thành công!");
             } else if (result == AccountDAO.CREATE_ACCOUNT_EXISTS) {
-                sendThongBaoOK(session, "Tài khoản đã tồn tại.");
+                sendThongBaoOK(session, "Tên tài khoản đã tồn tại.");
             } else {
-                sendThongBaoOK(session, "Không thể tạo tài khoản. Vui lòng thử lại.");
+                sendThongBaoOK(session, "Không thể đăng ký tài khoản. Vui lòng thử lại.");
             }
         } catch (Exception e) {
             Log.error(Service.class, e);
-            sendThongBaoOK(session, "Có lỗi khi đăng ký tài khoản");
+            sendThongBaoOK(session, "Không thể đăng ký tài khoản. Vui lòng thử lại.");
         }
     }
 

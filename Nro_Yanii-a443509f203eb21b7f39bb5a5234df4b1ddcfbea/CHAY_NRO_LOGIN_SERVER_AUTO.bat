@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
 title NRO - LOGIN + SERVER AUTO RESTART
@@ -156,6 +156,11 @@ if not "%BUILD_RESULT%"=="0" (
 
 echo.
 echo [BUILD SUCCESS]
+powershell.exe -NoProfile -Command "$f=Get-ChildItem '%SERVER_DIR%\target\*-jar-with-dependencies.jar' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if(!$f){exit 2}; Copy-Item $f.FullName '%SERVER_DIR%\Server.jar' -Force; Write-Host ('Server.jar <= '+$f.Name)"
+if errorlevel 1 (
+    echo [LOI] Khong the copy Server.jar tu target!
+    goto :FAIL
+)
 
 REM =========================================================
 REM CHAY FILE RUN CUA LOGIN

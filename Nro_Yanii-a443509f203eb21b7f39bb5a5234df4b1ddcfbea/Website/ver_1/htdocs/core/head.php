@@ -244,8 +244,6 @@
             <?php } else { ?> 
           <a href="/dangnhap" class="btn btn-action m-1 text-white" style="border-radius: 10px;">
             <i class="fa fa-sign-in"></i> Đăng nhập </a>
-          <a href="/dangky" class="btn btn-action m-1 text-white" style="border-radius: 10px;">
-            <i class="fa fa-user-plus"></i> Đăng ký </a>
           <a href="/forum" class="btn btn-action m-1 text-white" style="border-radius: 10px;">
             <i class="fa fa-globe"></i> Diễn Đàn </a> 
             <a href="/pages/quenmatkhau.php" class="btn btn-action m-1 text-white" style="border-radius: 10px;">

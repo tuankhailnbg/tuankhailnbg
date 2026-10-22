@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
 title NRO VPS - LOGIN + SERVER AUTO BUILD
@@ -7,6 +7,10 @@ cd /d "%~dp0"
 set "ROOT=%CD%"
 set "LOGIN_DIR=%ROOT%\Login"
 set "SERVER_DIR=%ROOT%\Server"
+if not exist "%LOGIN_DIR%" if exist "%ROOT%\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Login" (
+  set "LOGIN_DIR=%ROOT%\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Login"
+  set "SERVER_DIR=%ROOT%\Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea\Server"
+)
 
 set "LOGIN_PORT=3105"
 set "SERVER_PORT=14445"
@@ -50,6 +54,7 @@ set "MAVEN="
 for /f "delims=" %%M in ('where.exe mvn.cmd 2^>nul') do if not defined MAVEN set "MAVEN=%%M"
 if not defined MAVEN if exist "C:\Tools\maven\bin\mvn.cmd" set "MAVEN=C:\Tools\maven\bin\mvn.cmd"
 if not defined MAVEN if exist "D:\Tools\maven\bin\mvn.cmd" set "MAVEN=D:\Tools\maven\bin\mvn.cmd"
+if not defined MAVEN if exist "C:\Users\Admin\Downloads\apache-maven-3.10.0-bin\maven\bin\mvn.cmd" set "MAVEN=C:\Users\Admin\Downloads\apache-maven-3.10.0-bin\maven\bin\mvn.cmd"
 if not defined MAVEN (
   echo [LOI] Khong tim thay Maven.
   echo Chay lenh: where.exe mvn

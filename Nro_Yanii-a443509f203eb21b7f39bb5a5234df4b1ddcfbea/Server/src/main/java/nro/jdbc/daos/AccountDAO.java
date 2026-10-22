@@ -95,7 +95,7 @@ public class AccountDAO {
     public static final int CREATE_ACCOUNT_ERROR = -1;
     public static final int CREATE_ACCOUNT_EXISTS = -2;
 
-    public static int createAccount(String user, String password) {
+    public static synchronized int createAccount(String user, String password) {
         if (user == null || password == null) {
             return CREATE_ACCOUNT_ERROR;
         }

@@ -9,12 +9,13 @@ import nro.event.Event;
 import nro.lib.RandomCollection;
 import nro.models.item.ItemLuckyRound;
 import nro.models.item.ItemOptionLuckyRound;
-import nro.models.item.ItemReward;
-import nro.models.mob.MobReward;
 import nro.models.item.Item;
 import nro.models.item.ItemOption;
+import nro.models.item.ItemReward;
 import nro.models.map.ItemMap;
+import nro.models.mob.BigBoss;
 import nro.models.mob.Mob;
+import nro.models.mob.MobReward;
 import nro.models.player.Player;
 import nro.models.player.Pet;
 import nro.server.Manager;
@@ -40,7 +41,7 @@ import java.util.logging.Logger;
  */
 public class RewardService {
 
-    public static final int SKH_DROP_RATE = 8;
+    public static final int SKH_DROP_RATE = 15;
 
     // id option set kich hoat (tên set, hiệu ứng set, tỉ lệ, type tỉ lệ)
     public static final int[][][] ACTIVATION_SET = {
@@ -114,11 +115,12 @@ public class RewardService {
         int mapid = player.zone.map.mapId;
         List<ItemMap> list = new ArrayList<>();
 
-        // Rơi Set Kích Hoạt (SKH) chính xác 8% độc lập cho quái thường
+        // Rơi Set Kích Hoạt (SKH) chính xác 15% độc lập cho quái thường
         if (player != null && mob != null && mob.tempId != ConstMob.MOC_NHAN
                 && mob.tempId != ConstMob.HIRUDEGARN
                 && mob.tempId != ConstMob.VUA_BACH_TUOC
-                && mob.tempId != ConstMob.ROBOT_BAO_VE) {
+                && mob.tempId != ConstMob.ROBOT_BAO_VE
+                && !(mob instanceof BigBoss)) {
             Player killer = player.isPet ? ((Pet) player).master : player;
             if (killer != null && !killer.isBoss) {
                 if (ThreadLocalRandom.current().nextInt(100) < SKH_DROP_RATE) {
@@ -143,8 +145,6 @@ public class RewardService {
                     itemMap.options.add(new ItemOption(73, 0)); // option 73
 
                     list.add(itemMap);
-                    ServerNotify.gI().notify(killer.name + " vừa nhặt được " + itemMap.itemTemplate.name
-                            + " Set Kích Hoạt");
                 }
             }
         }
