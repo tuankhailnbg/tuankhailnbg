@@ -372,6 +372,9 @@ public class NPoint {
 
     private void setPointWhenWearClothes() {
         resetPoint();
+        if (this.player != null && this.player.setClothes != null) {
+            this.player.setClothes.setup();
+        }
         for (Item item : this.player.inventory.itemsBody) {
             if (item.isNotNullItem()) {
                 int tempID = item.template.id;
@@ -688,7 +691,7 @@ public class NPoint {
             this.mpMax += calPercent(this.mpMax, tl);
         }
         if (this.player.setClothes.picolo == 5) {
-            this.mpMax *= 3;
+            this.mpMax += calPercent(this.mpMax, 150);
         }
         // ngọc rồng đen 3 sao
         if (this.player.rewardBlackBall.timeOutOfDateReward[2] > System.currentTimeMillis()) {
@@ -1116,7 +1119,7 @@ public class NPoint {
                 }
                 percentDameSkill = skillSelect.damage;
                 if (this.player.setClothes.songoku == 5) {
-                    percentXDame = 90;
+                    percentXDame = 100;
                 }
                 // if (this.player.effectSkin.xDameChuong) {
                 // percentXDame += tlDameChuong;
@@ -1167,7 +1170,7 @@ public class NPoint {
                 }
                 percentDameSkill = skillSelect.damage;
                 if (this.player.setClothes.ocTieu == 5) {
-                    percentXDame = 90;
+                    percentXDame = 100;
                 }
                 break;
             case Skill.DICH_CHUYEN_TUC_THOI:
@@ -1186,7 +1189,7 @@ public class NPoint {
                 }
                 int damage = (int) ((totalHP / 10) + (this.dame * 10));
                 if (this.player.setClothes.kirin == 5) {
-                    damage *= 3;
+                    damage += (int) calPercent(damage, 150);
                 }
                 return damage;
         }

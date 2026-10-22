@@ -67,9 +67,13 @@ public class SetClothes {
     }
 
     private void setupSKT() {
-        for (int i = 0; i < 5; i++) {
+        if (this.player.inventory == null || this.player.inventory.itemsBody == null) {
+            return;
+        }
+        int size = Math.min(5, this.player.inventory.itemsBody.size());
+        for (int i = 0; i < size; i++) {
             Item item = this.player.inventory.itemsBody.get(i);
-            if (item.isNotNullItem()) {
+            if (item != null && item.isNotNullItem()) {
                 boolean isActSet = false;
                 for (ItemOption io : item.itemOptions) {
                     switch (io.optionTemplate.id) {
@@ -123,8 +127,6 @@ public class SetClothes {
                         break;
                     }
                 }
-            } else {
-                break;
             }
         }
     }

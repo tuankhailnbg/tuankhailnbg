@@ -29,7 +29,7 @@ public final class MobMe extends Mob {
         this.point.maxHp = SkillUtil.getHPMobMe(player.nPoint.hpMax, level);
         this.point.dame = SkillUtil.getHPMobMe(player.nPoint.getDameAttack(false), level);
         if (this.player.setClothes.pikkoroDaimao == 5) {
-            this.point.dame *= 2;
+            this.point.dame += this.point.dame * 150 / 100;
         }
         this.point.hp = this.point.maxHp;
         this.zone = player.zone;
@@ -40,7 +40,7 @@ public final class MobMe extends Mob {
 
     @Override
     public void update() {
-        if (Util.canDoWithTime(lastTimeSpawn, timeSurvive) && this.player.setClothes.pikkoroDaimao != 5) {
+        if (Util.canDoWithTime(lastTimeSpawn, timeSurvive)) {
             this.mobMeDie();
             this.dispose();
         }
