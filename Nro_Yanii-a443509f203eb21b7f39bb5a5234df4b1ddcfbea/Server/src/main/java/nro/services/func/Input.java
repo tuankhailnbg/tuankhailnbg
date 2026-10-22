@@ -47,6 +47,12 @@ public class Input {
     public static final int SEND_ITEM_OP = 512;
     public static final int TANG_SKH = 513;
     public static final int DOI_HONG_NGOC = 514;
+    public static final int BUFF_FIND_PLAYER = 520;
+    public static final int BUFF_SEARCH_ITEM = 521;
+    public static final int BUFF_INPUT_QUANTITY = 522;
+    public static final int BUFF_INPUT_OPTION = 523;
+    public static final int BUFF_INPUT_OPTION_STRING = 524;
+    public static final int BUFF_INPUT_PARAM = 525;
     public static final byte NUMERIC = 0;
     public static final byte ANY = 1;
     public static final byte PASSWORD = 2;
@@ -73,43 +79,37 @@ public class Input {
             switch (player.iDMark.getTypeInput()) {
                 case SEND_ITEM_OP:
                     if (player.isAdmin()) {
-                        pl = Client.gI().getPlayer(text[0]);
-                        int idItemBuff = Integer.parseInt(text[1]);
-                        String idOptionBuff = text[2].trim();
-                        int slItemBuff = Integer.parseInt(text[3]);
-
-                        try {
-                            if (pl != null) {
-                                String txtBuff = "Buff to player: " + pl.name + "\b";
-
-                                Item itemBuffTemplate = ItemService.gI()
-                                        .createNewItem((short) idItemBuff);
-                                RewardService.gI().initBaseOptionClothes(itemBuffTemplate.template.id,
-                                        itemBuffTemplate.template.type,
-                                        itemBuffTemplate.itemOptions);
-                                if (!idOptionBuff.isEmpty()) {
-                                    String arr[] = idOptionBuff.split(" ");
-                                    for (int i = 0; i < arr.length; i++) {
-                                        String arr2[] = arr[i].split("-");
-                                        int idoption = Integer.parseInt(arr2[0].trim());
-                                        int param = Integer.parseInt(arr2[1].trim());
-                                        itemBuffTemplate.itemOptions.add(new ItemOption(idoption, param));
-                                    }
-                                }
-                                itemBuffTemplate.quantity = slItemBuff;
-                                NpcService.gI().createTutorial(player, 24, txtBuff);
-                                InventoryService.gI().addItemBag(pl, itemBuffTemplate, 0);
-                                InventoryService.gI().sendItemBags(pl);
-                                if (player.id != pl.id) {
-                                    NpcService.gI().createTutorial(player, 24, txtBuff);
-                                }
-                            } else {
-                                Service.getInstance().sendThongBao(player, "Player không online");
-                            }
-                        } catch (Exception e) {
-
-                        }
-                        break;
+                        AdminBuffItemService.gI().openMenuBuffItem(player);
+                    }
+                    break;
+                case BUFF_FIND_PLAYER:
+                    if (player.isAdmin()) {
+                        AdminBuffItemService.gI().searchPlayer(player, text[0]);
+                    }
+                    break;
+                case BUFF_SEARCH_ITEM:
+                    if (player.isAdmin()) {
+                        AdminBuffItemService.gI().searchItem(player, text[0]);
+                    }
+                    break;
+                case BUFF_INPUT_QUANTITY:
+                    if (player.isAdmin()) {
+                        AdminBuffItemService.gI().setQuantity(player, text[0]);
+                    }
+                    break;
+                case BUFF_INPUT_OPTION:
+                    if (player.isAdmin()) {
+                        AdminBuffItemService.gI().handleSearchOptionInput(player, text[0], text.length > 1 ? text[1] : "");
+                    }
+                    break;
+                case BUFF_INPUT_OPTION_STRING:
+                    if (player.isAdmin()) {
+                        AdminBuffItemService.gI().handleOptionStringInput(player, text[0]);
+                    }
+                    break;
+                case BUFF_INPUT_PARAM:
+                    if (player.isAdmin()) {
+                        AdminBuffItemService.gI().handleParamInput(player, text[0]);
                     }
                     break;
 
@@ -404,11 +404,34 @@ public class Input {
     }
 
     public void createFormSenditem1(Player pl) {
-        createForm(pl, SEND_ITEM_OP, "SEND Vật Phẩm Option",
-                new SubInput("Tên người chơi", ANY),
-                new SubInput("ID item", NUMERIC),
-                new SubInput("Chuỗi Option (50-30 77-20)", ANY),
-                new SubInput("Số Lượng", NUMERIC));
+        AdminBuffItemService.gI().openMenuBuffItem(pl);
+    }
+
+    public void createFormBuffFindPlayer(Player pl) {
+        createForm(pl, BUFF_FIND_PLAYER, "TÌM NGƯỜI CHƠI", new SubInput("Tên nhân vật (hoặc ID)", ANY));
+    }
+
+    public void createFormBuffSearchItem(Player pl) {
+        createForm(pl, BUFF_SEARCH_ITEM, "TÌM KIẾM VẬT PHẨM", new SubInput("Nhập ID hoặc Tên vật phẩm", ANY));
+    }
+
+    public void createFormBuffQuantity(Player pl, int itemId, String itemName) {
+        createForm(pl, BUFF_INPUT_QUANTITY, "SỐ LƯỢNG: " + itemName + " (" + itemId + ")", new SubInput("Nhập số lượng (>= 1)", NUMERIC));
+    }
+
+    public void createFormBuffOption(Player pl) {
+        createForm(pl, BUFF_INPUT_OPTION, "THÊM OPTION CHO VẬT PHẨM",
+                new SubInput("ID hoặc Tên Option", ANY),
+                new SubInput("Giá trị Param (tùy chọn)", ANY));
+    }
+
+    public void createFormBuffOptionString(Player pl) {
+        createForm(pl, BUFF_INPUT_OPTION_STRING, "NHẬP CHUỖI OPTION",
+                new SubInput("Chuỗi Option (VD: 50-30 77-25 14-15 95-10)", ANY));
+    }
+
+    public void createFormBuffParam(Player pl, int optId, String optName) {
+        createForm(pl, BUFF_INPUT_PARAM, "NHẬP PARAM", new SubInput("Param cho " + optName + " (" + optId + ")", NUMERIC));
     }
 
     public void createFormChangePassword(Player pl) {

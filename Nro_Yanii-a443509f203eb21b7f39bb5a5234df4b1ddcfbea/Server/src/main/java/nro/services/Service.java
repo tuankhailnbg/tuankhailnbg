@@ -24,6 +24,7 @@ import nro.power.CaptionManager;
 import nro.server.Client;
 import nro.server.io.Message;
 import nro.server.io.Session;
+import nro.services.func.AdminBuffItemService;
 import nro.services.func.Input;
 import nro.utils.FileIO;
 import nro.utils.Log;
@@ -792,7 +793,7 @@ public class Service {
                                 + "|1|Số người chơi đang online: " + Client.gI().getPlayers().size() + "\n"
                                 + "|8|Current thread server: " + Thread.activeCount() + "\n"
                                 + "|6|Time start server: " + ServerManager.timeStart,
-                        "Ngọc rồng", "Đệ tử", "Bảo trì", "Tìm kiếm\nngười chơi", "Đóng");
+                        "Buff\nvật phẩm", "Ngọc rồng", "Đệ tử", "Bảo trì", "Tìm kiếm\nngười chơi", "Đóng");
                 return;
             }
             if (text.equals("quanct")) {
@@ -819,11 +820,11 @@ public class Service {
             } else if (text.equals("toado")) {
                 Service.getInstance().sendThongBao(player, player.location.x + " - " + player.location.y);
                 return;
-            } else if (text.equals("buff")) {
-                Input.gI().createFormAddItem(player);
+            } else if (text.equals("buff") || text.equals("buffitem") || text.equals("adminbuff")) {
+                AdminBuffItemService.gI().openMenuBuffItem(player);
                 return;
             } else if (text.equals("quanct1")) {
-                Input.gI().createFormSenditem1(player);
+                AdminBuffItemService.gI().openMenuBuffItem(player);
                 return;
             } else if (text.startsWith("upp")) {
                 try {

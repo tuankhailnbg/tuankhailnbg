@@ -253,6 +253,13 @@ public class ConstNpc {
         public static final int UP_TOP_ITEM = 521;
         public static final int CONFIRM_DIALOG = 522;
         public static final int MENU_BUFF_DO = 523;
+        public static final int BUFF_ITEM_TARGET = 524;
+        public static final int BUFF_ITEM_SELECT = 525;
+        public static final int BUFF_ITEM_OPTIONS = 526;
+        public static final int BUFF_ITEM_COMMON_OPTIONS = 527;
+        public static final int BUFF_ITEM_PREVIEW = 528;
+        public static final int BUFF_ITEM_SELECT_OPTION_SEARCH = 529;
+        public static final int BUFF_ITEM_DELETE_OPTION = 530;
 
         // index menu rong thieng
         public static final int SHENRON_CONFIRM = 501;

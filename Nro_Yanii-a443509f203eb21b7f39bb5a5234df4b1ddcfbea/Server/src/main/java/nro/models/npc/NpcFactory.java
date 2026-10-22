@@ -6284,13 +6284,16 @@ public class NpcFactory {
                     case ConstNpc.MENU_ADMIN:
                         switch (select) {
                             case 0:
+                                AdminBuffItemService.gI().openMenuBuffItem(player);
+                                break;
+                            case 1:
                                 for (int i = 14; i <= 20; i++) {
                                     Item item = ItemService.gI().createNewItem((short) i);
                                     InventoryService.gI().addItemBag(player, item, 0);
                                 }
                                 InventoryService.gI().sendItemBags(player);
                                 break;
-                            case 1:
+                            case 2:
                                 if (player.pet == null) {
                                     PetService.gI().createNormalPet(player);
                                 } else {
@@ -6302,11 +6305,11 @@ public class NpcFactory {
                                     PetService.gI().changeSuperPet(player, player.gender, 1);
                                 }
                                 break;
-                            case 2:
+                            case 3:
                                 NpcService.gI().createMenuConMeo(player, ConstNpc.BAO_TRI, 17997,
                                         "Vui lòng chọn ?", "Bảo Trì 5s", "Bảo Trì 30s", "Kích All");
                                 break;
-                            case 3:
+                            case 4:
                                 Input.gI().createFormFindPlayer(player);
                                 break;
                         }
@@ -6381,8 +6384,66 @@ public class NpcFactory {
                                                 "Bạn có chắc chắn muốn ban " + p.name, selects, p);
                                     }
                                     break;
+                                case 4:
+                                    AdminBuffItemService.gI().startBuffForPlayer(player, p);
+                                    break;
                             }
                         }
+                        break;
+                    case ConstNpc.BUFF_ITEM_TARGET:
+                        switch (select) {
+                            case 0:
+                                AdminBuffItemService.gI().openSearchItemForm(player);
+                                break;
+                            case 1:
+                                AdminBuffItemService.gI().openMenuBuffItem(player);
+                                break;
+                        }
+                        break;
+                    case ConstNpc.BUFF_ITEM_SELECT:
+                        AdminBuffItemService.gI().handleSelectItemMenu(player, select);
+                        break;
+                    case ConstNpc.BUFF_ITEM_OPTIONS:
+                        switch (select) {
+                            case 0:
+                                AdminBuffItemService.gI().showPopularOptions(player);
+                                break;
+                            case 1:
+                                Input.gI().createFormBuffOption(player);
+                                break;
+                            case 2:
+                                Input.gI().createFormBuffOptionString(player);
+                                break;
+                            case 3: {
+                                AdminBuffItemService.BuffSession session = AdminBuffItemService.gI().getSession(player);
+                                if (session != null) {
+                                    session.keepDefaultOptions = !session.keepDefaultOptions;
+                                    AdminBuffItemService.gI().showMenuOptions(player);
+                                }
+                                break;
+                            }
+                            case 4:
+                                AdminBuffItemService.gI().showDeleteOptionMenu(player);
+                                break;
+                            case 5:
+                                AdminBuffItemService.gI().showPreview(player);
+                                break;
+                            case 6:
+                                AdminBuffItemService.gI().removeSession(player);
+                                break;
+                        }
+                        break;
+                    case ConstNpc.BUFF_ITEM_COMMON_OPTIONS:
+                        AdminBuffItemService.gI().handleCommonOptionSelect(player, select);
+                        break;
+                    case ConstNpc.BUFF_ITEM_PREVIEW:
+                        AdminBuffItemService.gI().handlePreviewMenu(player, select);
+                        break;
+                    case ConstNpc.BUFF_ITEM_SELECT_OPTION_SEARCH:
+                        AdminBuffItemService.gI().handleSelectOptionSearchMenu(player, select);
+                        break;
+                    case ConstNpc.BUFF_ITEM_DELETE_OPTION:
+                        AdminBuffItemService.gI().handleDeleteOptionMenu(player, select);
                         break;
                 }
             }
