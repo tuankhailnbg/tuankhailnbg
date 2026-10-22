@@ -27,7 +27,7 @@ public abstract class AbsLuckyRound {
     protected List<Integer> icons = new ArrayList<>();
 
     public void payAndGetStarted(Player player, byte quantity) {
-        if (quantity <= 0) {
+        if (quantity < 1 || quantity > 7) {
             return;
         }
         if (quantity > InventoryService.gI().getCountEmptyListItem(player.inventory.itemsBoxCrackBall)) {
@@ -45,12 +45,24 @@ public abstract class AbsLuckyRound {
             numTicket = q;
         }
         q -= numTicket;
-        int price = q * this.price;
-        if (price > 0 && !checkMoney(player, price)) {
-            return;
+        long priceLong = 0;
+        if (q > 0) {
+            try {
+                priceLong = Math.multiplyExact((long) q, (long) this.price);
+            } catch (ArithmeticException e) {
+                return;
+            }
+            if (priceLong <= 0) {
+                return;
+            }
         }
-        if (price > 0) {
-            payWithMoney(player, price);
+        if (priceLong > 0) {
+            if (!checkMoney(player, priceLong)) {
+                return;
+            }
+            if (!payWithMoney(player, priceLong)) {
+                return;
+            }
             Service.getInstance().sendMoney(player);
         }
         if (itm != null && numTicket > 0) {
@@ -61,9 +73,9 @@ public abstract class AbsLuckyRound {
         result(player, list);
     }
 
-    public abstract boolean checkMoney(Player player, int price);
+    public abstract boolean checkMoney(Player player, long price);
 
-    public abstract void payWithMoney(Player player, int price);
+    public abstract boolean payWithMoney(Player player, long price);
 
     public abstract List<Item> reward(Player player, byte quantity);
 

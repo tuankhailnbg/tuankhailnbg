@@ -47,7 +47,7 @@ public class LuckyRoundGold extends AbsLuckyRound {
     }
 
     @Override
-    public boolean checkMoney(Player player, int price) {
+    public boolean checkMoney(Player player, long price) {
         if (!player.inventory.hasGold(price)) {
             Service.getInstance().sendThongBao(player, "Bạn không đủ vàng");
             return false;
@@ -56,8 +56,11 @@ public class LuckyRoundGold extends AbsLuckyRound {
     }
 
     @Override
-    public void payWithMoney(Player player, int price) {
-        player.inventory.trySpendGold(price);
+    public boolean payWithMoney(Player player, long price) {
+        if (!player.inventory.trySpendGold(price)) {
+            Service.getInstance().sendThongBao(player, "Bạn không đủ vàng");
+            return false;
+        }
+        return true;
     }
-
 }

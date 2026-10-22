@@ -4567,13 +4567,8 @@ public class NpcFactory {
                                                      Service.getInstance().sendThongBao(player, "Không đủ ngọc, yêu cầu 99 ngọc");
                                                      return;
                                                  }
-                                                 if (!player.inventory.trySpendGold(10_000_000L)) {
-                                                     Service.getInstance().sendThongBao(player, "Không đủ vàng");
-                                                     return;
-                                                 }
-                                                 if (!player.inventory.trySpendGem(99)) {
-                                                     player.inventory.addGold(10_000_000L);
-                                                     Service.getInstance().sendThongBao(player, "Không đủ ngọc");
+                                                 if (!player.inventory.trySpendGoldAndGem(10_000_000L, 99)) {
+                                                     Service.getInstance().sendThongBao(player, "Không đủ vàng hoặc ngọc");
                                                      return;
                                                  }
                                                  InventoryService.gI().subQuantityItemsBag(player, biKipTuyetKy, 9999);

@@ -7,6 +7,7 @@ package nro.services.func;
 
 import nro.models.player.Player;
 import nro.server.io.Message;
+import nro.services.Service;
 import nro.services.func.lr.LuckyRoundGem;
 import nro.services.func.lr.LuckyRoundGold;
 
@@ -49,7 +50,7 @@ public class LuckyRoundService {
             if (msg.reader().available() > 0) {
                 count = msg.reader().readByte();
             }
-            if (count > 0) {
+            if (count >= 1 && count <= 7) {
                 switch (player.iDMark.getTypeLuckyRound()) {
                     case USING_GOLD:
                         LuckyRoundGold.gI().payAndGetStarted(player, count);
@@ -59,8 +60,10 @@ public class LuckyRoundService {
                         LuckyRoundGem.gI().payAndGetStarted(player, count);
                         break;
                 }
-            } else {
+            } else if (count == 0) {
                 openCrackBallUI(player, player.iDMark.getTypeLuckyRound());
+            } else {
+                Service.getInstance().sendThongBao(player, "Số lượng không hợp lệ");
             }
         } catch (IOException e) {
             e.printStackTrace();

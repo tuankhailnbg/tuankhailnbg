@@ -189,15 +189,8 @@ public class SummerEvent extends Event {
                                     Service.getInstance().sendThongBao(player, "Bạn không đủ vàng");
                                     return;
                                 }
-                                if (rubyCost > 0 && !inv.trySpendRuby(rubyCost)) {
-                                    Service.getInstance().sendThongBao(player, "Bạn không đủ hồng ngọc");
-                                    return;
-                                }
-                                if (!inv.trySpendGold(cost)) {
-                                    if (rubyCost > 0) {
-                                        inv.addRuby(rubyCost);
-                                    }
-                                    Service.getInstance().sendThongBao(player, "Bạn không đủ vàng");
+                                if (!inv.trySpendGoldAndRuby(cost, rubyCost)) {
+                                    Service.getInstance().sendThongBao(player, "Không đủ vàng hoặc hồng ngọc");
                                     return;
                                 }
                                 InventoryService.gI().subQuantityItemsBag(player, canhKho, 50);

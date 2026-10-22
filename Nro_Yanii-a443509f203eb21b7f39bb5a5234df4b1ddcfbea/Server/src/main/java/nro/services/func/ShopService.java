@@ -409,7 +409,29 @@ public class ShopService {
                 return;
             }
 
-            // 2. Event points preflight check
+            // 2. Shop-specific preflights
+            if (player.iDMark.getShopId() == ConstNpc.SHOP_SANTA_3) {
+                Service.gI().sendThongBao(player, "Bạn chưa mở khóa danh hiệu này");
+                Service.getInstance().sendMoney(player);
+                return;
+            }
+
+            Item mealBill = null;
+            if (player.iDMark.getShopId() == ConstNpc.SHOP_BILL_HUY_DIET_0) {
+                if (!player.setClothes.godClothes) {
+                    Service.getInstance().sendThongBao(player, "Yêu cầu có đủ trang bị thần linh");
+                    Service.getInstance().sendMoney(player);
+                    return;
+                }
+                mealBill = InventoryService.gI().findMealChangeDestroyClothes(player);
+                if (mealBill == null || mealBill.quantity < 200) {
+                    Service.getInstance().sendThongBao(player, "Yêu cầu có 200 thức ăn");
+                    Service.getInstance().sendMoney(player);
+                    return;
+                }
+            }
+
+            // 3. Event points preflight check
             int pointExchange = 0;
             if (player.iDMark.getShopId() == ConstNpc.SHOP_SU_KIEN_TET) {
                 for (ItemOption io : is.options) {
@@ -424,7 +446,7 @@ public class ShopService {
                 }
             }
 
-            // 3. Buy limit preflight check
+            // 4. Buy limit preflight check
             if (itemExchange >= 0 && isLimitItem(itemShopID)) {
                 if (player.buyLimit[itemShopID - 1074] >= getBuyLimit(itemShopID)) {
                     Service.getInstance().sendThongBao(player, "Số lượt mua trong ngày đã đạt giới hạn");
@@ -433,7 +455,7 @@ public class ShopService {
                 }
             }
 
-            // 4. Item exchange preflight check
+            // 5. Item exchange preflight check
             Item itm = null;
             if (itemExchange >= 0) {
                 if (itemExchange == 861) {
@@ -452,199 +474,163 @@ public class ShopService {
                 }
             }
 
-            // 5. Currency preflight checks (Gold & Gem)
-            if (gold > 0 && !player.inventory.hasGold(gold)) {
+            // 6. Currency preflight checks (Gold, Gem, Ruby)
+            long goldSpend = gold > 0 ? (long) gold : 0L;
+            int gemSpend = gem > 0 ? gem : 0;
+            int rubySpend = (itemExchange == 861) ? is.costSpec : 0;
+
+            if (goldSpend > 0 && !player.inventory.hasGold(goldSpend)) {
                 Service.getInstance().sendThongBaoOK(player, "Bạn không đủ vàng, còn thiếu "
-                        + (Util.numberToMoney(gold - player.inventory.gold) + " vàng"));
+                        + (Util.numberToMoney(goldSpend - player.inventory.gold) + " vàng"));
                 Service.getInstance().sendMoney(player);
                 return;
             }
-            if (gem > 0 && !player.inventory.hasGem(gem)) {
+            if (gemSpend > 0 && !player.inventory.hasGem(gemSpend)) {
                 Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc, còn thiếu "
-                        + (gem - player.inventory.getGem()) + " ngọc");
+                        + (gemSpend - player.inventory.getGem()) + " ngọc");
+                Service.getInstance().sendMoney(player);
+                return;
+            }
+            if (rubySpend > 0 && !player.inventory.hasRuby(rubySpend)) {
+                Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc hồng để trao đổi.");
                 Service.getInstance().sendMoney(player);
                 return;
             }
 
-            // 6. Atomic payment
-            if (gold > 0 && !player.inventory.trySpendGold(gold)) {
-                Service.getInstance().sendThongBaoOK(player, "Bạn không đủ vàng");
+            // 7. Atomic multi-currency payment
+            if (!player.inventory.trySpendCurrencies(goldSpend, gemSpend, rubySpend)) {
+                Service.getInstance().sendThongBao(player, "Giao dịch thất bại do không đủ tiền");
                 Service.getInstance().sendMoney(player);
                 return;
             }
-            if (gem > 0 && !player.inventory.trySpendGem(gem)) {
-                if (gold > 0) {
-                    player.inventory.addGold(gold);
-                }
-                Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc");
-                Service.getInstance().sendMoney(player);
-                return;
-            }
-            if (itemExchange >= 0) {
-                if (itemExchange == 861) {
-                    if (!player.inventory.trySpendRuby(is.costSpec)) {
-                        if (gold > 0) {
-                            player.inventory.addGold(gold);
-                        }
-                        if (gem > 0) {
-                            player.inventory.addGem(gem);
-                        }
-                        Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc hồng để trao đổi.");
-                        Service.getInstance().sendMoney(player);
-                        return;
-                    }
-                } else {
-                    InventoryService.gI().subQuantityItemsBag(player, itm, is.costSpec);
-                }
-                if (isLimitItem(itemShopID)) {
-                    player.buyLimit[itemShopID - 1074]++;
-                }
+
+            // 8. Deduct non-currency requirements
+            boolean subbedItemExchange = false;
+            if (itemExchange >= 0 && itemExchange != 861) {
+                InventoryService.gI().subQuantityItemsBag(player, itm, is.costSpec);
+                subbedItemExchange = true;
             }
             if (pointExchange > 0) {
                 player.event.subEventPoint(pointExchange);
             }
-//                if (is.options.size() != 0 && is.options.get(0).optionTemplate.id == 247) {
-//                    is.options.clear();
-//                    is.options.add(new ItemOption(50, Util.nextInt(10, 25)));
-//                    is.options.add(new ItemOption(77, Util.nextInt(10, 25)));
-//                    is.options.add(new ItemOption(103, Util.nextInt(10, 25)));
-//                    is.options.add(new ItemOption(30, 1));
-//
-//                } else if (is.options.size() != 0 && is.options.get(0).optionTemplate.id == 249) {
-//                    is.options.clear();
-//                    double tile = Math.random();
-//                    if (tile < 0.2) {
-//                        is.options.add(new ItemOption(5, Util.nextInt(70, 120)));
-//                    } else {
-//                        is.options.add(new ItemOption(5, Util.nextInt(50, 69)));
-//                    }
-//                    is.options.add(new ItemOption(50, Util.nextInt(1, 10)));
-//                    is.options.add(new ItemOption(77, Util.nextInt(1, 10)));
-//                    is.options.add(new ItemOption(103, Util.nextInt(1, 10)));
-//                    is.options.add(new ItemOption(30, 1));
-//                }
-                switch (player.iDMark.getShopId()) {
-//                    case ConstNpc.SHOP_SANTA_1:
-//                        player.head = is.temp.part;
-//                        Service.getInstance().Send_Caitrang(player);
-//                        Service.getInstance().sendThongBao(player, "Đổi kiểu tóc thành công");
-//                        break;
-                    case ConstNpc.SHOP_SANTA_3:
-                        Service.gI().sendThongBao(player, "Bạn chưa mở khóa danh hiệu này");
-                        break;
-                    case ConstNpc.SHOP_BA_HAT_MIT_0:
-                        player.charms.addTimeCharms(is.temp.id, 60);
-                        openShopBua(player, player.iDMark.getShopId(), 0);
-                        break;
-                    case ConstNpc.SHOP_BA_HAT_MIT_1:
-                        player.charms.addTimeCharms(is.temp.id, 60 * 8);
-                        openShopBua(player, player.iDMark.getShopId(), 1);
-                        break;
-                    case ConstNpc.SHOP_BA_HAT_MIT_2:
-                        player.charms.addTimeCharms(is.temp.id, 60 * 24 * 30);
-                        openShopBua(player, player.iDMark.getShopId(), 2);
-                        break;
-                    case ConstNpc.SHOP_BA_HAT_MIT_3:
-                        player.charms.addTimeCharms(is.temp.id, 60);
-                        openShopBua(player, player.iDMark.getShopId(), 3);
-                        break;
-                    case ConstNpc.SHOP_BILL_HUY_DIET_0:
-                        if (player.setClothes.godClothes) {
-                            Item meal = InventoryService.gI().findMealChangeDestroyClothes(player);
-                            if (meal != null) {
-                                Item item = ItemService.gI().createItemFromItemShop(is);
-                                int param = 0;
-                                if (Util.isTrue(2, 10)) {
-                                    param = Util.nextInt(10, 15);
-                                } else if (Util.isTrue(3, 10)) {
-                                    param = Util.nextInt(0, 10);
-                                }
-                                for (ItemOption io : item.itemOptions) {
-                                    int optId = io.optionTemplate.id;
-                                    switch (optId) {
-                                        case 47: // giáp
-                                        case 6: // hp
-                                        case 26: // hp/30s
-                                        case 22: // hp k
-                                        case 0: // sức đánh
-                                        case 7: // ki
-                                        case 28: // ki/30s
-                                        case 23: // ki k
-                                        case 14: // crit
-                                            io.param += ((long) io.param * param / 100);
-                                            break;
-                                    }
-                                }
-                                InventoryService.gI().subQuantityItemsBag(player, meal, 200);
-                                InventoryService.gI().addItemBag(player, item, 200);
-                                InventoryService.gI().sendItemBags(player);
-                                Service.getInstance().sendThongBao(player, "Đổi thành công " + is.temp.name);
-                            } else {
-                                Service.getInstance().sendThongBao(player, "Yêu cầu có 200 thức ăn");
-                            }
-                        } else {
-                            Service.getInstance().sendThongBao(player, "Yêu cầu có đủ trang bị thần linh");
+            boolean incBuyLimit = false;
+            if (itemExchange >= 0 && isLimitItem(itemShopID)) {
+                player.buyLimit[itemShopID - 1074]++;
+                incBuyLimit = true;
+            }
+
+            // 9. Execute shop action with addItemBag result check & complete rollback
+            boolean success = false;
+            switch (player.iDMark.getShopId()) {
+                case ConstNpc.SHOP_BA_HAT_MIT_0:
+                    player.charms.addTimeCharms(is.temp.id, 60);
+                    openShopBua(player, player.iDMark.getShopId(), 0);
+                    success = true;
+                    break;
+                case ConstNpc.SHOP_BA_HAT_MIT_1:
+                    player.charms.addTimeCharms(is.temp.id, 60 * 8);
+                    openShopBua(player, player.iDMark.getShopId(), 1);
+                    success = true;
+                    break;
+                case ConstNpc.SHOP_BA_HAT_MIT_2:
+                    player.charms.addTimeCharms(is.temp.id, 60 * 24 * 30);
+                    openShopBua(player, player.iDMark.getShopId(), 2);
+                    success = true;
+                    break;
+                case ConstNpc.SHOP_BA_HAT_MIT_3:
+                    player.charms.addTimeCharms(is.temp.id, 60);
+                    openShopBua(player, player.iDMark.getShopId(), 3);
+                    success = true;
+                    break;
+                case ConstNpc.SHOP_BILL_HUY_DIET_0:
+                    InventoryService.gI().subQuantityItemsBag(player, mealBill, 200);
+                    Item itemBill = ItemService.gI().createItemFromItemShop(is);
+                    int param = 0;
+                    if (Util.isTrue(2, 10)) {
+                        param = Util.nextInt(10, 15);
+                    } else if (Util.isTrue(3, 10)) {
+                        param = Util.nextInt(0, 10);
+                    }
+                    for (ItemOption io : itemBill.itemOptions) {
+                        int optId = io.optionTemplate.id;
+                        switch (optId) {
+                            case 47: // giáp
+                            case 6: // hp
+                            case 26: // hp/30s
+                            case 22: // hp k
+                            case 0: // sức đánh
+                            case 7: // ki
+                            case 28: // ki/30s
+                            case 23: // ki k
+                            case 14: // crit
+                                io.param += ((long) io.param * param / 100);
+                                break;
                         }
-                        break;
-                    case ConstNpc.SHOP_WHIS_THIEN_SU:
-                        int param = 0;
-                        // if (Util.isTrue(2, 10)) {
-                        // param = Util.nextInt(10, 15);
-                        // } else if (Util.isTrue(3, 10)) {
-                        // param = Util.nextInt(0, 10);
-                        // }
-                        Item item = ItemService.gI().createItemFromItemShop(is);
-                        // for (ItemOption io : item.itemOptions) {
-                        // int optId = io.optionTemplate.id;
-                        // switch (optId) {
-                        // case 47: //giáp
-                        // case 6: //hp
-                        // case 26: //hp/30s
-                        // case 22: //hp k
-                        // case 0: //sức đánh
-                        // case 7: //ki
-                        // case 28: //ki/30s
-                        // case 23: //ki k
-                        // case 14: //crit
-                        //// io.param += ((long) io.param * param / 100);
-                        // break;
-                        // }
-                        // }
-                        // item.itemOptions.add(new ItemOption(41, 1));
-                        InventoryService.gI().addItemBag(player, item, 99);
+                    }
+                    if (InventoryService.gI().addItemBag(player, itemBill, 200)) {
                         InventoryService.gI().sendItemBags(player);
                         Service.getInstance().sendThongBao(player, "Đổi thành công " + is.temp.name);
-                        break;
-                    case ConstNpc.SHOP_SU_KIEN_TET:
-                        InventoryService.gI().addItemBag(player, ItemService.gI().createItemFromItemShop(is),
-                                99);
+                        success = true;
+                    } else {
+                        // Refund meal
+                        InventoryService.gI().addItemBag(player, ItemService.gI().createNewItem(mealBill.template.id, 200), 999);
+                    }
+                    break;
+                case ConstNpc.SHOP_WHIS_THIEN_SU:
+                    Item itemWhis = ItemService.gI().createItemFromItemShop(is);
+                    if (InventoryService.gI().addItemBag(player, itemWhis, 99)) {
+                        InventoryService.gI().sendItemBags(player);
+                        Service.getInstance().sendThongBao(player, "Đổi thành công " + is.temp.name);
+                        success = true;
+                    }
+                    break;
+                case ConstNpc.SHOP_SU_KIEN_TET:
+                    Item itemTet = ItemService.gI().createItemFromItemShop(is);
+                    if (InventoryService.gI().addItemBag(player, itemTet, 99)) {
                         InventoryService.gI().sendItemBags(player);
                         Service.getInstance().sendThongBao(player, "Bạn nhận được " + is.temp.name);
-                        break;
-                    default:
-                        InventoryService.gI().addItemBag(player, ItemService.gI().createItemFromItemShop(is), 99);
+                        success = true;
+                    }
+                    break;
+                default:
+                    Item itemDefault = ItemService.gI().createItemFromItemShop(is);
+                    if (InventoryService.gI().addItemBag(player, itemDefault, 99)) {
                         InventoryService.gI().sendItemBags(player);
                         Service.getInstance().sendThongBao(player, "Mua thành công " + is.temp.name);
                         if (is.temp.id == 517 || is.temp.id == 518) {
                             reopenShop(player, 39, 1);
                         }
-//                        if (player.iDMark.getShopId() == ConstNpc.SHOP_TORIBOT) {
-//                            if (is.options.size() == 4) {
-//                                is.options.clear();
-//                                is.options.add(new ItemOption(247, 0));
-//                            }
-//                        }
-//                        if (player.iDMark.getShopId() == ConstNpc.SHOP_TORIBOT) {
-//                            if (is.options.size() == 5) {
-//                                is.options.clear();
-//                                is.options.add(new ItemOption(249, 0));
-//                            }
-//                        }
-                        break;
-                }
-                Service.getInstance().sendMoney(player);
+                        success = true;
+                    }
+                    break;
             }
+
+            if (!success) {
+                // Rollback all spent resources
+                if (goldSpend > 0) {
+                    player.inventory.addGold(goldSpend);
+                }
+                if (gemSpend > 0) {
+                    player.inventory.addGem(gemSpend);
+                }
+                if (rubySpend > 0) {
+                    player.inventory.addRuby(rubySpend);
+                }
+                if (subbedItemExchange) {
+                    Item refundExchange = ItemService.gI().createNewItem((short) itemExchange, is.costSpec);
+                    InventoryService.gI().addItemBag(player, refundExchange, 9999);
+                }
+                if (pointExchange > 0) {
+                    player.event.addEventPoint(pointExchange);
+                }
+                if (incBuyLimit) {
+                    player.buyLimit[itemShopID - 1074]--;
+                }
+                Service.getInstance().sendThongBao(player, "Hành trang không đủ chỗ trống, giao dịch thất bại");
+            }
+            Service.getInstance().sendMoney(player);
         }
+    }
 
     public void reopenShop(Player player, int npcId, int select) {
         try {

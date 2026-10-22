@@ -118,10 +118,10 @@ public class InventoryService {
             case 9:
                 if (player.inventory.gold + item.quantity <= player.inventory.getGoldLimit()) {
                     if (player.playerIntrinsic.intrinsic.id == 23) {
-                        player.inventory.gold += player.nPoint.calPercent(item.quantity,
-                                player.playerIntrinsic.intrinsic.param1);
+                        player.inventory.addGold(player.nPoint.calPercent(item.quantity,
+                                player.playerIntrinsic.intrinsic.param1));
                     } else {
-                        player.inventory.gold += item.quantity;
+                        player.inventory.addGold(item.quantity);
                     }
                     Service.getInstance().sendMoney(player);
                     return true;
@@ -130,11 +130,11 @@ public class InventoryService {
                     return false;
                 }
             case 10:
-                player.inventory.gem += item.quantity;
+                player.inventory.addGem(item.quantity);
                 Service.getInstance().sendMoney(player);
                 return true;
             case 34:
-                player.inventory.ruby += item.quantity;
+                player.inventory.addRuby(item.quantity);
                 Service.getInstance().sendMoney(player);
                 return true;
         }

@@ -818,7 +818,7 @@ public class GodGK {
                         player.pet = pet;
                     }
                     if (session.ruby > 0) {
-                        player.inventory.ruby += session.ruby;
+                        player.inventory.addRuby(session.ruby);
                         player.playerTask.achivements.get(ConstAchive.LAN_DAU_NAP_NGOC).count += session.ruby;
                         PlayerDAO.subRuby(player, session.userId, session.ruby);
                     }

@@ -44,8 +44,11 @@ public class LuckyRoundGem extends AbsLuckyRound {
     }
 
     @Override
-    public boolean checkMoney(Player player, int price) {
-        if (!player.inventory.hasGem(price)) {
+    public boolean checkMoney(Player player, long price) {
+        if (price > Integer.MAX_VALUE || price <= 0) {
+            return false;
+        }
+        if (!player.inventory.hasGem((int) price)) {
             Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc");
             return false;
         }
@@ -53,8 +56,14 @@ public class LuckyRoundGem extends AbsLuckyRound {
     }
 
     @Override
-    public void payWithMoney(Player player, int price) {
-        player.inventory.trySpendGem(price);
+    public boolean payWithMoney(Player player, long price) {
+        if (price > Integer.MAX_VALUE || price <= 0) {
+            return false;
+        }
+        if (!player.inventory.trySpendGem((int) price)) {
+            Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc");
+            return false;
+        }
+        return true;
     }
-
 }

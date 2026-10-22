@@ -27,27 +27,34 @@ public class ChallengePVP extends PVP {
         if (gold <= 0) {
             return;
         }
-        if (!this.player1.inventory.hasGold(gold)) {
-            Service.getInstance().sendThongBao(player1, "Bạn không đủ vàng");
-            return;
+        Player firstLock = this.player1.id < this.player2.id ? this.player1 : this.player2;
+        Player secondLock = this.player1.id < this.player2.id ? this.player2 : this.player1;
+
+        synchronized (firstLock.inventory) {
+            synchronized (secondLock.inventory) {
+                if (!this.player1.inventory.hasGold(gold)) {
+                    Service.getInstance().sendThongBao(player1, "Bạn không đủ vàng");
+                    return;
+                }
+                if (!this.player2.inventory.hasGold(gold)) {
+                    Service.getInstance().sendThongBao(player2, "Bạn không đủ vàng");
+                    return;
+                }
+                if (!this.player1.inventory.trySpendGold(gold)) {
+                    return;
+                }
+                if (!this.player2.inventory.trySpendGold(gold)) {
+                    this.player1.inventory.addGold(gold);
+                    return;
+                }
+                super.start();
+                this.totalGold += ((long) gold * 90 / 100) * 2;
+                Service.getInstance().sendMoney(player1);
+                Service.getInstance().sendMoney(player2);
+                PlayerService.gI().changeAndSendTypePK(this.player1, ConstPlayer.PK_PVP);
+                PlayerService.gI().changeAndSendTypePK(this.player2, ConstPlayer.PK_PVP);
+            }
         }
-        if (!this.player2.inventory.hasGold(gold)) {
-            Service.getInstance().sendThongBao(player2, "Bạn không đủ vàng");
-            return;
-        }
-        if (!this.player1.inventory.trySpendGold(gold)) {
-            return;
-        }
-        if (!this.player2.inventory.trySpendGold(gold)) {
-            this.player1.inventory.addGold(gold);
-            return;
-        }
-        super.start();
-        this.totalGold += ((long) gold * 90 / 100) * 2;
-        Service.getInstance().sendMoney(player1);
-        Service.getInstance().sendMoney(player2);
-        PlayerService.gI().changeAndSendTypePK(this.player1, ConstPlayer.PK_PVP);
-        PlayerService.gI().changeAndSendTypePK(this.player2, ConstPlayer.PK_PVP);
     }
 
     @Override

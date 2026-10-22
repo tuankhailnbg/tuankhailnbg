@@ -1591,15 +1591,8 @@ public class CombineServiceNew {
                         Service.getInstance().sendThongBao(player, "Không đủ Mảnh vỡ bông tai");
                         return;
                     }
-                    if (gold > 0 && !player.inventory.trySpendGold(gold)) {
-                        Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
-                        return;
-                    }
-                    if (gem > 0 && !player.inventory.trySpendGem(gem)) {
-                        if (gold > 0) {
-                            player.inventory.addGold(gold);
-                        }
-                        Service.getInstance().sendThongBao(player, "Không đủ ngọc để thực hiện");
+                    if (!player.inventory.trySpendGoldAndGem(gold, gem)) {
+                        Service.getInstance().sendThongBao(player, "Không đủ vàng hoặc ngọc để thực hiện");
                         return;
                     }
                     if (Util.isTrue(player.combineNew.ratioCombine, 100)) {
@@ -1878,15 +1871,8 @@ public class CombineServiceNew {
                 }
             }
             if (bongTai != null && daXanhLam != null && manhHon != null && manhHon.quantity >= 99) {
-                if (gold > 0 && !player.inventory.trySpendGold(gold)) {
-                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
-                    return;
-                }
-                if (gem > 0 && !player.inventory.trySpendGem(gem)) {
-                    if (gold > 0) {
-                        player.inventory.addGold(gold);
-                    }
-                    Service.getInstance().sendThongBao(player, "Không đủ ngọc để thực hiện");
+                if (!player.inventory.trySpendGoldAndGem(gold, gem)) {
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng hoặc ngọc để thực hiện");
                     return;
                 }
                 InventoryService.gI().subQuantityItemsBag(player, manhHon, 99);
@@ -2681,15 +2667,8 @@ public class CombineServiceNew {
                             "Bạn không đủ ngọc, còn thiếu " + Util.mumberToLouis(missingGem > 0 ? missingGem : gem) + " ngọc nữa");
                     return;
                 }
-                if (gold > 0 && !player.inventory.trySpendGold(gold)) {
-                    Service.getInstance().sendThongBao(player, "Bạn không đủ vàng để thực hiện");
-                    return;
-                }
-                if (gem > 0 && !player.inventory.trySpendGem(gem)) {
-                    if (gold > 0) {
-                        player.inventory.addGold(gold);
-                    }
-                    Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc để thực hiện");
+                if (!player.inventory.trySpendGoldAndGem(gold, gem)) {
+                    Service.getInstance().sendThongBao(player, "Bạn không đủ vàng hoặc ngọc để thực hiện");
                     return;
                 }
                 if (Util.isTrue(player.combineNew.ratioCombine, 400)) {
@@ -2755,13 +2734,7 @@ public class CombineServiceNew {
                     return;
                 }
                 for (int i = 0; i < 10; i++) {
-                    if (gold > 0 && !player.inventory.trySpendGold(gold)) {
-                        break;
-                    }
-                    if (gem > 0 && !player.inventory.trySpendGem(gem)) {
-                        if (gold > 0) {
-                            player.inventory.addGold(gold);
-                        }
+                    if (!player.inventory.trySpendGoldAndGem(gold, gem)) {
                         break;
                     }
                     if (Util.isTrue(player.combineNew.ratioCombine, 400)) {
@@ -2833,13 +2806,7 @@ public class CombineServiceNew {
                     return;
                 }
                 for (int i = 0; i < 100; i++) {
-                    if (gold > 0 && !player.inventory.trySpendGold(gold)) {
-                        break;
-                    }
-                    if (gem > 0 && !player.inventory.trySpendGem(gem)) {
-                        if (gold > 0) {
-                            player.inventory.addGold(gold);
-                        }
+                    if (!player.inventory.trySpendGoldAndGem(gold, gem)) {
                         break;
                     }
                     if (Util.isTrue(player.combineNew.ratioCombine, 400)) {

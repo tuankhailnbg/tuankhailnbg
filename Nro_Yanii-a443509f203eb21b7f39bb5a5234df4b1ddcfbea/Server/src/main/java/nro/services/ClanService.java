@@ -514,15 +514,8 @@ public class ClanService {
                             + (missing > 0 ? missing : 0) + " ngọc");
                     return;
                 }
-                if (flagBag.gold > 0 && !player.inventory.trySpendGold(flagBag.gold)) {
-                    Service.getInstance().sendThongBao(player, "Không đủ vàng");
-                    return;
-                }
-                if (flagBag.gem > 0 && !player.inventory.trySpendGem(flagBag.gem)) {
-                    if (flagBag.gold > 0) {
-                        player.inventory.addGold(flagBag.gold);
-                    }
-                    Service.getInstance().sendThongBao(player, "Không đủ ngọc");
+                if (!player.inventory.trySpendGoldAndGem(flagBag.gold, flagBag.gem)) {
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng hoặc ngọc");
                     return;
                 }
                 PlayerService.gI().sendInfoHpMpMoney(player);
@@ -753,15 +746,8 @@ public class ClanService {
                             + (missing > 0 ? missing : 0) + " ngọc");
                     return;
                 }
-                if (flagBag.gold > 0 && !player.inventory.trySpendGold(flagBag.gold)) {
-                    Service.getInstance().sendThongBao(player, "Không đủ vàng");
-                    return;
-                }
-                if (flagBag.gem > 0 && !player.inventory.trySpendGem(flagBag.gem)) {
-                    if (flagBag.gold > 0) {
-                        player.inventory.addGold(flagBag.gold);
-                    }
-                    Service.getInstance().sendThongBao(player, "Không đủ ngọc");
+                if (!player.inventory.trySpendGoldAndGem(flagBag.gold, flagBag.gem)) {
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng hoặc ngọc");
                     return;
                 }
                 PlayerService.gI().sendInfoHpMpMoney(player);

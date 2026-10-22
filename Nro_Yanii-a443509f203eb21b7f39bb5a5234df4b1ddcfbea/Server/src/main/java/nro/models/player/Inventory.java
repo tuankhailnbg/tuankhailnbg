@@ -154,40 +154,106 @@ public class Inventory {
         }
     }
 
-    public void addGold(long gold) {
+    public synchronized boolean trySpendCurrencies(long gold, int gem, int ruby) {
+        if (gold < 0 || gem < 0 || ruby < 0) {
+            return false;
+        }
+        if (gold > 0 && this.gold < gold) {
+            return false;
+        }
+        if (gem > 0 && this.gem < gem) {
+            return false;
+        }
+        if (ruby > 0 && this.ruby < ruby) {
+            return false;
+        }
+        if (gold > 0) {
+            this.gold -= gold;
+        }
+        if (gem > 0) {
+            this.gem -= gem;
+        }
+        if (ruby > 0) {
+            this.ruby -= ruby;
+        }
+        return true;
+    }
+
+    public synchronized boolean trySpendGoldAndGem(long gold, int gem) {
+        return trySpendCurrencies(gold, gem, 0);
+    }
+
+    public synchronized boolean trySpendGoldAndRuby(long gold, int ruby) {
+        return trySpendCurrencies(gold, 0, ruby);
+    }
+
+    public synchronized boolean trySpendGemAndRuby(int gem, int ruby) {
+        return trySpendCurrencies(0, gem, ruby);
+    }
+
+    public synchronized void addGold(long gold) {
         if (gold <= 0) {
             return;
         }
-        this.gold += gold;
+        if (this.gold < 0) {
+            this.gold = 0;
+        }
         long goldLimit = getGoldLimit();
-        if (this.gold > goldLimit) {
+        if (this.gold >= goldLimit) {
             this.gold = goldLimit;
+            return;
+        }
+        if (gold >= goldLimit - this.gold) {
+            this.gold = goldLimit;
+        } else {
+            this.gold += gold;
         }
     }
 
-    public void addGem(int gem) {
+    public synchronized void addGem(int gem) {
         if (gem <= 0) {
             return;
-        }
-        this.gem += gem;
-    }
-
-    public void addRuby(int ruby) {
-        if (ruby <= 0) {
-            return;
-        }
-        this.ruby += ruby;
-    }
-
-    public void sanitizeCurrencies() {
-        if (this.gold < 0) {
-            nro.utils.Log.warning(String.format("[GOLD_SANITIZE] Player=%s OldGold=%d NewGold=0", (player != null ? player.name : "unknown"), this.gold));
-            this.gold = 0;
         }
         if (this.gem < 0) {
             this.gem = 0;
         }
+        long result = (long) this.gem + gem;
+        if (result > Integer.MAX_VALUE) {
+            this.gem = Integer.MAX_VALUE;
+        } else {
+            this.gem = (int) result;
+        }
+    }
+
+    public synchronized void addRuby(int ruby) {
+        if (ruby <= 0) {
+            return;
+        }
         if (this.ruby < 0) {
+            this.ruby = 0;
+        }
+        long result = (long) this.ruby + ruby;
+        if (result > Integer.MAX_VALUE) {
+            this.ruby = Integer.MAX_VALUE;
+        } else {
+            this.ruby = (int) result;
+        }
+    }
+
+    public synchronized void sanitizeCurrencies() {
+        if (this.gold < 0) {
+            nro.utils.Log.error(String.format("[GOLD_SANITIZE] PlayerId=%d PlayerName=%s OldGold=%d NewGold=0",
+                    (player != null ? player.id : -1), (player != null ? player.name : "unknown"), this.gold));
+            this.gold = 0;
+        }
+        if (this.gem < 0) {
+            nro.utils.Log.error(String.format("[GEM_SANITIZE] PlayerId=%d PlayerName=%s OldGem=%d NewGem=0",
+                    (player != null ? player.id : -1), (player != null ? player.name : "unknown"), this.gem));
+            this.gem = 0;
+        }
+        if (this.ruby < 0) {
+            nro.utils.Log.error(String.format("[RUBY_SANITIZE] PlayerId=%d PlayerName=%s OldRuby=%d NewRuby=0",
+                    (player != null ? player.id : -1), (player != null ? player.name : "unknown"), this.ruby));
             this.ruby = 0;
         }
     }
