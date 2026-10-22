@@ -185,6 +185,9 @@ public class NPoint {
 
     public void initPowerLimit() {
         powerLimit = PowerLimitManager.getInstance().get(limitPower);
+        if (powerLimit == null) {
+            powerLimit = PowerLimitManager.getInstance().get(0);
+        }
     }
 
     /*-------------------------------------------------------------------------*/
@@ -1391,10 +1394,17 @@ public class NPoint {
     }
 
     public long getPowerLimit() {
+        if (powerLimit == null) {
+            initPowerLimit();
+        }
         if (powerLimit != null) {
             return powerLimit.getPower();
         }
-        return 0;
+        PowerLimit pl = PowerLimitManager.getInstance().get(0);
+        if (pl != null) {
+            return pl.getPower();
+        }
+        return Long.MAX_VALUE;
     }
 
     public long getPowerNextLimit() {
@@ -1417,6 +1427,9 @@ public class NPoint {
     }
 
     public void increasePoint(byte type, short point) {
+        if (powerLimit == null) {
+            initPowerLimit();
+        }
         if (powerLimit == null) {
             return;
         }

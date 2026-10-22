@@ -3104,6 +3104,9 @@ public class TaskService {
     }
 
     public void checkDoneSideTaskKillMob(Player player, Mob mob) {
+        if (player.isPet || player.isBoss || player.playerTask == null || player.playerTask.sideTask == null) {
+            return;
+        }
         if (player.playerTask.sideTask.template != null) {
             if ((player.playerTask.sideTask.template.id == 0 && mob.tempId == ConstMob.KHUNG_LONG)
                     || (player.playerTask.sideTask.template.id == 1 && mob.tempId == ConstMob.LON_LOI)

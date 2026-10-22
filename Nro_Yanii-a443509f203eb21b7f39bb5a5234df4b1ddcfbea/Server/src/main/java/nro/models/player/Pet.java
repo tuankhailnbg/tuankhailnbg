@@ -72,6 +72,7 @@ public class Pet extends Player {
     public Pet(Player master) {
         this.master = master;
         this.isPet = true;
+        this.nPoint.initPowerLimit();
     }
 
     public void changeStatus(byte status) {

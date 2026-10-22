@@ -71,6 +71,7 @@ public class PetService {
                 createNewPet(player, false, false, false, false, false, false);
                 if (limitPower != null && limitPower.length == 1) {
                     player.pet.nPoint.limitPower = limitPower[0];
+                    player.pet.nPoint.initPowerLimit();
                 }
                 Thread.sleep(1000);
                 Service.getInstance().chatJustForMe(player, player.pet, "Xin hãy thu nhận làm đệ tử");
@@ -440,6 +441,7 @@ public class PetService {
         for (int i = 0; i < 3; i++) {
             pet.playerSkill.skills.add(SkillUtil.createEmptySkill());
         }
+        pet.nPoint.initPowerLimit();
         pet.nPoint.calPoint();
         pet.nPoint.setFullHpMp();
         player.pet = pet;

@@ -1155,20 +1155,32 @@ public class Service {
     }
 
     public void addSMTN(Player player, byte type, long param, boolean isOri) {
+        if (player == null || param <= 0) {
+            return;
+        }
         if (player.isPet) {
             if (player.nPoint.power > player.nPoint.getPowerLimit()) {
                 return;
             }
-            player.nPoint.powerUp(param);
-            player.nPoint.tiemNangUp(param);
-            Player master = ((Pet) player).master;
-
-            param = master.nPoint.calSubTNSM(param);
-            if (master.nPoint.power < master.nPoint.getPowerLimit()) {
-                master.nPoint.powerUp(param);
+            switch (type) {
+                case 1:
+                    player.nPoint.tiemNangUp(param);
+                    break;
+                case 2:
+                    player.nPoint.powerUp(param);
+                    player.nPoint.tiemNangUp(param);
+                    break;
+                default:
+                    player.nPoint.powerUp(param);
+                    break;
             }
-            master.nPoint.tiemNangUp(param);
-            addSMTN(master, type, param, true);
+            Player master = ((Pet) player).master;
+            if (master != null) {
+                long masterParam = master.nPoint.calSubTNSM(param);
+                if (masterParam > 0) {
+                    addSMTN(master, type, masterParam, true);
+                }
+            }
         } else {
             if (player.nPoint.power > player.nPoint.getPowerLimit()) {
                 return;

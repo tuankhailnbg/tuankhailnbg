@@ -756,6 +756,7 @@ public class GodGK {
                         pet.nPoint.power = Long.parseLong(String.valueOf(dataObject.get("power")));
                         pet.nPoint.tiemNang = Long.parseLong(String.valueOf(dataObject.get("tiem_nang")));
                         pet.nPoint.limitPower = Byte.parseByte(String.valueOf(dataObject.get("limit_power")));
+                        pet.nPoint.initPowerLimit();
                         int hp = Integer.parseInt(String.valueOf(dataObject.get("hp")));
                         int mp = Integer.parseInt(String.valueOf(dataObject.get("mp")));
 
