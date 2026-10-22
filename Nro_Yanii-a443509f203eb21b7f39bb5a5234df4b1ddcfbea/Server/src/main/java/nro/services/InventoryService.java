@@ -202,6 +202,10 @@ public class InventoryService {
     }
 
     public boolean addItemList(List<Item> items, Item item, int maxQuantity) {
+        if (items == null || item == null || item.template == null || item.quantity <= 0 || item.quantity > 2_000_000_000) {
+            return false;
+        }
+
         // nếu item ko có option, add option rỗng vào
         if (item.itemOptions.isEmpty()) {
             item.itemOptions.add(new ItemOption(73, 0));
@@ -236,7 +240,9 @@ public class InventoryService {
         if (isItemIncremental(item)) {
             for (Item it : items) {
                 if (it.isNotNullItem() && it.template.id == item.template.id && areItemOptionsEqual(it.itemOptions, item.itemOptions)) {
-                    if (item.template.id != 457
+                    long effectiveMax = 2_000_000_000L;
+                    if (maxQuantity > 0
+                            && item.template.id != 457
                             && item.template.type != 14
                             && item.template.id != 590
                             && item.template.id != 462
@@ -252,28 +258,20 @@ public class InventoryService {
                             && item.template.id != 2130
                             && item.template.id != 2013
                             && item.template.id != 2014
-                            && item.template.id != 2015
-                            && it.quantity + item.quantity > maxQuantity && maxQuantity != 0) {
-                        if (maxQuantity == 999) {
-                            int add = 999 - it.quantity;
-                            it.quantity = 999;
-                            item.quantity -= add;
-                            return true;
-                        } else {
-                            return false;
-                        }
-                    } else {
-                        long totalQty = (long) it.quantity + (long) item.quantity;
-                        if (totalQty > 2_000_000_000L) {
-                            it.quantity = 2_000_000_000;
-                        } else {
-                            it.quantity = (int) totalQty;
-                        }
+                            && item.template.id != 2015) {
+                        effectiveMax = maxQuantity;
+                    }
+
+                    long totalQty = (long) it.quantity + (long) item.quantity;
+                    if (totalQty <= effectiveMax) {
+                        it.quantity = (int) totalQty;
                         if (maxQuantity > 0) {
                             item.quantity = 0;
                         }
                         return true;
                     }
+                    // Nếu vượt quá effectiveMax (ví dụ 1.9B + 200M > 2B):
+                    // KHÔNG chỉnh sửa stack hiện tại, tiếp tục tìm stack khác còn đủ chỗ hoặc ô trống mới!
                 }
             }
         }

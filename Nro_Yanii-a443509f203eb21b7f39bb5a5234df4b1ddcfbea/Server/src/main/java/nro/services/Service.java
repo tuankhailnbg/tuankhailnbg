@@ -823,9 +823,6 @@ public class Service {
             } else if (text.equals("buff") || text.equals("buffitem") || text.equals("adminbuff")) {
                 AdminBuffItemService.gI().openMenuBuffItem(player);
                 return;
-            } else if (text.equals("nhanqua") || text.equals("nhanitem") || text.equals("nhanvatpham")) {
-                AdminBuffItemService.gI().deliverPendingGrants(player);
-                return;
             } else if (text.equals("quanct1")) {
                 AdminBuffItemService.gI().openMenuBuffItem(player);
                 return;
@@ -869,6 +866,14 @@ public class Service {
                     Service.gI().sendThongBaoOK(player, "Cú pháp: m_MapId ( _ là dấu cách )");
                 }
             }
+        }
+
+        // Lệnh nhận quà/vật phẩm Admin đang chờ nhận dành cho MỌI người chơi hợp lệ
+        if (text.equals("nhanqua") || text.equals("nhanitem") || text.equals("nhanvatpham")) {
+            if (player != null && player.getSession() != null) {
+                AdminBuffItemService.gI().deliverPendingGrants(player);
+            }
+            return;
         }
         if (text.startsWith("ten con la ")) {
             PetService.gI().changeNamePet(player, text.replaceAll("ten con la ", ""));

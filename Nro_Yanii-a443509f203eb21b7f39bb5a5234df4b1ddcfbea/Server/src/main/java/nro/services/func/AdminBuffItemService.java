@@ -2,14 +2,17 @@ package nro.services.func;
 
 import nro.consts.ConstNpc;
 import nro.jdbc.DBService;
+import nro.jdbc.daos.PlayerDAO;
 import nro.models.item.Item;
 import nro.models.item.ItemOption;
 import nro.models.item.ItemOptionTemplate;
 import nro.models.item.ItemTemplate;
+import nro.models.npc.specialnpc.MabuEgg;
 import nro.models.player.Player;
 import nro.server.Client;
 import nro.server.Manager;
 import nro.services.InventoryService;
+import nro.services.ItemMapService;
 import nro.services.ItemService;
 import nro.services.NpcService;
 import nro.services.RewardService;
@@ -68,8 +71,11 @@ public class AdminBuffItemService {
                     + "KEY `idx_target_player_status` (`target_player_id`, `status`), "
                     + "KEY `idx_status` (`status`)"
                     + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+            // Khôi phục các grant bị kẹt PROCESSING từ phiên bản trước do server tắt đột ngột
+            stmt.executeUpdate("UPDATE `admin_item_grant` SET `status` = 'PENDING' WHERE `status` = 'PROCESSING'");
         } catch (Throwable e) {
-            // Log.error(AdminBuffItemService.class, e, "Lỗi kiểm tra/tạo bảng admin_item_grant");
+            Log.error(AdminBuffItemService.class.getName() + ": Không thể khởi tạo bảng admin_item_grant: " + e.getMessage());
         }
     }
 
@@ -1008,6 +1014,17 @@ public class AdminBuffItemService {
             return;
         }
 
+        if (session.selectedTemplate == null) {
+            Service.getInstance().sendThongBao(admin, "Chưa chọn vật phẩm.");
+            return;
+        }
+
+        // Chặn các item world/event đặc biệt không thể deliver offline
+        if (ItemMapService.gI().isBlackBall(session.selectedTemplate.id)) {
+            Service.getInstance().sendThongBao(admin, "Vật phẩm Ngọc Rồng Đen chỉ có thể buff khi người chơi ONLINE!");
+            return;
+        }
+
         if (session.quantity <= 0 || session.quantity > 2_000_000_000) {
             Service.getInstance().sendThongBao(admin, "Số lượng vượt quá giới hạn cho phép.");
             return;
@@ -1058,17 +1075,90 @@ public class AdminBuffItemService {
         }
     }
 
-    private static class PendingGrant {
-        long id;
-        int itemTemplateId;
-        int quantity;
-        String optionsJson;
+    /**
+     * Snapshot trạng thái Player trong RAM để khôi phục (rollback) khi DB transaction gặp sự cố
+     */
+    public static class PlayerStateSnapshot {
+        private final List<Item> itemsBag;
+        private final List<Item> itemsBox;
+        private final long gold;
+        private final int gem;
+        private final int ruby;
+        private final long goldLimit;
+        private final int hp;
+        private final int mp;
+        private final boolean haveTennisSpaceShip;
+        private final MabuEgg mabuEgg;
+
+        public PlayerStateSnapshot(Player player) {
+            this.itemsBag = new ArrayList<>();
+            if (player.inventory != null && player.inventory.itemsBag != null) {
+                for (Item it : player.inventory.itemsBag) {
+                    this.itemsBag.add(copyItemSafe(it));
+                }
+            }
+            this.itemsBox = new ArrayList<>();
+            if (player.inventory != null && player.inventory.itemsBox != null) {
+                for (Item it : player.inventory.itemsBox) {
+                    this.itemsBox.add(copyItemSafe(it));
+                }
+            }
+            this.gold = player.inventory != null ? player.inventory.gold : 0;
+            this.gem = player.inventory != null ? player.inventory.gem : 0;
+            this.ruby = player.inventory != null ? player.inventory.ruby : 0;
+            this.goldLimit = player.inventory != null ? player.inventory.goldLimit : 0;
+            this.hp = player.nPoint != null ? player.nPoint.hp : 0;
+            this.mp = player.nPoint != null ? player.nPoint.mp : 0;
+            this.haveTennisSpaceShip = player.haveTennisSpaceShip;
+            this.mabuEgg = player.mabuEgg;
+        }
+
+        public void restore(Player player) {
+            if (player.inventory != null) {
+                if (player.inventory.itemsBag != null) {
+                    player.inventory.itemsBag.clear();
+                    for (Item it : this.itemsBag) {
+                        player.inventory.itemsBag.add(copyItemSafe(it));
+                    }
+                }
+                if (player.inventory.itemsBox != null) {
+                    player.inventory.itemsBox.clear();
+                    for (Item it : this.itemsBox) {
+                        player.inventory.itemsBox.add(copyItemSafe(it));
+                    }
+                }
+                player.inventory.gold = this.gold;
+                player.inventory.gem = this.gem;
+                player.inventory.ruby = this.ruby;
+                player.inventory.goldLimit = this.goldLimit;
+            }
+            if (player.nPoint != null) {
+                player.nPoint.hp = this.hp;
+                player.nPoint.mp = this.mp;
+            }
+            player.haveTennisSpaceShip = this.haveTennisSpaceShip;
+            player.mabuEgg = this.mabuEgg;
+        }
+
+        private static Item copyItemSafe(Item it) {
+            if (it == null) {
+                return null;
+            }
+            if (!it.isNotNullItem()) {
+                Item empty = new Item();
+                empty.template = null;
+                empty.quantity = 0;
+                return empty;
+            }
+            return ItemService.gI().copyItem(it);
+        }
     }
 
     /**
      * Nhận các vật phẩm Admin đang ở trạng thái PENDING khi player đăng nhập hoặc gọi chat "nhanqua".
-     * Chạy toàn bộ qua InventoryService.addItemBag() để đảm bảo mọi logic item đặc biệt (vàng, ngọc, ruby, Mabư egg, v.v.)
-     * đều hoạt động chuẩn xác như khi online.
+     * Mỗi grant được xử lý trong một DB transaction độc lập kết hợp lưu dữ liệu Player (PlayerDAO.updatePlayer)
+     * và cập nhật trạng thái DELIVERED trên cùng Connection.
+     * Có cơ chế RAM Snapshot & Rollback nếu DB transaction bị lỗi.
      */
     public void deliverPendingGrants(Player player) {
         if (player == null || player.inventory == null || player.getSession() == null) {
@@ -1081,96 +1171,160 @@ public class AdminBuffItemService {
         }
 
         try {
-            List<PendingGrant> grants = new ArrayList<>();
-            // Mở transaction với row lock FOR UPDATE
-            try (Connection con = DBService.gI().getConnectionForSaveData()) {
-                con.setAutoCommit(false);
-                String selectSql = "SELECT id, item_template_id, quantity, options_json FROM admin_item_grant "
-                        + "WHERE target_player_id = ? AND status = 'PENDING' ORDER BY id ASC FOR UPDATE";
-                try (PreparedStatement ps = con.prepareStatement(selectSql)) {
-                    ps.setLong(1, player.id);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        while (rs.next()) {
-                            PendingGrant g = new PendingGrant();
-                            g.id = rs.getLong("id");
-                            g.itemTemplateId = rs.getInt("item_template_id");
-                            g.quantity = rs.getInt("quantity");
-                            g.optionsJson = rs.getString("options_json");
-                            grants.add(g);
-                        }
+            List<Long> pendingIds = new ArrayList<>();
+            // Load danh sách ID grant PENDING theo thứ tự FIFO (id ASC)
+            try (Connection con = DBService.gI().getConnectionForSaveData();
+                 PreparedStatement ps = con.prepareStatement(
+                         "SELECT id FROM admin_item_grant WHERE target_player_id = ? AND status = 'PENDING' ORDER BY id ASC")) {
+                ps.setLong(1, player.id);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        pendingIds.add(rs.getLong("id"));
                     }
                 }
+            } catch (Throwable e) {
+                Log.error(AdminBuffItemService.class.getName() + ": Lỗi tải danh sách pending grants cho player " + player.name + ": " + e.getMessage());
+                return;
+            }
 
-                if (grants.isEmpty()) {
-                    con.commit();
-                    return;
-                }
+            if (pendingIds.isEmpty()) {
+                return;
+            }
 
-                boolean hasBagFull = false;
-                int deliveredCount = 0;
+            boolean hasBagFull = false;
+            int deliveredCount = 0;
 
-                for (PendingGrant g : grants) {
-                    ItemTemplate template = getItemTemplate(g.itemTemplateId);
-                    if (template == null || g.quantity <= 0 || g.quantity > 2_000_000_000) {
-                        try (PreparedStatement psUpdate = con.prepareStatement("UPDATE admin_item_grant SET status = 'FAILED' WHERE id = ?")) {
-                            psUpdate.setLong(1, g.id);
-                            psUpdate.executeUpdate();
+            for (long grantId : pendingIds) {
+                try (Connection con = DBService.gI().getConnectionForSaveData()) {
+                    con.setAutoCommit(false);
+
+                    int itemTemplateId = -1;
+                    int quantity = 0;
+                    String optionsJson = null;
+                    String currentStatus = null;
+
+                    // 1. SELECT grant ... FOR UPDATE
+                    try (PreparedStatement psSelect = con.prepareStatement(
+                            "SELECT item_template_id, quantity, options_json, status FROM admin_item_grant WHERE id = ? FOR UPDATE")) {
+                        psSelect.setLong(1, grantId);
+                        try (ResultSet rs = psSelect.executeQuery()) {
+                            if (rs.next()) {
+                                itemTemplateId = rs.getInt("item_template_id");
+                                quantity = rs.getInt("quantity");
+                                optionsJson = rs.getString("options_json");
+                                currentStatus = rs.getString("status");
+                            }
                         }
+                    }
+
+                    // 2. Xác nhận status == PENDING
+                    if (!"PENDING".equals(currentStatus)) {
+                        con.rollback();
                         continue;
                     }
 
-                    // Tạm chuyển sang PROCESSING atomically
-                    try (PreparedStatement psProcessing = con.prepareStatement("UPDATE admin_item_grant SET status = 'PROCESSING' WHERE id = ? AND status = 'PENDING'")) {
-                        psProcessing.setLong(1, g.id);
-                        if (psProcessing.executeUpdate() == 0) {
-                            // Đã được xử lý ở transaction khác
+                    // 3. Validate ItemTemplate & Quantity
+                    ItemTemplate template = getItemTemplate(itemTemplateId);
+                    if (template == null || quantity <= 0 || quantity > 2_000_000_000) {
+                        try (PreparedStatement psFail = con.prepareStatement(
+                                "UPDATE admin_item_grant SET status = 'FAILED' WHERE id = ?")) {
+                            psFail.setLong(1, grantId);
+                            psFail.executeUpdate();
+                        }
+                        con.commit();
+                        continue;
+                    }
+
+                    // 4. Update status PENDING -> PROCESSING atomically
+                    try (PreparedStatement psProc = con.prepareStatement(
+                            "UPDATE admin_item_grant SET status = 'PROCESSING' WHERE id = ? AND status = 'PENDING'")) {
+                        psProc.setLong(1, grantId);
+                        if (psProc.executeUpdate() == 0) {
+                            con.rollback();
                             continue;
                         }
                     }
 
-                    // Tạo Item và khôi phục options
-                    Item item = ItemService.gI().createNewItem((short) g.itemTemplateId, g.quantity);
-                    item.itemOptions = parseOptionsJson(g.optionsJson);
-                    item.quantity = g.quantity;
+                    // 5. Tạo snapshot trạng thái Player trước khi thay đổi
+                    PlayerStateSnapshot snapshot = new PlayerStateSnapshot(player);
 
-                    // Thêm vật phẩm vào túi bằng CHÍNH InventoryService.addItemBag
-                    boolean success = InventoryService.gI().addItemBag(player, item, 0);
+                    // 6. Tạo Item và khôi phục options
+                    Item item = ItemService.gI().createNewItem((short) itemTemplateId, quantity);
+                    item.itemOptions = parseOptionsJson(optionsJson);
+                    item.quantity = quantity;
 
-                    if (success) {
-                        try (PreparedStatement psDelivered = con.prepareStatement("UPDATE admin_item_grant SET status = 'DELIVERED', delivered_at = NOW() WHERE id = ?")) {
-                            psDelivered.setLong(1, g.id);
-                            psDelivered.executeUpdate();
+                    // 7. Gọi InventoryService.gI().addItemBag(player, item, 0)
+                    boolean added = false;
+                    try {
+                        added = InventoryService.gI().addItemBag(player, item, 0);
+                    } catch (Exception t) {
+                        Log.error(AdminBuffItemService.class, t, "Lỗi addItemBag cho grant " + grantId);
+                        added = false;
+                    }
+
+                    if (!added) {
+                        // Khôi phục RAM nếu có mutation dở dang
+                        snapshot.restore(player);
+
+                        // Trả trạng thái về PENDING
+                        try (PreparedStatement psRevert = con.prepareStatement(
+                                "UPDATE admin_item_grant SET status = 'PENDING' WHERE id = ?")) {
+                            psRevert.setLong(1, grantId);
+                            psRevert.executeUpdate();
                         }
-                        logAuditDelivered(g.id, player.name, player.id, item.template.id, item.template.name, g.quantity);
-                        deliveredCount++;
-                    } else {
-                        // Túi đầy hoặc điều kiện không cho phép: hoàn trả về PENDING để nhận sau
-                        try (PreparedStatement psPending = con.prepareStatement("UPDATE admin_item_grant SET status = 'PENDING' WHERE id = ?")) {
-                            psPending.setLong(1, g.id);
-                            psPending.executeUpdate();
-                        }
-                        logAuditBagFull(g.id, player.name, player.id, item.template.id, item.template.name, g.quantity);
+                        con.commit();
+
+                        logAuditBagFull(grantId, player.name, player.id, item.template.id, item.template.name, quantity);
                         hasBagFull = true;
-                        // Dừng xử lý các grant tiếp theo để đảm bảo FIFO và không skip item
+                        // Dừng xử lý các grant tiếp theo để giữ đúng FIFO
                         break;
                     }
-                }
 
-                con.commit();
+                    // 8. Đã thêm vào RAM thành công -> persist Player và update DELIVERED trong CÙNG transaction!
+                    try {
+                        PlayerDAO.updatePlayer(player, con);
 
-                if (deliveredCount > 0) {
-                    InventoryService.gI().sendItemBags(player);
-                    Service.getInstance().sendThongBao(player,
-                            "Bạn đã nhận thành công " + deliveredCount + " phần quà/vật phẩm từ Admin!");
-                }
+                        try (PreparedStatement psDelivered = con.prepareStatement(
+                                "UPDATE admin_item_grant SET status = 'DELIVERED', delivered_at = NOW() WHERE id = ?")) {
+                            psDelivered.setLong(1, grantId);
+                            psDelivered.executeUpdate();
+                        }
 
-                if (hasBagFull) {
-                    Service.getInstance().sendThongBao(player,
-                            "Bạn có vật phẩm Admin đang chờ nhận nhưng hành trang đã đầy. Vui lòng dọn túi rồi chat 'nhanqua' hoặc đăng nhập lại để nhận.");
+                        // COMMIT CẢ DỮ LIỆU PLAYER VÀ TRẠNG THÁI GRANT CÙNG NHAU
+                        con.commit();
+
+                        logAuditDelivered(grantId, player.name, player.id, item.template.id, item.template.name, quantity);
+                        deliveredCount++;
+                    } catch (Exception t) {
+                        // Lỗi ghi DB: rollback cả player data và trạng thái grant
+                        con.rollback();
+
+                        // QUAN TRỌNG: Khôi phục RAM về snapshot để không bị dirty memory!
+                        snapshot.restore(player);
+                        InventoryService.gI().sendItemBags(player);
+                        Service.getInstance().sendMoney(player);
+
+                        Log.error(AdminBuffItemService.class, t, "Lỗi commit grant " + grantId + ", đã khôi phục RAM và DB!");
+                        break;
+                    }
+                } catch (Throwable e) {
+                    Log.error(AdminBuffItemService.class.getName() + ": Lỗi transaction cho grant " + grantId + ": " + e.getMessage());
+                    break;
                 }
-            } catch (Exception e) {
-                Log.error(AdminBuffItemService.class, e, "Lỗi deliverPendingGrants cho player " + player.name);
             }
+
+            if (deliveredCount > 0) {
+                InventoryService.gI().sendItemBags(player);
+                Service.getInstance().sendThongBao(player,
+                        "Bạn đã nhận thành công " + deliveredCount + " phần quà/vật phẩm từ Admin!");
+            }
+
+            if (hasBagFull) {
+                Service.getInstance().sendThongBao(player,
+                        "Bạn có vật phẩm Admin đang chờ nhận nhưng hành trang đã đầy. Vui lòng dọn túi rồi chat 'nhanqua' hoặc đăng nhập lại để nhận.");
+            }
+        } catch (Throwable t) {
+            Log.error(AdminBuffItemService.class.getName() + ": Lỗi deliverPendingGrants cho player " + player.name + ": " + t.getMessage());
         } finally {
             deliveringPlayers.remove(player.id);
         }
