@@ -24,10 +24,26 @@ public class ChallengePVP extends PVP {
 
     @Override
     public void start() {
+        if (gold <= 0) {
+            return;
+        }
+        if (!this.player1.inventory.hasGold(gold)) {
+            Service.getInstance().sendThongBao(player1, "Bạn không đủ vàng");
+            return;
+        }
+        if (!this.player2.inventory.hasGold(gold)) {
+            Service.getInstance().sendThongBao(player2, "Bạn không đủ vàng");
+            return;
+        }
+        if (!this.player1.inventory.trySpendGold(gold)) {
+            return;
+        }
+        if (!this.player2.inventory.trySpendGold(gold)) {
+            this.player1.inventory.addGold(gold);
+            return;
+        }
         super.start();
         this.totalGold += ((long) gold * 90 / 100) * 2;
-        this.player1.inventory.gold -= gold;
-        this.player2.inventory.gold -= gold;
         Service.getInstance().sendMoney(player1);
         Service.getInstance().sendMoney(player2);
         PlayerService.gI().changeAndSendTypePK(this.player1, ConstPlayer.PK_PVP);

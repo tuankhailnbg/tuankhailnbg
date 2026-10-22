@@ -92,6 +92,9 @@ public class Trade {
         if (pl.getSession().actived) {
             // if (pl.nPoint.power >= 40_000_000_000L) {
             if (index == -1) {
+                if (quantity < 0 || !pl.inventory.hasGold(quantity)) {
+                    return;
+                }
                 if (pl.equals(this.player1)) {
                     goldTrade1 = quantity;
                 } else {
@@ -323,6 +326,22 @@ public class Trade {
 
     private void startTrade() {
         byte tradeStatus = SUCCESS;
+        if (goldTrade1 < 0 || goldTrade2 < 0) {
+            sendNotifyTrade(FAIL_NOT_ENOUGH_BAG_P1);
+            return;
+        }
+        if (!player1.inventory.hasGold(goldTrade1)) {
+            Service.getInstance().sendThongBao(player1, "Bạn không đủ vàng để giao dịch");
+            Service.getInstance().sendThongBao(player2, "Đối thủ không đủ vàng để giao dịch");
+            sendNotifyTrade(FAIL_NOT_ENOUGH_BAG_P1);
+            return;
+        }
+        if (!player2.inventory.hasGold(goldTrade2)) {
+            Service.getInstance().sendThongBao(player1, "Đối thủ không đủ vàng để giao dịch");
+            Service.getInstance().sendThongBao(player2, "Bạn không đủ vàng để giao dịch");
+            sendNotifyTrade(FAIL_NOT_ENOUGH_BAG_P2);
+            return;
+        }
         if (player1.inventory.gold + goldTrade2 > player1.inventory.getGoldLimit()) {
             tradeStatus = FAIL_MAX_GOLD_PLAYER1;
         } else if (player2.inventory.gold + goldTrade1 > player2.inventory.getGoldLimit()) {
@@ -347,10 +366,23 @@ public class Trade {
                     }
                 }
                 if (tradeStatus == SUCCESS) {
-                    player1.inventory.gold += goldTrade2;
-                    player2.inventory.gold += goldTrade1;
-                    player1.inventory.gold -= goldTrade1;
-                    player2.inventory.gold -= goldTrade2;
+                    if (goldTrade1 > 0 && !player1.inventory.trySpendGold(goldTrade1)) {
+                        sendNotifyTrade(FAIL_NOT_ENOUGH_BAG_P1);
+                        return;
+                    }
+                    if (goldTrade2 > 0 && !player2.inventory.trySpendGold(goldTrade2)) {
+                        if (goldTrade1 > 0) {
+                            player1.inventory.addGold(goldTrade1);
+                        }
+                        sendNotifyTrade(FAIL_NOT_ENOUGH_BAG_P2);
+                        return;
+                    }
+                    if (goldTrade2 > 0) {
+                        player1.inventory.addGold(goldTrade2);
+                    }
+                    if (goldTrade1 > 0) {
+                        player2.inventory.addGold(goldTrade1);
+                    }
                     player1.inventory.itemsBag = itemsBag1;
                     player2.inventory.itemsBag = itemsBag2;
 

@@ -63,27 +63,132 @@ public class Inventory {
         return this.ruby;
     }
 
-    public void subGem(int num) {
-        this.gem -= num;
+    public boolean hasGold(long amount) {
+        if (amount < 0) {
+            return false;
+        }
+        return this.gold >= amount;
+    }
+
+    public synchronized boolean trySpendGold(long amount) {
+        if (amount <= 0) {
+            return false;
+        }
+        if (this.gold < amount) {
+            return false;
+        }
+        this.gold -= amount;
+        return true;
     }
 
     public void subGold(int num) {
-        this.gold -= num;
+        subGold((long) num);
     }
 
-    public void subGold(long num) {
-        this.gold -= num;
+    public synchronized void subGold(long num) {
+        if (num <= 0) {
+            return;
+        }
+        if (this.gold >= num) {
+            this.gold -= num;
+        } else {
+            nro.utils.Log.error("[INVENTORY_SUBGOLD_GUARD] Attempted to subGold " + num + " with only " + this.gold + " gold! Player: " + (player != null ? player.name : "null"));
+        }
     }
 
-    public void subRuby(int num) {
-        this.ruby -= num;
+    public boolean hasGem(int amount) {
+        if (amount < 0) {
+            return false;
+        }
+        return this.gem >= amount;
+    }
+
+    public synchronized boolean trySpendGem(int amount) {
+        if (amount <= 0) {
+            return false;
+        }
+        if (this.gem < amount) {
+            return false;
+        }
+        this.gem -= amount;
+        return true;
+    }
+
+    public synchronized void subGem(int num) {
+        if (num <= 0) {
+            return;
+        }
+        if (this.gem >= num) {
+            this.gem -= num;
+        } else {
+            nro.utils.Log.error("[INVENTORY_SUBGEM_GUARD] Attempted to subGem " + num + " with only " + this.gem + " gem! Player: " + (player != null ? player.name : "null"));
+        }
+    }
+
+    public boolean hasRuby(int amount) {
+        if (amount < 0) {
+            return false;
+        }
+        return this.ruby >= amount;
+    }
+
+    public synchronized boolean trySpendRuby(int amount) {
+        if (amount <= 0) {
+            return false;
+        }
+        if (this.ruby < amount) {
+            return false;
+        }
+        this.ruby -= amount;
+        return true;
+    }
+
+    public synchronized void subRuby(int num) {
+        if (num <= 0) {
+            return;
+        }
+        if (this.ruby >= num) {
+            this.ruby -= num;
+        } else {
+            nro.utils.Log.error("[INVENTORY_SUBRUBY_GUARD] Attempted to subRuby " + num + " with only " + this.ruby + " ruby! Player: " + (player != null ? player.name : "null"));
+        }
     }
 
     public void addGold(long gold) {
+        if (gold <= 0) {
+            return;
+        }
         this.gold += gold;
         long goldLimit = getGoldLimit();
         if (this.gold > goldLimit) {
             this.gold = goldLimit;
+        }
+    }
+
+    public void addGem(int gem) {
+        if (gem <= 0) {
+            return;
+        }
+        this.gem += gem;
+    }
+
+    public void addRuby(int ruby) {
+        if (ruby <= 0) {
+            return;
+        }
+        this.ruby += ruby;
+    }
+
+    public void sanitizeCurrencies() {
+        if (this.gold < 0) {
+            nro.utils.Log.warning(String.format("[GOLD_SANITIZE] Player=%s OldGold=%d NewGold=0", (player != null ? player.name : "unknown"), this.gold));
+            this.gold = 0;
+        }
+        if (this.gem < 0) {
+            this.gem = 0;
+        }
+        if (this.ruby < 0) {
+            this.ruby = 0;
         }
     }
 

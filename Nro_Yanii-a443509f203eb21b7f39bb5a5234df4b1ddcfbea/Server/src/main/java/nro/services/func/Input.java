@@ -263,29 +263,32 @@ public class Input {
 
                 case BAN_THOI_VANG:
                     long soLuong = Long.parseLong(text[0]);
-                    Item thoiVang = InventoryService.gI().findItemBagByTemp(player, (short) 457);
-                    if (soLuong < 0) {
-                        Service.getInstance().sendThongBao(player,
-                                "Đã bán " + soLuong + " bãi cứt" + " thu được 1" + " vàng");
+                    if (soLuong <= 0) {
                         return;
                     }
-                    if (soLuong <= thoiVang.quantity) {
-                        long goldNhanDuoc = soLuong * 25_000_000;
-                        long soGoldAll = goldNhanDuoc + player.inventory.gold;
-                        if (soGoldAll <= player.inventory.getGoldLimit()) {
-                            player.inventory.gold += (soLuong * 25_000_000);
-                            InventoryService.gI().subQuantityItemsBag(player, thoiVang, (int) soLuong);
-                            InventoryService.gI().sendItemBags(player);
-                            Service.getInstance().sendMoney(player);
-                            Service.getInstance().sendThongBao(player, "Đã bán " + soLuong + " " + thoiVang.getName()
-                                    + " thu được " + Util.numberToMoney(goldNhanDuoc) + " vàng");
-                        } else {
-                            Service.getInstance().sendThongBao(player,
-                                    "Số vàng sau khi bán vượt quá số vàng có thể lưu trữ");
-                        }
-                    } else {
+                    Item thoiVang = InventoryService.gI().findItemBagByTemp(player, (short) 457);
+                    if (thoiVang == null || soLuong > thoiVang.quantity) {
                         Service.getInstance().sendThongBao(player, "Không đủ thỏi vàng để bán");
+                        return;
                     }
+                    long goldNhanDuoc;
+                    try {
+                        goldNhanDuoc = Math.multiplyExact(soLuong, 25_000_000L);
+                    } catch (ArithmeticException e) {
+                        Service.getInstance().sendThongBao(player, "Số lượng quá lớn");
+                        return;
+                    }
+                    if (player.inventory.gold + goldNhanDuoc > player.inventory.getGoldLimit()) {
+                        Service.getInstance().sendThongBao(player,
+                                "Số vàng sau khi bán vượt quá số vàng có thể lưu trữ");
+                        return;
+                    }
+                    player.inventory.addGold(goldNhanDuoc);
+                    InventoryService.gI().subQuantityItemsBag(player, thoiVang, (int) soLuong);
+                    InventoryService.gI().sendItemBags(player);
+                    Service.getInstance().sendMoney(player);
+                    Service.getInstance().sendThongBao(player, "Đã bán " + soLuong + " " + thoiVang.getName()
+                            + " thu được " + Util.numberToMoney(goldNhanDuoc) + " vàng");
                     break;
                 case GIAI_TAN_BANG:
                     if (text[0] != null) {
@@ -298,24 +301,34 @@ public class Input {
                 case TANG_NGOC_HONG:
                     pl = Client.gI().getPlayer(text[0]);
                     int numruby = Integer.parseInt((text[1]));
-                    if (pl != null) {
-                        if (numruby > 0 && player.inventory.ruby >= numruby) {
-                            Item item = InventoryService.gI().findVeTangNgoc(player);
-                            player.inventory.subRuby(numruby);
-                            PlayerService.gI().sendInfoHpMpMoney(player);
-                            pl.inventory.ruby += numruby;
-                            PlayerService.gI().sendInfoHpMpMoney(pl);
-                            Service.getInstance().sendThongBao(player, "Tặng Hồng ngọc thành công");
-                            Service.getInstance().sendThongBao(pl,
-                                    "Bạn được " + player.name + " tặng " + numruby + " Hồng ngọc");
-                            InventoryService.gI().subQuantityItemsBag(player, item, 1);
-                            InventoryService.gI().sendItemBags(player);
-                        } else {
-                            Service.getInstance().sendThongBao(player, "Không đủ Hồng ngọc để tặng");
-                        }
-                    } else {
+                    if (pl == null) {
                         Service.getInstance().sendThongBao(player, "Người chơi không tồn tại hoặc đang offline");
+                        return;
                     }
+                    if (numruby <= 0) {
+                        return;
+                    }
+                    Item veTangNgoc = InventoryService.gI().findVeTangNgoc(player);
+                    if (veTangNgoc == null) {
+                        Service.getInstance().sendThongBao(player, "Cần vé tặng ngọc");
+                        return;
+                    }
+                    if (!player.inventory.hasRuby(numruby)) {
+                        Service.getInstance().sendThongBao(player, "Không đủ Hồng ngọc để tặng");
+                        return;
+                    }
+                    if (!player.inventory.trySpendRuby(numruby)) {
+                        Service.getInstance().sendThongBao(player, "Không đủ Hồng ngọc để tặng");
+                        return;
+                    }
+                    pl.inventory.addRuby(numruby);
+                    InventoryService.gI().subQuantityItemsBag(player, veTangNgoc, 1);
+                    InventoryService.gI().sendItemBags(player);
+                    PlayerService.gI().sendInfoHpMpMoney(player);
+                    PlayerService.gI().sendInfoHpMpMoney(pl);
+                    Service.getInstance().sendThongBao(player, "Tặng Hồng ngọc thành công");
+                    Service.getInstance().sendThongBao(pl,
+                            "Bạn được " + player.name + " tặng " + numruby + " Hồng ngọc");
                     break;
 
                 case TANG_SKH:

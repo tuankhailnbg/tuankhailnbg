@@ -281,19 +281,21 @@ public class BlackBallWar {
             case X5 -> cost = COST_X5;
             case X7 -> cost = COST_X7;
         }
-        if (player.inventory.gold >= cost) {
-            player.inventory.gold -= cost;
-            Service.getInstance().sendMoney(player);
-            player.effectSkin.lastTimeXHPKI = System.currentTimeMillis();
-            player.effectSkin.xHPKI = x;
-            player.nPoint.calPoint();
-            player.nPoint.setHp((long) player.nPoint.hp * x);
-            player.nPoint.setMp((long) player.nPoint.mp * x);
-            PlayerService.gI().sendInfoHpMp(player);
-            Service.getInstance().point(player);
-        } else {
+        if (cost <= 0) {
+            return;
+        }
+        if (!player.inventory.trySpendGold(cost)) {
             Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện, còn thiếu "
                     + Util.numberToMoney(cost - player.inventory.gold) + " vàng");
+            return;
         }
+        Service.getInstance().sendMoney(player);
+        player.effectSkin.lastTimeXHPKI = System.currentTimeMillis();
+        player.effectSkin.xHPKI = x;
+        player.nPoint.calPoint();
+        player.nPoint.setHp((long) player.nPoint.hp * x);
+        player.nPoint.setMp((long) player.nPoint.mp * x);
+        PlayerService.gI().sendInfoHpMp(player);
+        Service.getInstance().point(player);
     }
 }

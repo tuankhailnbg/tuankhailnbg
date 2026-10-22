@@ -64,24 +64,23 @@ public class ChatGlobalService implements Runnable {
                 return;
             }
 
-            if (player.inventory.getGold() >= 60000000) {
-                if (player.isAdmin() || Util.canDoWithTime(player.lastTimeChatGlobal, 180000)) {
-                    if (player.isAdmin() || player.nPoint.power >= 20000000L) {
-                        player.inventory.subGold(60000000);
-                        Service.getInstance().sendMoney(player);
-                        player.lastTimeChatGlobal = System.currentTimeMillis();
-                        waitingChat.add(new ChatGlobal(player, text.length() > 100 ? text.substring(0, 100) : text));
-                    } else {
-                        Service.getInstance().sendThongBao(player,
-                                "Sức mạnh phải ít nhất 20 triệu sức mạnh mới có thể chat thế giới");
-                    }
-                } else {
-                    Service.getInstance().sendThongBao(player, "Không thể chat thế giới lúc này, vui lòng đợi "
-                            + TimeUtil.getTimeLeft(player.lastTimeChatGlobal, 120));
-                }
-            } else {
-                Service.getInstance().sendThongBao(player, "Không đủ vàng, yêu cầu 60tr vàng để chat thế giới");
+            if (!player.isAdmin() && !Util.canDoWithTime(player.lastTimeChatGlobal, 180000)) {
+                Service.getInstance().sendThongBao(player, "Không thể chat thế giới lúc này, vui lòng đợi "
+                        + TimeUtil.getTimeLeft(player.lastTimeChatGlobal, 120));
+                return;
             }
+            if (!player.isAdmin() && player.nPoint.power < 20000000L) {
+                Service.getInstance().sendThongBao(player,
+                        "Sức mạnh phải ít nhất 20 triệu sức mạnh mới có thể chat thế giới");
+                return;
+            }
+            if (!player.inventory.trySpendGold(60000000L)) {
+                Service.getInstance().sendThongBao(player, "Không đủ vàng, yêu cầu 60tr vàng để chat thế giới");
+                return;
+            }
+            Service.getInstance().sendMoney(player);
+            player.lastTimeChatGlobal = System.currentTimeMillis();
+            waitingChat.add(new ChatGlobal(player, text.length() > 100 ? text.substring(0, 100) : text));
         }
     }
 

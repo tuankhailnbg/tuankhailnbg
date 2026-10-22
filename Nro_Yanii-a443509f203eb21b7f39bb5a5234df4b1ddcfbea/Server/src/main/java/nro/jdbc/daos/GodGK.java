@@ -21,6 +21,7 @@ import nro.models.npc.specialnpc.MabuEgg;
 import nro.models.npc.specialnpc.MagicTree;
 import nro.models.player.*;
 import nro.models.skill.Skill;
+import nro.utils.Log;
 import nro.models.task.Achivement;
 import nro.models.task.AchivementTemplate;
 import nro.models.task.TaskMain;
@@ -172,9 +173,14 @@ public class GodGK {
 
                     // data kim lượng
                     dataArray = (JSONArray) JSONValue.parse(rs.getString("data_inventory"));
-                    player.inventory.gold = Long.parseLong(dataArray.get(0).toString());
-                    player.inventory.gem = Integer.parseInt(dataArray.get(1).toString());
-                    player.inventory.ruby = Integer.parseInt(dataArray.get(2).toString());
+                    long loadedGold = Long.parseLong(dataArray.get(0).toString());
+                    if (loadedGold < 0) {
+                        Log.warning(String.format("[GOLD_SANITIZE] Player=%s OldGold=%d NewGold=0", player.name, loadedGold));
+                        loadedGold = 0;
+                    }
+                    player.inventory.gold = loadedGold;
+                    player.inventory.gem = Math.max(0, Integer.parseInt(dataArray.get(1).toString()));
+                    player.inventory.ruby = Math.max(0, Integer.parseInt(dataArray.get(2).toString()));
                     if (dataArray.size() >= 4) {
                         player.inventory.goldLimit = Long.parseLong(dataArray.get(3).toString());
                     }

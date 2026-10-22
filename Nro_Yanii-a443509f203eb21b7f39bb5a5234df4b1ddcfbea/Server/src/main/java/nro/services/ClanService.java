@@ -502,23 +502,28 @@ public class ClanService {
             }
             FlagBag flagBag = FlagBagService.gI().getFlagBag(imgId);
             if (flagBag != null) {
-                if (flagBag.gold > 0) {
-                    if (player.inventory.gold >= flagBag.gold) {
-                        player.inventory.gold -= flagBag.gold;
-                    } else {
-                        Service.getInstance().sendThongBao(player, "Bạn không đủ vàng, còn thiếu "
-                                + Util.numberToMoney(flagBag.gold - player.inventory.gold) + " vàng");
-                        return;
-                    }
+                if (flagBag.gold > 0 && !player.inventory.hasGold(flagBag.gold)) {
+                    long missing = flagBag.gold - player.inventory.gold;
+                    Service.getInstance().sendThongBao(player, "Bạn không đủ vàng, còn thiếu "
+                            + Util.numberToMoney(missing > 0 ? missing : 0) + " vàng");
+                    return;
                 }
-                if (flagBag.gem > 0) {
-                    if (player.inventory.getGem() >= flagBag.gem) {
-                        player.inventory.subGem(flagBag.gem);
-                    } else {
-                        Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc, còn thiếu "
-                                + (flagBag.gem - player.inventory.getGem()) + " ngọc");
-                        return;
+                if (flagBag.gem > 0 && !player.inventory.hasGem(flagBag.gem)) {
+                    int missing = flagBag.gem - player.inventory.getGem();
+                    Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc, còn thiếu "
+                            + (missing > 0 ? missing : 0) + " ngọc");
+                    return;
+                }
+                if (flagBag.gold > 0 && !player.inventory.trySpendGold(flagBag.gold)) {
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng");
+                    return;
+                }
+                if (flagBag.gem > 0 && !player.inventory.trySpendGem(flagBag.gem)) {
+                    if (flagBag.gold > 0) {
+                        player.inventory.addGold(flagBag.gold);
                     }
+                    Service.getInstance().sendThongBao(player, "Không đủ ngọc");
+                    return;
                 }
                 PlayerService.gI().sendInfoHpMpMoney(player);
 
@@ -736,23 +741,28 @@ public class ClanService {
             FlagBag flagBag = FlagBagService.gI().getFlagBag(imgId);
 
             if (flagBag != null) {
-                if (flagBag.gold > 0) {
-                    if (player.inventory.gold >= flagBag.gold) {
-                        player.inventory.gold -= flagBag.gold;
-                    } else {
-                        Service.getInstance().sendThongBao(player, "Bạn không đủ vàng, còn thiếu "
-                                + Util.numberToMoney(flagBag.gold - player.inventory.gold) + " vàng");
-                        return;
-                    }
+                if (flagBag.gold > 0 && !player.inventory.hasGold(flagBag.gold)) {
+                    long missing = flagBag.gold - player.inventory.gold;
+                    Service.getInstance().sendThongBao(player, "Bạn không đủ vàng, còn thiếu "
+                            + Util.numberToMoney(missing > 0 ? missing : 0) + " vàng");
+                    return;
                 }
-                if (flagBag.gem > 0) {
-                    if (player.inventory.getGem() >= flagBag.gem) {
-                        player.inventory.subGem(flagBag.gem);
-                    } else {
-                        Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc, còn thiếu "
-                                + (flagBag.gem - player.inventory.getGem()) + " ngọc");
-                        return;
+                if (flagBag.gem > 0 && !player.inventory.hasGem(flagBag.gem)) {
+                    int missing = flagBag.gem - player.inventory.getGem();
+                    Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc, còn thiếu "
+                            + (missing > 0 ? missing : 0) + " ngọc");
+                    return;
+                }
+                if (flagBag.gold > 0 && !player.inventory.trySpendGold(flagBag.gold)) {
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng");
+                    return;
+                }
+                if (flagBag.gem > 0 && !player.inventory.trySpendGem(flagBag.gem)) {
+                    if (flagBag.gold > 0) {
+                        player.inventory.addGold(flagBag.gold);
                     }
+                    Service.getInstance().sendThongBao(player, "Không đủ ngọc");
+                    return;
                 }
                 PlayerService.gI().sendInfoHpMpMoney(player);
                 player.clan.imgId = imgId;

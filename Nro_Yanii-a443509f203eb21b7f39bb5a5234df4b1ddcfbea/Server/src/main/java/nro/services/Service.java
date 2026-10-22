@@ -1686,36 +1686,35 @@ public class Service {
     }
 
     public void chatGlobal(Player pl, String text) {
-        if (pl.inventory.getGem() >= 5) {
-            if (pl.isAdmin() || Util.canDoWithTime(pl.lastTimeChatGlobal, 180000)) {
-                if (pl.isAdmin() || pl.nPoint.power > 2000000000) {
-                    pl.inventory.subGem(5);
-                    sendMoney(pl);
-                    pl.lastTimeChatGlobal = System.currentTimeMillis();
-                    Message msg;
-                    try {
-                        msg = new Message(92);
-                        msg.writer().writeUTF(pl.name);
-                        msg.writer().writeUTF("|5|" + text);
-                        msg.writer().writeInt((int) pl.id);
-                        msg.writer().writeShort(pl.getHead());
-                        msg.writer().writeShort(pl.getBody());
-                        msg.writer().writeShort(pl.getFlagBag()); // bag
-                        msg.writer().writeShort(pl.getLeg());
-                        msg.writer().writeByte(0);
-                        sendMessAllPlayer(msg);
-                        msg.cleanup();
-                    } catch (Exception e) {
-                    }
-                } else {
-                    sendThongBao(pl, "Sức mạnh phải ít nhất 2tỷ mới có thể chat thế giới");
-                }
-            } else {
-                sendThongBao(pl, "Không thể chat thế giới lúc này, vui lòng đợi "
-                        + TimeUtil.getTimeLeft(pl.lastTimeChatGlobal, 120));
-            }
-        } else {
+        if (!pl.isAdmin() && !Util.canDoWithTime(pl.lastTimeChatGlobal, 180000)) {
+            sendThongBao(pl, "Không thể chat thế giới lúc này, vui lòng đợi "
+                    + TimeUtil.getTimeLeft(pl.lastTimeChatGlobal, 120));
+            return;
+        }
+        if (!pl.isAdmin() && pl.nPoint.power <= 2000000000L) {
+            sendThongBao(pl, "Sức mạnh phải ít nhất 2tỷ mới có thể chat thế giới");
+            return;
+        }
+        if (!pl.inventory.trySpendGem(5)) {
             sendThongBao(pl, "Không đủ ngọc chat thế giới");
+            return;
+        }
+        sendMoney(pl);
+        pl.lastTimeChatGlobal = System.currentTimeMillis();
+        Message msg;
+        try {
+            msg = new Message(92);
+            msg.writer().writeUTF(pl.name);
+            msg.writer().writeUTF("|5|" + text);
+            msg.writer().writeInt((int) pl.id);
+            msg.writer().writeShort(pl.getHead());
+            msg.writer().writeShort(pl.getBody());
+            msg.writer().writeShort(pl.getFlagBag()); // bag
+            msg.writer().writeShort(pl.getLeg());
+            msg.writer().writeByte(0);
+            sendMessAllPlayer(msg);
+            msg.cleanup();
+        } catch (Exception e) {
         }
     }
 

@@ -240,16 +240,18 @@ public class PlayerService {
                         ? COST_GOLD_HOI_SINH_NRD
                         : COST_GOLD_HOI_SINH;
 
-        if (player.inventory.gem >= cost) {
-            player.inventory.gem -= cost;
-            Service.getInstance().sendMoney(player);
-            Service.getInstance().hsChar(player, player.nPoint.hpMax, player.nPoint.mpMax);
-            // player.playerTask.achivements.get(ConstAchive.THANH_HOI_SINH).count++;
-        } else {
+        if (cost <= 0) {
+            return;
+        }
+        if (!player.inventory.trySpendGem(cost)) {
             int shortfall = cost - player.inventory.gem;
             Service.getInstance().sendThongBao(player,
-                    "Không đủ ngọc xanh để thực hiện, còn thiếu " + Util.numberToMoney(shortfall) + " ngọc");
+                    "Không đủ ngọc xanh để thực hiện, còn thiếu " + Util.numberToMoney(shortfall > 0 ? shortfall : 0) + " ngọc");
+            return;
         }
+        Service.getInstance().sendMoney(player);
+        Service.getInstance().hsChar(player, player.nPoint.hpMax, player.nPoint.mpMax);
+        // player.playerTask.achivements.get(ConstAchive.THANH_HOI_SINH).count++;
     }
 
     public boolean createPlayer(Connection con, int userId, String name, int gender, int hair) {

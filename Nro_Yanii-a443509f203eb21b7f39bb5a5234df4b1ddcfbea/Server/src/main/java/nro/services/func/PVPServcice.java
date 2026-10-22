@@ -144,14 +144,23 @@ public class PVPServcice implements Runnable {
                 if (pvp1 == null && pvp2 == null) {
                     if (pl.zone.equals(pl2.zone)) {
                         int gold = PLAYER_GOLD.get(pl2);
-                        if (pl.inventory.gold >= gold && pl2.inventory.gold >= gold) {
-                            ChallengePVP pvp = new ChallengePVP(pl, pl2);
-                            pvp.gold = gold;
-                            PVPS.add(pvp);
-                            PLAYER_PVP.put(pl, pvp);
-                            PLAYER_PVP.put(pl2, pvp);
-                            pvp.start();
+                        if (gold <= 0) {
+                            return;
                         }
+                        if (!pl.inventory.hasGold(gold)) {
+                            Service.getInstance().sendThongBao(pl, "Bạn không đủ vàng để thách đấu");
+                            return;
+                        }
+                        if (!pl2.inventory.hasGold(gold)) {
+                            Service.getInstance().sendThongBao(pl, "Đối thủ không đủ vàng để thách đấu");
+                            return;
+                        }
+                        ChallengePVP pvp = new ChallengePVP(pl, pl2);
+                        pvp.gold = gold;
+                        PVPS.add(pvp);
+                        PLAYER_PVP.put(pl, pvp);
+                        PLAYER_PVP.put(pl2, pvp);
+                        pvp.start();
                     } else {
                         Service.getInstance().sendThongBao(pl, "Đối thủ đã rời khỏi map");
                     }
@@ -210,28 +219,29 @@ public class PVPServcice implements Runnable {
     }
 
     public void acceptRevenge(Player pl) {
-        if (pl.inventory.getRuby() > 10) {
-            pl.inventory.subRuby(10);
-            PlayerService.gI().sendInfoHpMpMoney(pl);
-            Player enemy = PLAYER_VS_PLAYER.get(pl);
-            if (enemy != null) {
-                Zone mapGo = enemy.zone;
-                if ((mapGo = ChangeMapService.gI().checkMapCanJoin(pl, mapGo)) != null && !mapGo.isFullPlayer()) {
-                    RevengePVP pvp = new RevengePVP(pl, enemy);
-                    PLAYER_PVP.put(pl, pvp);
-                    PLAYER_PVP.put(enemy, pvp);
-                    PVPS.add(pvp);
-                    ChangeMapService.gI().changeMap(pl, mapGo,
-                            enemy.location.x + Util.nextInt(-5, 5), enemy.location.y);
-                    pvp.lastTimeGoToMapEnemy = System.currentTimeMillis();
-                    pvp.start();
-                } else {
-                    Service.getInstance().sendThongBao(pl, "Không thể tới khu vực này, vui lòng đợi sau ít phút");
-                }
-            }
-        } else {
-            Service.getInstance().sendThongBao(pl, "Bạn không đủ ngọc, còn thiếu 10 hồng ngọc nữa");
+        Player enemy = PLAYER_VS_PLAYER.get(pl);
+        if (enemy == null) {
+            Service.getInstance().sendThongBao(pl, "Không tìm thấy đối thủ");
+            return;
         }
+        Zone mapGo = enemy.zone;
+        if ((mapGo = ChangeMapService.gI().checkMapCanJoin(pl, mapGo)) == null || mapGo.isFullPlayer()) {
+            Service.getInstance().sendThongBao(pl, "Không thể tới khu vực này, vui lòng đợi sau ít phút");
+            return;
+        }
+        if (!pl.inventory.trySpendRuby(10)) {
+            Service.getInstance().sendThongBao(pl, "Bạn không đủ ngọc, còn thiếu 10 hồng ngọc nữa");
+            return;
+        }
+        PlayerService.gI().sendInfoHpMpMoney(pl);
+        RevengePVP pvp = new RevengePVP(pl, enemy);
+        PLAYER_PVP.put(pl, pvp);
+        PLAYER_PVP.put(enemy, pvp);
+        PVPS.add(pvp);
+        ChangeMapService.gI().changeMap(pl, mapGo,
+                enemy.location.x + Util.nextInt(-5, 5), enemy.location.y);
+        pvp.lastTimeGoToMapEnemy = System.currentTimeMillis();
+        pvp.start();
     }
 
     @Override

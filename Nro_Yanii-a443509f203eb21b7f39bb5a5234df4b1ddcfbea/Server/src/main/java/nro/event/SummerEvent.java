@@ -176,19 +176,30 @@ public class SummerEvent extends Event {
                         ConfirmDialog confDialog = new ConfirmDialog(sb.toString(), () -> {
                             if (canhKho != null && nuocSuoi != null && goLon != null && queDot != null) {
                                 int cost = 150000000;
+                                int rubyCost = 0;
                                 if (select == 1) {
-                                    if (inv.ruby < 15) {
-                                        Service.getInstance().sendThongBao(player, "Bạn không đủ tiền");
-                                        return;
-                                    }
-                                    inv.subRuby(15);
+                                    rubyCost = 15;
                                     cost = 300000000;
                                 }
-                                if (inv.gold < cost) {
-                                    Service.getInstance().sendThongBao(player, "Bạn không đủ tiền");
+                                if (rubyCost > 0 && !inv.hasRuby(rubyCost)) {
+                                    Service.getInstance().sendThongBao(player, "Bạn không đủ hồng ngọc");
                                     return;
                                 }
-                                inv.subGold(cost);
+                                if (!inv.hasGold(cost)) {
+                                    Service.getInstance().sendThongBao(player, "Bạn không đủ vàng");
+                                    return;
+                                }
+                                if (rubyCost > 0 && !inv.trySpendRuby(rubyCost)) {
+                                    Service.getInstance().sendThongBao(player, "Bạn không đủ hồng ngọc");
+                                    return;
+                                }
+                                if (!inv.trySpendGold(cost)) {
+                                    if (rubyCost > 0) {
+                                        inv.addRuby(rubyCost);
+                                    }
+                                    Service.getInstance().sendThongBao(player, "Bạn không đủ vàng");
+                                    return;
+                                }
                                 InventoryService.gI().subQuantityItemsBag(player, canhKho, 50);
                                 InventoryService.gI().subQuantityItemsBag(player, nuocSuoi, 20);
                                 InventoryService.gI().subQuantityItemsBag(player, goLon, 20);

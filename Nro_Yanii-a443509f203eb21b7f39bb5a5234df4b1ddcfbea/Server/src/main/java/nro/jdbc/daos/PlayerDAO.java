@@ -377,6 +377,7 @@ public class PlayerDAO {
                 long st = System.currentTimeMillis();
                 try {
 
+                    player.inventory.sanitizeCurrencies();
                     JSONArray dataInventory = new JSONArray();
                     // data kim lượng
                     dataInventory.add(player.inventory.gold);
@@ -1039,6 +1040,7 @@ public class PlayerDAO {
 
         try {
             // 1. data_inventory: [gold, gem, ruby, goldLimit]
+            player.inventory.sanitizeCurrencies();
             JSONArray dataInventory = new JSONArray();
             dataInventory.add(player.inventory.gold);
             dataInventory.add(player.inventory.gem);

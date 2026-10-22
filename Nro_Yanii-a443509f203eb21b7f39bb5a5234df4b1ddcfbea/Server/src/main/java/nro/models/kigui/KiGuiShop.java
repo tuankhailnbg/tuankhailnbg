@@ -103,23 +103,22 @@ public class KiGuiShop {
 
     private void upTop(Player player, short itemID) {
         ConfirmDialog confirmDialog = new ConfirmDialog("Bạn có muốn đưa vật phẩm này của bản thân lên trang đầu?\nYêu cầu 50 hồng ngọc.", () -> {
-            if (player.inventory.ruby < 50) {
-                Service.getInstance().sendThongBao(player, "Bạn không đủ hồng ngọc");
-                show(player);
-                return;
-            }
             KiGuiItem consignmentItem = findItemConsign(player.id, itemID);
-            if (consignmentItem.isUpTop()) {
-                Service.getInstance().sendThongBao(player, "Vật phẩm này đã up top rồi");
-                show(player);
-                return;
-            }
             if (consignmentItem == null || consignmentItem.getSold() == 1) {
                 Service.getInstance().sendThongBao(player, "Vật phẩm không tồn tại hoặc đã được bán");
                 show(player);
                 return;
             }
-            player.inventory.subRuby(50);
+            if (consignmentItem.isUpTop()) {
+                Service.getInstance().sendThongBao(player, "Vật phẩm này đã up top rồi");
+                show(player);
+                return;
+            }
+            if (!player.inventory.trySpendRuby(50)) {
+                Service.getInstance().sendThongBao(player, "Bạn không đủ hồng ngọc");
+                show(player);
+                return;
+            }
             Service.getInstance().sendMoney(player);
             consignmentItem.setUpTop(true);
             Service.getInstance().sendThongBao(player, "Vật phẩm " + consignmentItem.template.name + " của bạn đã up top thành công");

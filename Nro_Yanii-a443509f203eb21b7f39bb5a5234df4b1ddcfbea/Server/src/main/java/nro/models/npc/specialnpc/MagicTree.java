@@ -206,23 +206,28 @@ public class MagicTree {
 
     public void upgradeMagicTree() {
         short gold = PEA_UPGRADE[this.level - 1][3];
-        int goldRequire = gold * (this.level <= 3 ? 1000 : 1000000);
-        if (this.player.inventory.gold < goldRequire) {
-            Service.getInstance().sendThongBao(player, "Bạn không đủ vàng để nâng cấp, còn thiếu "
-                    + (goldRequire - this.player.inventory.gold) + " vàng nữa");
-        } else {
-            this.player.inventory.gold -= goldRequire;
-            PlayerService.gI().sendInfoHpMpMoney(this.player);
-            this.isUpgrade = true;
-            this.lastTimeUpgrade = System.currentTimeMillis();
-            this.loadMagicTree();
+        long goldRequire = (long) gold * (this.level <= 3 ? 1000L : 1000000L);
+        if (goldRequire <= 0) {
+            return;
         }
+        if (!this.player.inventory.trySpendGold(goldRequire)) {
+            long missing = goldRequire - this.player.inventory.gold;
+            Service.getInstance().sendThongBao(player, "Bạn không đủ vàng để nâng cấp, còn thiếu "
+                    + (missing > 0 ? missing : 0) + " vàng nữa");
+            return;
+        }
+        PlayerService.gI().sendInfoHpMpMoney(this.player);
+        this.isUpgrade = true;
+        this.lastTimeUpgrade = System.currentTimeMillis();
+        this.loadMagicTree();
     }
 
     public void unupgradeMagicTree() {
         short gold = PEA_UPGRADE[this.level - 1][3];
-        int goldReturn = (gold * (this.level <= 3 ? 1000 : 1000000)) / 2;
-        this.player.inventory.gold += goldReturn;
+        long goldReturn = ((long) gold * (this.level <= 3 ? 1000L : 1000000L)) / 2;
+        if (goldReturn > 0) {
+            this.player.inventory.addGold(goldReturn);
+        }
         PlayerService.gI().sendInfoHpMpMoney(this.player);
         this.isUpgrade = false;
         this.loadMagicTree();

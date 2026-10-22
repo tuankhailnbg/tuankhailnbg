@@ -1302,7 +1302,7 @@ public class CombineServiceNew {
                                 } else {
                                     this.baHatMit.createOtherMenu(player, ConstNpc.IGNORE_MENU, npcSay,
                                             "Còn thiếu\n"
-                                                    + Util.numberToMoney(player.inventory.gold - COST_GIA_HAN_CAI_TRANG)
+                                                    + Util.numberToMoney(COST_GIA_HAN_CAI_TRANG - player.inventory.gold)
                                                     + " vàng");
                                 }
                             } else {
@@ -1383,7 +1383,7 @@ public class CombineServiceNew {
                                 } else {
                                     this.whis.createOtherMenu(player, ConstNpc.IGNORE_MENU, npcSay,
                                             "Còn thiếu\n"
-                                                    + Util.numberToMoney(player.inventory.gold - COST_DAP_DO_KICH_HOAT)
+                                                    + Util.numberToMoney(COST_DAP_DO_KICH_HOAT - player.inventory.gold)
                                                     + " vàng");
                                 }
                             } else {
@@ -1521,11 +1521,14 @@ public class CombineServiceNew {
             return;
         }
 
-        if (player.inventory.gold < COST_NANG_CAP_DO_TL) {
+        if (!player.inventory.hasGold(COST_NANG_CAP_DO_TL)) {
             Service.getInstance().sendThongBao(player, "Con cần 12.5 tỷ vàng để nâng cấp!");
             return;
         }
-        player.inventory.subGold(COST_NANG_CAP_DO_TL);
+        if (!player.inventory.trySpendGold(COST_NANG_CAP_DO_TL)) {
+            Service.getInstance().sendThongBao(player, "Con cần 12.5 tỷ vàng để nâng cấp!");
+            return;
+        }
         byte itemGender = (dtl.template.type != 4) ? dtl.template.gender : player.gender;
 
         if (Util.isTrue(100, 100)) {
@@ -1547,12 +1550,12 @@ public class CombineServiceNew {
     private void nangCapBongTai(Player player) {
         if (player.combineNew.itemsCombine.size() == 2) {
             int gold = player.combineNew.goldCombine;
-            if (player.inventory.gold < gold) {
+            int gem = player.combineNew.gemCombine;
+            if (gold > 0 && !player.inventory.hasGold(gold)) {
                 Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
                 return;
             }
-            int gem = player.combineNew.gemCombine;
-            if (player.inventory.gem < gem) {
+            if (gem > 0 && !player.inventory.hasGem(gem)) {
                 Service.getInstance().sendThongBao(player, "Không đủ ngọc để thực hiện");
                 return;
             }
@@ -1588,8 +1591,17 @@ public class CombineServiceNew {
                         Service.getInstance().sendThongBao(player, "Không đủ Mảnh vỡ bông tai");
                         return;
                     }
-                    player.inventory.gold -= gold;
-                    player.inventory.gem -= gem;
+                    if (gold > 0 && !player.inventory.trySpendGold(gold)) {
+                        Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+                        return;
+                    }
+                    if (gem > 0 && !player.inventory.trySpendGem(gem)) {
+                        if (gold > 0) {
+                            player.inventory.addGold(gold);
+                        }
+                        Service.getInstance().sendThongBao(player, "Không đủ ngọc để thực hiện");
+                        return;
+                    }
                     if (Util.isTrue(player.combineNew.ratioCombine, 100)) {
                         bongtai.template = ItemService.gI().getTemplate(getidbtsaukhilencap(lvbt));
                         bongtai.itemOptions.clear();
@@ -1652,7 +1664,6 @@ public class CombineServiceNew {
 
     private void nangCapSachTuyetKy(Player player) {
         if (player.combineNew.itemsCombine.size() == 2) {
-
             Item sachTuyetKy = null;
             Item kimBamGiay = null;
 
@@ -1663,7 +1674,6 @@ public class CombineServiceNew {
                     kimBamGiay = item;
                 }
             }
-            Item sachTuyetKy_2 = ItemService.gI().createNewItem((short) ((short) sachTuyetKy.template.id + 1));
             if (sachTuyetKy != null && kimBamGiay != null) {
                 if (kimBamGiay.quantity < 10) {
                     Service.getInstance().sendThongBao(player, "Không đủ Kìm bấm giấy mà đòi nâng cấp");
@@ -1673,6 +1683,7 @@ public class CombineServiceNew {
                     Service.getInstance().sendThongBao(player, "Chưa giám định mà đòi nâng cấp");
                     return;
                 }
+                Item sachTuyetKy_2 = ItemService.gI().createNewItem((short) ((short) sachTuyetKy.template.id + 1));
                 for (int i = 0; i < sachTuyetKy.itemOptions.size(); i++) {
                     sachTuyetKy_2.itemOptions.add(new ItemOption(sachTuyetKy.itemOptions.get(i).optionTemplate.id,
                             sachTuyetKy.itemOptions.get(i).param));
@@ -1683,7 +1694,6 @@ public class CombineServiceNew {
                 InventoryService.gI().subQuantityItemsBag(player, kimBamGiay, 10);
                 InventoryService.gI().sendItemBags(player);
                 reOpenItemCombine(player);
-
             }
         }
     }
@@ -1708,35 +1718,35 @@ public class CombineServiceNew {
                         break;
                     }
                 }
-                if (cuonSachCu == null) {
+                if (doBen == 1000) {
+                    Service.getInstance().sendThongBao(player, "Sách còn nguyên độ bền không cần phục hồi");
+                    return;
+                }
+                if (cuonSachCu == null || cuonSachCu.quantity < 10) {
                     Service.getInstance().sendThongBaoOK(player, "Cần sách tuyệt kỹ và 10 cuốn sách cũ");
                     return;
                 }
-                if (cuonSachCu.quantity < 10) {
-                    Service.getInstance().sendThongBaoOK(player, "Cần sách tuyệt kỹ và 10 cuốn sách cũ");
+                if (!player.inventory.hasGold(goldPhanra)) {
+                    long missing = goldPhanra - player.inventory.gold;
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện, còn thiếu "
+                            + Util.numberToMoney(missing > 0 ? missing : goldPhanra) + " vàng");
                     return;
                 }
-                if (player.inventory.gold < goldPhanra) {
-                    Service.getInstance().sendThongBao(player, "Không có tiền mà đòi phục hồi à");
+                if (!player.inventory.trySpendGold(goldPhanra)) {
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
                     return;
                 }
-                if (doBen != 1000) {
-                    for (int i = 0; i < sachTuyetKy.itemOptions.size(); i++) {
-                        if (sachTuyetKy.itemOptions.get(i).optionTemplate.id == 231) {
-                            sachTuyetKy.itemOptions.get(i).param = 1000;
-                            break;
-                        }
+                for (int i = 0; i < sachTuyetKy.itemOptions.size(); i++) {
+                    if (sachTuyetKy.itemOptions.get(i).optionTemplate.id == 231) {
+                        sachTuyetKy.itemOptions.get(i).param = 1000;
+                        break;
                     }
-                    player.inventory.gold -= 10_000_000;
-                    InventoryService.gI().subQuantityItemsBag(player, cuonSachCu, 10);
-                    InventoryService.gI().sendItemBags(player);
-                    Service.getInstance().sendMoney(player);
-                    sendEffectSuccessCombine(player);
-                    reOpenItemCombine(player);
-                } else {
-                    Service.getInstance().sendThongBao(player, "Còn dùng được phục hồi ăn cứt à");
-                    return;
                 }
+                InventoryService.gI().subQuantityItemsBag(player, cuonSachCu, 10);
+                InventoryService.gI().sendItemBags(player);
+                Service.getInstance().sendMoney(player);
+                sendEffectSuccessCombine(player);
+                reOpenItemCombine(player);
             }
         }
     }
@@ -1761,24 +1771,26 @@ public class CombineServiceNew {
                         break;
                     }
                 }
-                if (player.inventory.gold < goldPhanra) {
-                    Service.getInstance().sendThongBao(player, "Không có tiền mà đòi phân rã à");
+                if (luotTay != 0) {
+                    Service.getInstance().sendThongBao(player, "Sách còn lượt tẩy không thể phân rã");
                     return;
                 }
-                if (luotTay == 0) {
-
-                    player.inventory.gold -= goldPhanra;
-                    InventoryService.gI().subQuantityItemsBag(player, sachTuyetKy, 1);
-                    InventoryService.gI().addItemBag(player, cuonSachCu, 999);
-                    InventoryService.gI().sendItemBags(player);
-                    Service.getInstance().sendMoney(player);
-                    sendEffectSuccessCombine(player);
-                    reOpenItemCombine(player);
-
-                } else {
-                    Service.getInstance().sendThongBao(player, "Còn dùng được phân rã ăn cứt à");
+                if (!player.inventory.hasGold(goldPhanra)) {
+                    long missing = goldPhanra - player.inventory.gold;
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện, còn thiếu "
+                            + Util.numberToMoney(missing > 0 ? missing : goldPhanra) + " vàng");
                     return;
                 }
+                if (!player.inventory.trySpendGold(goldPhanra)) {
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+                    return;
+                }
+                InventoryService.gI().subQuantityItemsBag(player, sachTuyetKy, 1);
+                InventoryService.gI().addItemBag(player, cuonSachCu, 999);
+                InventoryService.gI().sendItemBags(player);
+                Service.getInstance().sendMoney(player);
+                sendEffectSuccessCombine(player);
+                reOpenItemCombine(player);
             }
         }
     }
@@ -1845,7 +1857,11 @@ public class CombineServiceNew {
         if (player.combineNew.itemsCombine.size() == 3) {
             int gold = player.combineNew.goldCombine;
             int gem = player.combineNew.gemCombine;
-            if (player.inventory.gem < gem) {
+            if (gold > 0 && !player.inventory.hasGold(gold)) {
+                Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+                return;
+            }
+            if (gem > 0 && !player.inventory.hasGem(gem)) {
                 Service.getInstance().sendThongBao(player, "Không đủ ngọc để thực hiện");
                 return;
             }
@@ -1861,8 +1877,18 @@ public class CombineServiceNew {
                     daXanhLam = item;
                 }
             }
-            if (bongTai != null && daXanhLam != null && manhHon.quantity >= 99) {
-                player.inventory.gem -= gem;
+            if (bongTai != null && daXanhLam != null && manhHon != null && manhHon.quantity >= 99) {
+                if (gold > 0 && !player.inventory.trySpendGold(gold)) {
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+                    return;
+                }
+                if (gem > 0 && !player.inventory.trySpendGem(gem)) {
+                    if (gold > 0) {
+                        player.inventory.addGold(gold);
+                    }
+                    Service.getInstance().sendThongBao(player, "Không đủ ngọc để thực hiện");
+                    return;
+                }
                 InventoryService.gI().subQuantityItemsBag(player, manhHon, 99);
                 InventoryService.gI().subQuantityItemsBag(player, daXanhLam, 1);
                 if (Util.isTrue(player.combineNew.ratioCombine, 100)) {
@@ -1914,22 +1940,32 @@ public class CombineServiceNew {
             Service.getInstance().sendThongBao(player, "Thiếu đồ");
             return;
         }
-        if (player.inventory.gold < COST) {
-            Service.getInstance().sendThongBao(player, "Ảo ít thôi con...");
-            return;
-        }
         if (InventoryService.gI().getCountEmptyBag(player) < 1) {
             Service.getInstance().sendThongBao(player, "Bạn phải có ít nhất 1 ô trống hành trang");
             return;
         }
-        Item itemTL = player.combineNew.itemsCombine.stream().filter(item -> item.isNotNullItem() && item.isCongThuc())
-                .findFirst().get();
-        Item itemHDs = player.combineNew.itemsCombine.stream()
-                .filter(item -> item.isNotNullItem() && item.template.id == 1311).findFirst().get();
-        Item itemManh = player.combineNew.itemsCombine.stream()
-                .filter(item -> item.isNotNullItem() && item.isManhTS() && item.quantity >= 999).findFirst().get();
+        if (!player.inventory.hasGold(COST)) {
+            Service.getInstance().sendThongBao(player, "Ảo ít thôi con...");
+            return;
+        }
+        var itemTLOpt = player.combineNew.itemsCombine.stream().filter(item -> item != null && item.isNotNullItem() && item.isCongThuc())
+                .findFirst();
+        var itemHDsOpt = player.combineNew.itemsCombine.stream()
+                .filter(item -> item != null && item.isNotNullItem() && item.template.id == 1311).findFirst();
+        var itemManhOpt = player.combineNew.itemsCombine.stream()
+                .filter(item -> item != null && item.isNotNullItem() && item.isManhTS() && item.quantity >= 999).findFirst();
+        if (itemTLOpt.isEmpty() || itemHDsOpt.isEmpty() || itemManhOpt.isEmpty()) {
+            Service.getInstance().sendThongBao(player, "Thiếu đồ");
+            return;
+        }
+        if (!player.inventory.trySpendGold(COST)) {
+            Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+            return;
+        }
+        Item itemTL = itemTLOpt.get();
+        Item itemHDs = itemHDsOpt.get();
+        Item itemManh = itemManhOpt.get();
 
-        player.inventory.gold -= COST;
         sendEffectSuccessCombine(player);
         short[][] itemIds = { { 1048, 1051, 1054, 1057, 1060 }, { 1049, 1052, 1055, 1058, 1061 },
                 { 1050, 1053, 1056, 1059, 1062 } }; // thứ tự td - 0,nm - 1, xd - 2
@@ -1972,86 +2008,94 @@ public class CombineServiceNew {
                     }
                 }
             }
+            if (angelClothes == null || craftingRecipe == null) {
+                return;
+            }
             boolean canUpgrade = true;
             for (ItemOption io : angelClothes.itemOptions) {
                 int optId = io.optionTemplate.id;
                 if (optId == 41) {
                     canUpgrade = false;
+                    break;
                 }
             }
-            if (canUpgrade) {
-                if (angelClothes != null && craftingRecipe != null) {
-                    int ratioTotal = (20 + ratioUpgradeStone + ratioRecipe);
-                    int ratio = ratioTotal > 75 ? ratio = 75 : ratioTotal;
-                    if (player.inventory.gold >= COST_DAP_DO_KICH_HOAT) {
-                        if (Util.isTrue(ratio, 150)) {
-                            int num = 0;
-                            if (Util.isTrue(ratioLuckyStone, 150)) {
-                                num = 15;
-                            } else if (Util.isTrue(5, 100)) {
-                                num = Util.nextInt(10, 15);
-                            } else if (Util.isTrue(20, 100)) {
-                                num = Util.nextInt(1, 10);
-                            }
-                            RandomCollection<Integer> rd = new RandomCollection<>();
-                            rd.add(50, 1);
-                            rd.add(25, 2);
-                            rd.add(10, 3);
-                            rd.add(5, 4);
-                            int color = rd.next();
-                            for (ItemOption io : angelClothes.itemOptions) {
-                                int optId = io.optionTemplate.id;
-                                switch (optId) {
-                                    case 47: // giáp
-                                    case 6: // hp
-                                    case 26: // hp/30s
-                                    case 22: // hp k
-                                    case 0: // sức đánh
-                                    case 7: // ki
-                                    case 28: // ki/30s
-                                    case 23: // ki k
-                                    case 14: // crit
-                                        io.param += ((long) io.param * num / 100);
-                                        break;
-                                }
-                            }
-                            angelClothes.itemOptions.add(new ItemOption(41, color));
-                            for (int i = 0; i < color; i++) {
-                                angelClothes.itemOptions
-                                        .add(new ItemOption(Util.nextInt(201, 212), Util.nextInt(1, 10)));
-                            }
-                            sendEffectSuccessCombine(player);
-                            Service.getInstance().sendThongBao(player, "Chúc mừng bạn đã nâng cấp thành công");
-                        } else {
-                            sendEffectFailCombine(player);
-                            Service.getInstance().sendThongBao(player, "Chúc bạn đen nốt lần sau");
-                        }
-                        for (Item it : list) {
-                            InventoryService.gI().subQuantityItemsBag(player, it, 1);
-                        }
-                        player.inventory.subGold(COST_DAP_DO_KICH_HOAT);
-                        InventoryService.gI().sendItemBags(player);
-                        Service.getInstance().sendMoney(player);
-                        reOpenItemCombine(player);
+            if (!canUpgrade) {
+                Service.getInstance().sendThongBao(player, "Mỗi vật phẩm chỉ có thể nâng cấp 1 lần");
+                return;
+            }
+            if (!player.inventory.hasGold(COST_DAP_DO_KICH_HOAT)) {
+                long missing = COST_DAP_DO_KICH_HOAT - player.inventory.gold;
+                Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện, còn thiếu "
+                        + Util.numberToMoney(missing > 0 ? missing : COST_DAP_DO_KICH_HOAT) + " vàng");
+                return;
+            }
+            if (!player.inventory.trySpendGold(COST_DAP_DO_KICH_HOAT)) {
+                Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+                return;
+            }
+
+            int ratioTotal = (20 + ratioUpgradeStone + ratioRecipe);
+            int ratio = ratioTotal > 75 ? ratio = 75 : ratioTotal;
+            if (Util.isTrue(ratio, 150)) {
+                int num = 0;
+                if (Util.isTrue(ratioLuckyStone, 150)) {
+                    num = 15;
+                } else if (Util.isTrue(5, 100)) {
+                    num = Util.nextInt(10, 15);
+                } else if (Util.isTrue(20, 100)) {
+                    num = Util.nextInt(1, 10);
+                }
+                RandomCollection<Integer> rd = new RandomCollection<>();
+                rd.add(50, 1);
+                rd.add(25, 2);
+                rd.add(10, 3);
+                rd.add(5, 4);
+                int color = rd.next();
+                for (ItemOption io : angelClothes.itemOptions) {
+                    int optId = io.optionTemplate.id;
+                    switch (optId) {
+                        case 47: // giáp
+                        case 6: // hp
+                        case 26: // hp/30s
+                        case 22: // hp k
+                        case 0: // sức đánh
+                        case 7: // ki
+                        case 28: // ki/30s
+                        case 23: // ki k
+                        case 14: // crit
+                            io.param += ((long) io.param * num / 100);
+                            break;
                     }
                 }
+                angelClothes.itemOptions.add(new ItemOption(41, color));
+                for (int i = 0; i < color; i++) {
+                    angelClothes.itemOptions
+                            .add(new ItemOption(Util.nextInt(201, 212), Util.nextInt(1, 10)));
+                }
+                sendEffectSuccessCombine(player);
+                Service.getInstance().sendThongBao(player, "Chúc mừng bạn đã nâng cấp thành công");
+            } else {
+                sendEffectFailCombine(player);
+                Service.getInstance().sendThongBao(player, "Chúc bạn đen nốt lần sau");
             }
+            for (Item it : list) {
+                InventoryService.gI().subQuantityItemsBag(player, it, 1);
+            }
+            InventoryService.gI().sendItemBags(player);
+            Service.getInstance().sendMoney(player);
+            reOpenItemCombine(player);
         }
     }
 
     private void chuyenHoaTrangBiVang(Player player) {
         if (player.combineNew.itemsCombine.size() == 2) {
-
             Item trangBiGoc = player.combineNew.itemsCombine.get(0);
             Item trangBiCanChuyenHoa = player.combineNew.itemsCombine.get(1);
 
-            Item trangBiCanChuyenHoa_2 = ItemService.gI()
-                    .createNewItem(player.combineNew.itemsCombine.get(1).template.id);
-            int goldChuyenHoa = 2_000_000_000;
+            int goldChuyenHoa = 2000000000;
 
             int levelTrangBi = 0;
             int soLanRotCap = 0;
-            int chiSO1_trangBiCanChuyenHoa = 0;
 
             for (ItemOption io : trangBiGoc.itemOptions) {
                 if (io.optionTemplate.id == 72) {
@@ -2063,78 +2107,77 @@ public class CombineServiceNew {
 
             // START Tính chỉ số nhân với số cấp và trừ với số lần rớt cấp //
             int chisogoc = trangBiCanChuyenHoa.itemOptions.get(0).param;
-
             chisogoc += chisogoc * (levelTrangBi * 0.1);
-
             chisogoc -= chisogoc * (soLanRotCap * 0.1);
             // END Tính chỉ số nhân với số cấp và trừ với số lần rớt cấp //
 
             boolean trangBi_daNangCap_daPhaLeHoa = false;
-            if (player.inventory.gold >= goldChuyenHoa) {
-                if (!isTrangBiGoc(trangBiGoc)) {
-                    Service.getInstance().sendThongBaoOK(player,
-                            "Trang bị phải từ bậc lưỡng long, Jean hoặc Zelot trở lên");
-                    return;
-                } else if (levelTrangBi < 4) {
-                    Service.getInstance().sendThongBaoOK(player, "Trang bị gốc có cấp từ [+4]");
-                    return;
-                } else if (!isTrangBiChuyenHoa(trangBiCanChuyenHoa)) {
-                    Service.getInstance().sendThongBaoOK(player,
-                            "Trang bị phải từ bậc lưỡng long, Jean hoặc Zelot trở lên");
-                    return;
-                } else if (trangBi_daNangCap_daPhaLeHoa) {
-                    Service.getInstance().sendThongBaoOK(player,
-                            "Trang bị nhập thể phải chưa nâng cấp và pha lê hóa trang bị");
-                    return;
-                } else if (!isCheckTrungTypevsGender(trangBiGoc, trangBiCanChuyenHoa)) {
-                    Service.getInstance().sendThongBaoOK(player,
-                            "Trang bị gốc và Trang bị nhập thể phải cùng loại và hành tinh");
-                    return;
-                } else {
-
-                    trangBiCanChuyenHoa.itemOptions.get(0).param = chisogoc;
-
-                    for (int i = 1; i < trangBiGoc.itemOptions.size(); i++) {
-                        trangBiCanChuyenHoa.itemOptions.add(new ItemOption(
-                                trangBiGoc.itemOptions.get(i).optionTemplate.id, trangBiGoc.itemOptions.get(i).param));
-                    }
-
-                    for (int i = 0; i < trangBiCanChuyenHoa.itemOptions.size(); i++) {
-                        trangBiCanChuyenHoa_2.itemOptions
-                                .add(new ItemOption(trangBiCanChuyenHoa.itemOptions.get(i).optionTemplate.id,
-                                        trangBiCanChuyenHoa.itemOptions.get(i).param));
-                    }
-
-                    player.inventory.gold -= 2_000_000_000;
-                    Service.getInstance().sendMoney(player);
-                    InventoryService.gI().addItemBag(player, trangBiCanChuyenHoa_2, 1);
-                    InventoryService.gI().subQuantityItemsBag(player, trangBiGoc, 1);
-                    InventoryService.gI().subQuantityItemsBag(player, trangBiCanChuyenHoa, 1);
-                    InventoryService.gI().sendItemBags(player);
-                    reOpenItemCombine(player);
-                    sendEffectSuccessCombine(player);
-                }
-            } else {
-                Service.getInstance().sendThongBao(player, "Không có tiền mà đòi chuyển hóa cái gì?");
+            if (!isTrangBiGoc(trangBiGoc)) {
+                Service.getInstance().sendThongBaoOK(player,
+                        "Trang bị phải từ bậc lưỡng long, Jean hoặc Zelot trở lên");
+                return;
+            } else if (levelTrangBi < 4) {
+                Service.getInstance().sendThongBaoOK(player, "Trang bị gốc có cấp từ [+4]");
+                return;
+            } else if (!isTrangBiChuyenHoa(trangBiCanChuyenHoa)) {
+                Service.getInstance().sendThongBaoOK(player,
+                        "Trang bị phải từ bậc lưỡng long, Jean hoặc Zelot trở lên");
+                return;
+            } else if (trangBi_daNangCap_daPhaLeHoa) {
+                Service.getInstance().sendThongBaoOK(player,
+                        "Trang bị nhập thể phải chưa nâng cấp và pha lê hóa trang bị");
+                return;
+            } else if (!isCheckTrungTypevsGender(trangBiGoc, trangBiCanChuyenHoa)) {
+                Service.getInstance().sendThongBaoOK(player,
+                        "Trang bị gốc và Trang bị nhập thể phải cùng loại và hành tinh");
                 return;
             }
+
+            if (!player.inventory.hasGold(goldChuyenHoa)) {
+                long missing = goldChuyenHoa - player.inventory.gold;
+                Service.getInstance().sendThongBao(player, "Không có tiền mà đòi chuyển hóa cái gì? Còn thiếu "
+                        + Util.numberToMoney(missing > 0 ? missing : goldChuyenHoa) + " vàng");
+                return;
+            }
+            if (!player.inventory.trySpendGold(goldChuyenHoa)) {
+                Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+                return;
+            }
+
+            Item trangBiCanChuyenHoa_2 = ItemService.gI()
+                    .createNewItem(player.combineNew.itemsCombine.get(1).template.id);
+            trangBiCanChuyenHoa.itemOptions.get(0).param = chisogoc;
+
+            for (int i = 1; i < trangBiGoc.itemOptions.size(); i++) {
+                trangBiCanChuyenHoa.itemOptions.add(new ItemOption(
+                        trangBiGoc.itemOptions.get(i).optionTemplate.id, trangBiGoc.itemOptions.get(i).param));
+            }
+
+            for (int i = 0; i < trangBiCanChuyenHoa.itemOptions.size(); i++) {
+                trangBiCanChuyenHoa_2.itemOptions
+                        .add(new ItemOption(trangBiCanChuyenHoa.itemOptions.get(i).optionTemplate.id,
+                                trangBiCanChuyenHoa.itemOptions.get(i).param));
+            }
+
+            Service.getInstance().sendMoney(player);
+            InventoryService.gI().addItemBag(player, trangBiCanChuyenHoa_2, 1);
+            InventoryService.gI().subQuantityItemsBag(player, trangBiGoc, 1);
+            InventoryService.gI().subQuantityItemsBag(player, trangBiCanChuyenHoa, 1);
+            InventoryService.gI().sendItemBags(player);
+            reOpenItemCombine(player);
+            sendEffectSuccessCombine(player);
         }
     }
 
     private void chuyenHoaTrangBiNgoc(Player player) {
         if (player.combineNew.itemsCombine.size() == 2) {
-
             Item trangBiGoc = player.combineNew.itemsCombine.get(0);
             Item trangBiCanChuyenHoa = player.combineNew.itemsCombine.get(1);
-
-            Item trangBiCanChuyenHoa_2 = ItemService.gI()
-                    .createNewItem(player.combineNew.itemsCombine.get(1).template.id);
 
             int ngocChuyenHoa = 5000;
 
             int levelTrangBi = 0;
             int soLanRotCap = 0;
-            int chiSO1_trangBiCanChuyenHoa = 0;
 
             for (ItemOption io : trangBiGoc.itemOptions) {
                 if (io.optionTemplate.id == 72) {
@@ -2146,61 +2189,63 @@ public class CombineServiceNew {
 
             // START Tính chỉ số nhân với số cấp và trừ với số lần rớt cấp //
             int chisogoc = trangBiCanChuyenHoa.itemOptions.get(0).param;
-
             chisogoc += chisogoc * (levelTrangBi * 0.1);
-
             chisogoc -= chisogoc * (soLanRotCap * 0.1);
             // END Tính chỉ số nhân với số cấp và trừ với số lần rớt cấp //
 
             boolean trangBi_daNangCap_daPhaLeHoa = false;
-            if (player.inventory.gem >= ngocChuyenHoa) {
-                if (!isTrangBiGoc(trangBiGoc)) {
-                    Service.getInstance().sendThongBaoOK(player,
-                            "Trang bị phải từ bậc lưỡng long, Jean hoặc Zelot trở lên");
-                    return;
-                } else if (levelTrangBi < 4) {
-                    Service.getInstance().sendThongBaoOK(player, "Trang bị gốc có cấp từ [+4]");
-                    return;
-                } else if (!isTrangBiChuyenHoa(trangBiCanChuyenHoa)) {
-                    Service.getInstance().sendThongBaoOK(player,
-                            "Trang bị phải từ bậc lưỡng long, Jean hoặc Zelot trở lên");
-                    return;
-                } else if (trangBi_daNangCap_daPhaLeHoa) {
-                    Service.getInstance().sendThongBaoOK(player,
-                            "Trang bị nhập thể phải chưa nâng cấp và pha lê hóa trang bị");
-                    return;
-                } else if (!isCheckTrungTypevsGender(trangBiGoc, trangBiCanChuyenHoa)) {
-                    Service.getInstance().sendThongBaoOK(player,
-                            "Trang bị gốc và Trang bị nhập thể phải cùng loại và hành tinh");
-                    return;
-                } else {
-
-                    trangBiCanChuyenHoa.itemOptions.get(0).param = chisogoc;
-
-                    for (int i = 1; i < trangBiGoc.itemOptions.size(); i++) {
-                        trangBiCanChuyenHoa.itemOptions.add(new ItemOption(
-                                trangBiGoc.itemOptions.get(i).optionTemplate.id, trangBiGoc.itemOptions.get(i).param));
-                    }
-
-                    for (int i = 0; i < trangBiCanChuyenHoa.itemOptions.size(); i++) {
-                        trangBiCanChuyenHoa_2.itemOptions
-                                .add(new ItemOption(trangBiCanChuyenHoa.itemOptions.get(i).optionTemplate.id,
-                                        trangBiCanChuyenHoa.itemOptions.get(i).param));
-                    }
-
-                    player.inventory.gem -= ngocChuyenHoa;
-                    Service.getInstance().sendMoney(player);
-                    InventoryService.gI().addItemBag(player, trangBiCanChuyenHoa_2, 1);
-                    InventoryService.gI().subQuantityItemsBag(player, trangBiGoc, 1);
-                    InventoryService.gI().subQuantityItemsBag(player, trangBiCanChuyenHoa, 1);
-                    InventoryService.gI().sendItemBags(player);
-                    reOpenItemCombine(player);
-                    sendEffectSuccessCombine(player);
-                }
-            } else {
-                Service.getInstance().sendThongBao(player, "Không có tiền mà đòi chuyển hóa cái gì?");
+            if (!isTrangBiGoc(trangBiGoc)) {
+                Service.getInstance().sendThongBaoOK(player,
+                        "Trang bị phải từ bậc lưỡng long, Jean hoặc Zelot trở lên");
+                return;
+            } else if (levelTrangBi < 4) {
+                Service.getInstance().sendThongBaoOK(player, "Trang bị gốc có cấp từ [+4]");
+                return;
+            } else if (!isTrangBiChuyenHoa(trangBiCanChuyenHoa)) {
+                Service.getInstance().sendThongBaoOK(player,
+                        "Trang bị phải từ bậc lưỡng long, Jean hoặc Zelot trở lên");
+                return;
+            } else if (trangBi_daNangCap_daPhaLeHoa) {
+                Service.getInstance().sendThongBaoOK(player,
+                        "Trang bị nhập thể phải chưa nâng cấp và pha lê hóa trang bị");
+                return;
+            } else if (!isCheckTrungTypevsGender(trangBiGoc, trangBiCanChuyenHoa)) {
+                Service.getInstance().sendThongBaoOK(player,
+                        "Trang bị gốc và Trang bị nhập thể phải cùng loại và hành tinh");
                 return;
             }
+
+            if (!player.inventory.hasGem(ngocChuyenHoa)) {
+                Service.getInstance().sendThongBao(player, "Không có đủ ngọc mà đòi chuyển hóa cái gì?");
+                return;
+            }
+            if (!player.inventory.trySpendGem(ngocChuyenHoa)) {
+                Service.getInstance().sendThongBao(player, "Không đủ ngọc để thực hiện");
+                return;
+            }
+
+            Item trangBiCanChuyenHoa_2 = ItemService.gI()
+                    .createNewItem(player.combineNew.itemsCombine.get(1).template.id);
+            trangBiCanChuyenHoa.itemOptions.get(0).param = chisogoc;
+
+            for (int i = 1; i < trangBiGoc.itemOptions.size(); i++) {
+                trangBiCanChuyenHoa.itemOptions.add(new ItemOption(
+                        trangBiGoc.itemOptions.get(i).optionTemplate.id, trangBiGoc.itemOptions.get(i).param));
+            }
+
+            for (int i = 0; i < trangBiCanChuyenHoa.itemOptions.size(); i++) {
+                trangBiCanChuyenHoa_2.itemOptions
+                        .add(new ItemOption(trangBiCanChuyenHoa.itemOptions.get(i).optionTemplate.id,
+                                trangBiCanChuyenHoa.itemOptions.get(i).param));
+            }
+
+            Service.getInstance().sendMoney(player);
+            InventoryService.gI().addItemBag(player, trangBiCanChuyenHoa_2, 1);
+            InventoryService.gI().subQuantityItemsBag(player, trangBiGoc, 1);
+            InventoryService.gI().subQuantityItemsBag(player, trangBiCanChuyenHoa, 1);
+            InventoryService.gI().sendItemBags(player);
+            reOpenItemCombine(player);
+            sendEffectSuccessCombine(player);
         }
     }
 
@@ -2217,30 +2262,40 @@ public class CombineServiceNew {
                 }
             }
             if (caitrang != null && vegiahan != null) {
-                if (InventoryService.gI().getCountEmptyBag(player) > 0
-                        && player.inventory.gold >= COST_GIA_HAN_CAI_TRANG) {
-                    ItemOption expiredDate = null;
-                    boolean canBeExtend = true;
-                    for (ItemOption io : caitrang.itemOptions) {
-                        if (io.optionTemplate.id == 93) {
-                            expiredDate = io;
-                        }
-                        if (io.optionTemplate.id == 199) {
-                            canBeExtend = false;
-                        }
+                if (InventoryService.gI().getCountEmptyBag(player) <= 0) {
+                    Service.getInstance().sendThongBao(player, "Hành trang đã đầy");
+                    return;
+                }
+                ItemOption expiredDate = null;
+                boolean canBeExtend = true;
+                for (ItemOption io : caitrang.itemOptions) {
+                    if (io.optionTemplate.id == 93) {
+                        expiredDate = io;
                     }
-                    if (canBeExtend) {
-                        if (expiredDate.param > 0) {
-                            player.inventory.subGold(COST_GIA_HAN_CAI_TRANG);
-                            sendEffectSuccessCombine(player);
-                            expiredDate.param++;
-                            InventoryService.gI().subQuantityItemsBag(player, vegiahan, 1);
-                            InventoryService.gI().sendItemBags(player);
-                            Service.getInstance().sendMoney(player);
-                            reOpenItemCombine(player);
-                        }
+                    if (io.optionTemplate.id == 199) {
+                        canBeExtend = false;
                     }
                 }
+                if (!canBeExtend || expiredDate == null || expiredDate.param <= 0) {
+                    Service.getInstance().sendThongBao(player, "Vật phẩm này không thể gia hạn");
+                    return;
+                }
+                if (!player.inventory.hasGold(COST_GIA_HAN_CAI_TRANG)) {
+                    long missing = COST_GIA_HAN_CAI_TRANG - player.inventory.gold;
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện, còn thiếu "
+                            + Util.numberToMoney(missing > 0 ? missing : COST_GIA_HAN_CAI_TRANG) + " vàng");
+                    return;
+                }
+                if (!player.inventory.trySpendGold(COST_GIA_HAN_CAI_TRANG)) {
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+                    return;
+                }
+                sendEffectSuccessCombine(player);
+                expiredDate.param++;
+                InventoryService.gI().subQuantityItemsBag(player, vegiahan, 1);
+                InventoryService.gI().sendItemBags(player);
+                Service.getInstance().sendMoney(player);
+                reOpenItemCombine(player);
             }
         }
     }
@@ -2271,49 +2326,56 @@ public class CombineServiceNew {
                 }
             }
             if (hasAo && hasQuan && hasGang && hasGiay && hasRada) {
-                if (InventoryService.gI().getCountEmptyBag(player) > 0
-                        && player.inventory.gold >= COST_DAP_DO_KICH_HOAT) {
-
-                    player.inventory.subGold(COST_DAP_DO_KICH_HOAT);
-
-                    int soluongitem = ConstItem.LIST_ITEM_CLOTHES[0][0].length;
-                    int id;
-
-                    if (Util.isTrue(98, 100)) {
-                        if (Util.isTrue(60, 100)) {
-                            id = (Util.nextInt(0, soluongitem - 7));
-                        } else {
-                            id = (Util.nextInt(5, soluongitem - 2));
-                        }
-                    } else {
-                        id = soluongitem - 1;
-                    }
-
-                    sendEffectSuccessCombine(player);
-
-                    Item firstItem = items.get(0);
-                    int gender = firstItem.template.gender;
-                    if (gender == 3)
-                        gender = player.gender;
-
-                    Item item = ItemService.gI().createNewItem(
-                            (short) ConstItem.LIST_ITEM_CLOTHES[gender][firstItem.template.type][id]);
-
-                    RewardService.gI().initBaseOptionClothes(item.template.id, item.template.type, item.itemOptions);
-                    RewardService.gI().initActivationOption(gender, item.template.type, item.itemOptions);
-
-                    InventoryService.gI().addItemBag(player, item, 0);
-
-                    for (Item it : items) {
-                        InventoryService.gI().subQuantityItemsBag(player, it, 1);
-                    }
-
-                    InventoryService.gI().sendItemBags(player);
-                    Service.getInstance().sendMoney(player);
-                    reOpenItemCombine(player);
-                } else {
-                    Service.getInstance().sendThongBao(player, "Hành trang đã đầy hoặc không đủ vàng");
+                if (InventoryService.gI().getCountEmptyBag(player) <= 0) {
+                    Service.getInstance().sendThongBao(player, "Hành trang đã đầy");
+                    return;
                 }
+                if (!player.inventory.hasGold(COST_DAP_DO_KICH_HOAT)) {
+                    long missing = COST_DAP_DO_KICH_HOAT - player.inventory.gold;
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện, còn thiếu "
+                            + Util.numberToMoney(missing > 0 ? missing : COST_DAP_DO_KICH_HOAT) + " vàng");
+                    return;
+                }
+                if (!player.inventory.trySpendGold(COST_DAP_DO_KICH_HOAT)) {
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+                    return;
+                }
+
+                int soluongitem = ConstItem.LIST_ITEM_CLOTHES[0][0].length;
+                int id;
+
+                if (Util.isTrue(98, 100)) {
+                    if (Util.isTrue(60, 100)) {
+                        id = (Util.nextInt(0, soluongitem - 7));
+                    } else {
+                        id = (Util.nextInt(5, soluongitem - 2));
+                    }
+                } else {
+                    id = soluongitem - 1;
+                }
+
+                sendEffectSuccessCombine(player);
+
+                Item firstItem = items.get(0);
+                int gender = firstItem.template.gender;
+                if (gender == 3)
+                    gender = player.gender;
+
+                Item item = ItemService.gI().createNewItem(
+                        (short) ConstItem.LIST_ITEM_CLOTHES[gender][firstItem.template.type][id]);
+
+                RewardService.gI().initBaseOptionClothes(item.template.id, item.template.type, item.itemOptions);
+                RewardService.gI().initActivationOption(gender, item.template.type, item.itemOptions);
+
+                InventoryService.gI().addItemBag(player, item, 0);
+
+                for (Item it : items) {
+                    InventoryService.gI().subQuantityItemsBag(player, it, 1);
+                }
+
+                InventoryService.gI().sendItemBags(player);
+                Service.getInstance().sendMoney(player);
+                reOpenItemCombine(player);
             } else {
                 Service.getInstance().sendThongBao(player, "Cần đủ 2 món huỷ diệt: Áo, Quần, Găng, Giày, Rada");
             }
@@ -2333,27 +2395,37 @@ public class CombineServiceNew {
                 }
             }
             if (nr1s != null && doThan != null) {
-                if (InventoryService.gI().getCountEmptyBag(player) > 0
-                        && player.inventory.gold >= COST_DOI_MANH_KICH_HOAT) {
-                    player.inventory.gold -= COST_DOI_MANH_KICH_HOAT;
-                    int tiLe = buaBaoVe != null ? 100 : 50;
-                    if (Util.isTrue(tiLe, 100)) {
-                        sendEffectSuccessCombine(player);
-                        Item item = ItemService.gI().createNewItem((short) 2009);
-                        item.itemOptions.add(new ItemOption(30, 0));
-                        InventoryService.gI().addItemBag(player, item, 0);
-                    } else {
-                        sendEffectFailCombine(player);
-                    }
-                    InventoryService.gI().subQuantityItemsBag(player, nr1s, 1);
-                    InventoryService.gI().subQuantityItemsBag(player, doThan, 1);
-                    if (buaBaoVe != null) {
-                        InventoryService.gI().subQuantityItemsBag(player, buaBaoVe, 1);
-                    }
-                    InventoryService.gI().sendItemBags(player);
-                    Service.getInstance().sendMoney(player);
-                    reOpenItemCombine(player);
+                if (InventoryService.gI().getCountEmptyBag(player) <= 0) {
+                    Service.getInstance().sendThongBao(player, "Hành trang đã đầy");
+                    return;
                 }
+                if (!player.inventory.hasGold(COST_DOI_MANH_KICH_HOAT)) {
+                    long missing = COST_DOI_MANH_KICH_HOAT - player.inventory.gold;
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện, còn thiếu "
+                            + Util.numberToMoney(missing > 0 ? missing : COST_DOI_MANH_KICH_HOAT) + " vàng");
+                    return;
+                }
+                if (!player.inventory.trySpendGold(COST_DOI_MANH_KICH_HOAT)) {
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+                    return;
+                }
+                int tiLe = buaBaoVe != null ? 100 : 50;
+                if (Util.isTrue(tiLe, 100)) {
+                    sendEffectSuccessCombine(player);
+                    Item item = ItemService.gI().createNewItem((short) 2009);
+                    item.itemOptions.add(new ItemOption(30, 0));
+                    InventoryService.gI().addItemBag(player, item, 0);
+                } else {
+                    sendEffectFailCombine(player);
+                }
+                InventoryService.gI().subQuantityItemsBag(player, nr1s, 1);
+                InventoryService.gI().subQuantityItemsBag(player, doThan, 1);
+                if (buaBaoVe != null) {
+                    InventoryService.gI().subQuantityItemsBag(player, buaBaoVe, 1);
+                }
+                InventoryService.gI().sendItemBags(player);
+                Service.getInstance().sendMoney(player);
+                reOpenItemCombine(player);
             } else {
                 this.baHatMit.createOtherMenu(player, ConstNpc.IGNORE_MENU,
                         "Hãy chọn 1 trang bị thần linh và 1 viên ngọc rồng 1 sao", "Đóng");
@@ -2445,31 +2517,41 @@ public class CombineServiceNew {
                 }
             }
             if (dhd != null) {
-                if (InventoryService.gI().getCountEmptyBag(player) > 0
-                        && player.inventory.gold >= COST_DAP_DO_KICH_HOAT) {
-                    player.inventory.gold -= COST_DAP_DO_KICH_HOAT;
-                    int tiLe = dtl != null ? 100 : 40;
-                    if (Util.isTrue(tiLe, 100)) {
-                        sendEffectSuccessCombine(player);
-                        Item item = ItemService.gI()
-                                .createNewItem((short) getTempIdItemC0(dhd.template.gender, dhd.template.type));
-                        RewardService.gI().initBaseOptionClothes(item.template.id, item.template.type,
-                                item.itemOptions);
-                        RewardService.gI().initActivationOption(
-                                item.template.gender < 3 ? item.template.gender : player.gender, item.template.type,
-                                item.itemOptions);
-                        InventoryService.gI().addItemBag(player, item, 0);
-                    } else {
-                        sendEffectFailCombine(player);
-                    }
-                    InventoryService.gI().subQuantityItemsBag(player, dhd, 1);
-                    if (dtl != null) {
-                        InventoryService.gI().subQuantityItemsBag(player, dtl, 1);
-                    }
-                    InventoryService.gI().sendItemBags(player);
-                    Service.getInstance().sendMoney(player);
-                    reOpenItemCombine(player);
+                if (InventoryService.gI().getCountEmptyBag(player) <= 0) {
+                    Service.getInstance().sendThongBao(player, "Hành trang đã đầy");
+                    return;
                 }
+                if (!player.inventory.hasGold(COST_DAP_DO_KICH_HOAT)) {
+                    long missing = COST_DAP_DO_KICH_HOAT - player.inventory.gold;
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện, còn thiếu "
+                            + Util.numberToMoney(missing > 0 ? missing : COST_DAP_DO_KICH_HOAT) + " vàng");
+                    return;
+                }
+                if (!player.inventory.trySpendGold(COST_DAP_DO_KICH_HOAT)) {
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+                    return;
+                }
+                int tiLe = dtl != null ? 100 : 40;
+                if (Util.isTrue(tiLe, 100)) {
+                    sendEffectSuccessCombine(player);
+                    Item item = ItemService.gI()
+                            .createNewItem((short) getTempIdItemC0(dhd.template.gender, dhd.template.type));
+                    RewardService.gI().initBaseOptionClothes(item.template.id, item.template.type,
+                            item.itemOptions);
+                    RewardService.gI().initActivationOption(
+                            item.template.gender < 3 ? item.template.gender : player.gender, item.template.type,
+                            item.itemOptions);
+                    InventoryService.gI().addItemBag(player, item, 0);
+                } else {
+                    sendEffectFailCombine(player);
+                }
+                InventoryService.gI().subQuantityItemsBag(player, dhd, 1);
+                if (dtl != null) {
+                    InventoryService.gI().subQuantityItemsBag(player, dtl, 1);
+                }
+                InventoryService.gI().sendItemBags(player);
+                Service.getInstance().sendMoney(player);
+                reOpenItemCombine(player);
             }
         }
     }
@@ -2478,19 +2560,29 @@ public class CombineServiceNew {
         if (player.combineNew.itemsCombine.size() == 1) {
             Item item = player.combineNew.itemsCombine.get(0);
             if (item.isNotNullItem() && item.template.id >= 555 && item.template.id <= 567) {
-                if (InventoryService.gI().getCountEmptyBag(player) > 0
-                        && player.inventory.gold >= COST_DOI_VE_DOI_DO_HUY_DIET) {
-                    player.inventory.gold -= COST_DOI_VE_DOI_DO_HUY_DIET;
-                    Item ticket = ItemService.gI().createNewItem((short) (2001 + item.template.type));
-                    ticket.itemOptions.add(new ItemOption(30, 0));
-                    InventoryService.gI().subQuantityItemsBag(player, item, 1);
-                    InventoryService.gI().addItemBag(player, ticket, 99);
-                    sendEffectOpenItem(player, item.template.iconID, ticket.template.iconID);
-
-                    InventoryService.gI().sendItemBags(player);
-                    Service.getInstance().sendMoney(player);
-                    reOpenItemCombine(player);
+                if (InventoryService.gI().getCountEmptyBag(player) <= 0) {
+                    Service.getInstance().sendThongBao(player, "Hành trang đã đầy");
+                    return;
                 }
+                if (!player.inventory.hasGold(COST_DOI_VE_DOI_DO_HUY_DIET)) {
+                    long missing = COST_DOI_VE_DOI_DO_HUY_DIET - player.inventory.gold;
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện, còn thiếu "
+                            + Util.numberToMoney(missing > 0 ? missing : COST_DOI_VE_DOI_DO_HUY_DIET) + " vàng");
+                    return;
+                }
+                if (!player.inventory.trySpendGold(COST_DOI_VE_DOI_DO_HUY_DIET)) {
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+                    return;
+                }
+                Item ticket = ItemService.gI().createNewItem((short) (2001 + item.template.type));
+                ticket.itemOptions.add(new ItemOption(30, 0));
+                InventoryService.gI().subQuantityItemsBag(player, item, 1);
+                InventoryService.gI().addItemBag(player, ticket, 99);
+                sendEffectOpenItem(player, item.template.iconID, ticket.template.iconID);
+
+                InventoryService.gI().sendItemBags(player);
+                Service.getInstance().sendMoney(player);
+                reOpenItemCombine(player);
             }
         }
     }
@@ -2498,7 +2590,7 @@ public class CombineServiceNew {
     private void epSaoTrangBi(Player player) {
         if (player.combineNew.itemsCombine.size() == 2) {
             int gem = player.combineNew.gemCombine;
-            if (player.inventory.gem < gem) {
+            if (gem > 0 && !player.inventory.hasGem(gem)) {
                 Service.getInstance().sendThongBao(player, "Không đủ ngọc để thực hiện");
                 return;
             }
@@ -2524,7 +2616,10 @@ public class CombineServiceNew {
                     }
                 }
                 if (star < starEmpty) {
-                    player.inventory.subGem(gem);
+                    if (gem > 0 && !player.inventory.trySpendGem(gem)) {
+                        Service.getInstance().sendThongBao(player, "Không đủ ngọc để thực hiện");
+                        return;
+                    }
                     int optionId = getOptionDaPhaLe(daPhaLe);
                     int param = getParamDaPhaLe(daPhaLe);
                     ItemOption option = null;
@@ -2557,17 +2652,6 @@ public class CombineServiceNew {
 
     private void phaLeHoaTrangBi(Player player) {
         if (!player.combineNew.itemsCombine.isEmpty()) {
-            int gold = player.combineNew.goldCombine;
-            int gem = player.combineNew.gemCombine;
-            if (player.inventory.gold < gold) {
-                Service.getInstance().sendThongBao(player,
-                        "Bạn không đủ vàng, còn thiếu " + Util.numberToMoney(gold) + " vàng nữa");
-                return;
-            } else if (player.inventory.gem < gem) {
-                Service.getInstance().sendThongBao(player,
-                        "Bạn không đủ vàng, còn thiếu " + Util.mumberToLouis(gem) + " ngọc nữa");
-                return;
-            }
             Item item = player.combineNew.itemsCombine.get(0);
             if (isTrangBiPhaLeHoa(item)) {
                 int star = 0;
@@ -2579,9 +2663,107 @@ public class CombineServiceNew {
                         break;
                     }
                 }
-                if (star < MAX_STAR_ITEM) {
-                    player.inventory.gold -= gold;
-                    player.inventory.subGem(gem);
+                if (star >= MAX_STAR_ITEM) {
+                    Service.getInstance().sendThongBao(player, "Vật phẩm đã đạt tối đa sao pha lê");
+                    return;
+                }
+                int gold = player.combineNew.goldCombine;
+                int gem = player.combineNew.gemCombine;
+                if (gold > 0 && !player.inventory.hasGold(gold)) {
+                    long missing = gold - player.inventory.gold;
+                    Service.getInstance().sendThongBao(player,
+                            "Bạn không đủ vàng, còn thiếu " + Util.numberToMoney(missing > 0 ? missing : gold) + " vàng nữa");
+                    return;
+                }
+                if (gem > 0 && !player.inventory.hasGem(gem)) {
+                    int missingGem = gem - player.inventory.gem;
+                    Service.getInstance().sendThongBao(player,
+                            "Bạn không đủ ngọc, còn thiếu " + Util.mumberToLouis(missingGem > 0 ? missingGem : gem) + " ngọc nữa");
+                    return;
+                }
+                if (gold > 0 && !player.inventory.trySpendGold(gold)) {
+                    Service.getInstance().sendThongBao(player, "Bạn không đủ vàng để thực hiện");
+                    return;
+                }
+                if (gem > 0 && !player.inventory.trySpendGem(gem)) {
+                    if (gold > 0) {
+                        player.inventory.addGold(gold);
+                    }
+                    Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc để thực hiện");
+                    return;
+                }
+                if (Util.isTrue(player.combineNew.ratioCombine, 400)) {
+                    if (optionStar == null) {
+                        item.itemOptions.add(new ItemOption(107, 1));
+                    } else {
+                        optionStar.param++;
+                    }
+                    sendEffectSuccessCombine(player);
+                    if (optionStar != null && optionStar.param >= 7) {
+                        ServerNotify.gI().notify("Chúc mừng " + player.name + " vừa pha lê hóa " + "thành công "
+                                + item.template.name + " lên " + optionStar.param + " sao pha lê");
+                        ServerLog.logCombine(player.name, item.template.name, optionStar.param);
+                    }
+                } else {
+                    sendEffectFailCombine(player);
+                }
+                InventoryService.gI().sendItemBags(player);
+                Service.getInstance().sendMoney(player);
+                reOpenItemCombine(player);
+            }
+        }
+    }
+
+    private void phaLeHoaTrangBix10(Player player) {
+        if (!player.combineNew.itemsCombine.isEmpty()) {
+            Item item = player.combineNew.itemsCombine.get(0);
+            if (isTrangBiPhaLeHoa(item)) {
+                int star = 0;
+                ItemOption optionStar = null;
+                for (ItemOption io : item.itemOptions) {
+                    if (io.optionTemplate.id == 107) {
+                        star = io.param;
+                        optionStar = io;
+                        break;
+                    }
+                }
+                if (star >= MAX_STAR_ITEM) {
+                    Service.getInstance().sendThongBao(player, "Vật phẩm đã đạt tối đa sao pha lê");
+                    return;
+                }
+                long gold = player.combineNew.goldCombine;
+                int gem = player.combineNew.gemCombine;
+                long totalGold;
+                int totalGem;
+                try {
+                    totalGold = Math.multiplyExact(gold, 10L);
+                    totalGem = Math.multiplyExact(gem, 10);
+                } catch (ArithmeticException e) {
+                    Service.getInstance().sendThongBao(player, "Chi phí quá lớn");
+                    return;
+                }
+                if (totalGold > 0 && !player.inventory.hasGold(totalGold)) {
+                    long missing = totalGold - player.inventory.gold;
+                    Service.getInstance().sendThongBao(player,
+                            "Bạn không đủ vàng, còn thiếu " + Util.numberToMoney(missing > 0 ? missing : totalGold) + " vàng nữa");
+                    return;
+                }
+                if (totalGem > 0 && !player.inventory.hasGem(totalGem)) {
+                    int missingGem = totalGem - player.inventory.gem;
+                    Service.getInstance().sendThongBao(player,
+                            "Bạn không đủ ngọc, còn thiếu " + Util.mumberToLouis(missingGem > 0 ? missingGem : totalGem) + " ngọc nữa");
+                    return;
+                }
+                for (int i = 0; i < 10; i++) {
+                    if (gold > 0 && !player.inventory.trySpendGold(gold)) {
+                        break;
+                    }
+                    if (gem > 0 && !player.inventory.trySpendGem(gem)) {
+                        if (gold > 0) {
+                            player.inventory.addGold(gold);
+                        }
+                        break;
+                    }
                     if (Util.isTrue(player.combineNew.ratioCombine, 400)) {
                         if (optionStar == null) {
                             item.itemOptions.add(new ItemOption(107, 1));
@@ -2594,64 +2776,12 @@ public class CombineServiceNew {
                                     + item.template.name + " lên " + optionStar.param + " sao pha lê");
                             ServerLog.logCombine(player.name, item.template.name, optionStar.param);
                         }
-                    } else {
-                        sendEffectFailCombine(player);
-                    }
-                }
-                InventoryService.gI().sendItemBags(player);
-                Service.getInstance().sendMoney(player);
-                reOpenItemCombine(player);
-            }
-        }
-    }
-
-    private void phaLeHoaTrangBix10(Player player) {
-        if (!player.combineNew.itemsCombine.isEmpty()) {
-            long gold = player.combineNew.goldCombine;
-            int gem = player.combineNew.gemCombine;
-            if (player.inventory.gold < (gold * 100)) {
-                Service.getInstance().sendThongBao(player,
-                        "Bạn không đủ vàng, còn thiếu " + Util.numberToMoney(gold * 10) + " vàng nữa");
-                return;
-            } else if (player.inventory.gem < (gem * 100)) {
-                Service.getInstance().sendThongBao(player,
-                        "Bạn không đủ vàng, còn thiếu " + Util.mumberToLouis(gem * 10) + " ngọc nữa");
-                return;
-            }
-            Item item = player.combineNew.itemsCombine.get(0);
-            if (isTrangBiPhaLeHoa(item)) {
-                int star = 0;
-                ItemOption optionStar = null;
-                for (ItemOption io : item.itemOptions) {
-                    if (io.optionTemplate.id == 107) {
-                        star = io.param;
-                        optionStar = io;
+                        Service.getInstance().sendThongBao(player, "Bạn đã đập " + (i + 1) + " lần");
                         break;
-                    }
-                }
-                if (star < MAX_STAR_ITEM) {
-                    for (int i = 0; i < 10; i++) {
-                        player.inventory.gold -= gold;
-                        player.inventory.subGem(gem);
-                        if (Util.isTrue(player.combineNew.ratioCombine, 400)) {
-                            if (optionStar == null) {
-                                item.itemOptions.add(new ItemOption(107, 1));
-                            } else {
-                                optionStar.param++;
-                            }
-                            sendEffectSuccessCombine(player);
-                            if (optionStar != null && optionStar.param >= 7) {
-                                ServerNotify.gI().notify("Chúc mừng " + player.name + " vừa pha lê hóa " + "thành công "
-                                        + item.template.name + " lên " + optionStar.param + " sao pha lê");
-                                ServerLog.logCombine(player.name, item.template.name, optionStar.param);
-                            }
+                    } else {
+                        if (i == 9) {
+                            sendEffectFailCombine(player);
                             Service.getInstance().sendThongBao(player, "Bạn đã đập " + (i + 1) + " lần");
-                            break;
-                        } else {
-                            if (i == 9) {
-                                sendEffectFailCombine(player);
-                                Service.getInstance().sendThongBao(player, "Bạn đã đập " + (i + 1) + " lần");
-                            }
                         }
                     }
                 }
@@ -2664,17 +2794,6 @@ public class CombineServiceNew {
 
     private void phaLeHoaTrangBix100(Player player) {
         if (!player.combineNew.itemsCombine.isEmpty()) {
-            long gold = player.combineNew.goldCombine;
-            int gem = player.combineNew.gemCombine;
-            if (player.inventory.gold < (gold * 100)) {
-                Service.getInstance().sendThongBao(player,
-                        "Bạn không đủ vàng, còn thiếu " + Util.numberToMoney(gold * 100) + " vàng nữa");
-                return;
-            } else if (player.inventory.gem < (gem * 100)) {
-                Service.getInstance().sendThongBao(player,
-                        "Bạn không đủ vàng, còn thiếu " + Util.mumberToLouis(gem * 100) + " ngọc nữa");
-                return;
-            }
             Item item = player.combineNew.itemsCombine.get(0);
             if (isTrangBiPhaLeHoa(item)) {
                 int star = 0;
@@ -2686,29 +2805,61 @@ public class CombineServiceNew {
                         break;
                     }
                 }
-                if (star < MAX_STAR_ITEM) {
-                    for (int i = 0; i < 100; i++) {
-                        player.inventory.gold -= gold;
-                        player.inventory.subGem(gem);
-                        if (Util.isTrue(player.combineNew.ratioCombine, 400)) {
-                            if (optionStar == null) {
-                                item.itemOptions.add(new ItemOption(107, 1));
-                            } else {
-                                optionStar.param++;
-                            }
-                            sendEffectSuccessCombine(player);
-                            if (optionStar != null && optionStar.param >= 7) {
-                                ServerNotify.gI().notify("Chúc mừng " + player.name + " vừa pha lê hóa " + "thành công "
-                                        + item.template.name + " lên " + optionStar.param + " sao pha lê");
-                                ServerLog.logCombine(player.name, item.template.name, optionStar.param);
-                            }
-                            Service.getInstance().sendThongBao(player, "Bạn đã đập " + (i + 1) + " lần");
-                            break;
+                if (star >= MAX_STAR_ITEM) {
+                    Service.getInstance().sendThongBao(player, "Vật phẩm đã đạt tối đa sao pha lê");
+                    return;
+                }
+                long gold = player.combineNew.goldCombine;
+                int gem = player.combineNew.gemCombine;
+                long totalGold;
+                int totalGem;
+                try {
+                    totalGold = Math.multiplyExact(gold, 100L);
+                    totalGem = Math.multiplyExact(gem, 100);
+                } catch (ArithmeticException e) {
+                    Service.getInstance().sendThongBao(player, "Chi phí quá lớn");
+                    return;
+                }
+                if (totalGold > 0 && !player.inventory.hasGold(totalGold)) {
+                    long missing = totalGold - player.inventory.gold;
+                    Service.getInstance().sendThongBao(player,
+                            "Bạn không đủ vàng, còn thiếu " + Util.numberToMoney(missing > 0 ? missing : totalGold) + " vàng nữa");
+                    return;
+                }
+                if (totalGem > 0 && !player.inventory.hasGem(totalGem)) {
+                    int missingGem = totalGem - player.inventory.gem;
+                    Service.getInstance().sendThongBao(player,
+                            "Bạn không đủ ngọc, còn thiếu " + Util.mumberToLouis(missingGem > 0 ? missingGem : totalGem) + " ngọc nữa");
+                    return;
+                }
+                for (int i = 0; i < 100; i++) {
+                    if (gold > 0 && !player.inventory.trySpendGold(gold)) {
+                        break;
+                    }
+                    if (gem > 0 && !player.inventory.trySpendGem(gem)) {
+                        if (gold > 0) {
+                            player.inventory.addGold(gold);
+                        }
+                        break;
+                    }
+                    if (Util.isTrue(player.combineNew.ratioCombine, 400)) {
+                        if (optionStar == null) {
+                            item.itemOptions.add(new ItemOption(107, 1));
                         } else {
-                            if (i == 99) {
-                                sendEffectFailCombine(player);
-                                Service.getInstance().sendThongBao(player, "Bạn đã đập " + (i + 1) + " lần");
-                            }
+                            optionStar.param++;
+                        }
+                        sendEffectSuccessCombine(player);
+                        if (optionStar != null && optionStar.param >= 7) {
+                            ServerNotify.gI().notify("Chúc mừng " + player.name + " vừa pha lê hóa " + "thành công "
+                                    + item.template.name + " lên " + optionStar.param + " sao pha lê");
+                            ServerLog.logCombine(player.name, item.template.name, optionStar.param);
+                        }
+                        Service.getInstance().sendThongBao(player, "Bạn đã đập " + (i + 1) + " lần");
+                        break;
+                    } else {
+                        if (i == 99) {
+                            sendEffectFailCombine(player);
+                            Service.getInstance().sendThongBao(player, "Bạn đã đập " + (i + 1) + " lần");
                         }
                     }
                 }
@@ -2720,47 +2871,57 @@ public class CombineServiceNew {
     }
 
     private void nhapNgocRong(Player player) {
-        if (InventoryService.gI().getCountEmptyBag(player) > 0) {
-            if (!player.combineNew.itemsCombine.isEmpty()) {
-                Item item = player.combineNew.itemsCombine.get(0);
-                if (item != null && item.isNotNullItem()) {
-                    if ((item.template.id > 14 && item.template.id <= 20) && item.quantity >= 7) {
-                        Item nr = ItemService.gI().createNewItem((short) (item.template.id - 1));
-                        InventoryService.gI().addItemBag(player, nr, 0);
-                        InventoryService.gI().subQuantityItemsBag(player, item, 7);
-                        InventoryService.gI().sendItemBags(player);
-                        reOpenItemCombine(player);
-                        sendEffectCombineDB(player, item.template.iconID);
-                        return;
-                    }
-                    if (player.inventory.gold >= 500000000) {
-                        if (item.template.id == 14 && item.quantity >= 7) {
-                            Item nr = ItemService.gI().createNewItem((short) (1015));
-                            InventoryService.gI().addItemBag(player, nr, 0);
-                            sendEffectCombineDB(player, (short) 9650);
-                        } else if (item.template.id == 926 && item.quantity >= 7) {
-                            Item nr = ItemService.gI().createNewItem((short) (925));
-                            nr.itemOptions.add(new ItemOption(93, 70));
-                            InventoryService.gI().addItemBag(player, nr, 0);
-                            sendEffectCombineDB(player, item.template.iconID);
-                        }
-                        InventoryService.gI().subQuantityItemsBag(player, item, 7);
-                        player.inventory.gold -= 500000000;
-                        Service.getInstance().sendMoney(player);
-                        InventoryService.gI().sendItemBags(player);
-                        reOpenItemCombine(player);
-                    } else {
-                        Service.getInstance().sendThongBao(player, "Không đủ vàng, còn thiếu "
-                                + Util.numberToMoney(500000000 - player.inventory.gold) + " vàng");
-                    }
-                }
+        if (InventoryService.gI().getCountEmptyBag(player) <= 0) {
+            Service.getInstance().sendThongBao(player, "Hành trang đã đầy");
+            return;
+        }
+        if (player.combineNew.itemsCombine.isEmpty()) {
+            return;
+        }
+        Item item = player.combineNew.itemsCombine.get(0);
+        if (item == null || !item.isNotNullItem()) {
+            return;
+        }
+        if ((item.template.id > 14 && item.template.id <= 20) && item.quantity >= 7) {
+            Item nr = ItemService.gI().createNewItem((short) (item.template.id - 1));
+            InventoryService.gI().addItemBag(player, nr, 0);
+            InventoryService.gI().subQuantityItemsBag(player, item, 7);
+            InventoryService.gI().sendItemBags(player);
+            reOpenItemCombine(player);
+            sendEffectCombineDB(player, item.template.iconID);
+            return;
+        }
+        if ((item.template.id == 14 || item.template.id == 926) && item.quantity >= 7) {
+            long cost = 500000000L;
+            if (!player.inventory.hasGold(cost)) {
+                long missing = cost - player.inventory.gold;
+                Service.getInstance().sendThongBao(player, "Không đủ vàng, còn thiếu "
+                        + Util.numberToMoney(missing > 0 ? missing : cost) + " vàng");
+                return;
             }
+            if (!player.inventory.trySpendGold(cost)) {
+                Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+                return;
+            }
+            if (item.template.id == 14) {
+                Item nr = ItemService.gI().createNewItem((short) (1015));
+                InventoryService.gI().addItemBag(player, nr, 0);
+                sendEffectCombineDB(player, (short) 9650);
+            } else {
+                Item nr = ItemService.gI().createNewItem((short) (925));
+                nr.itemOptions.add(new ItemOption(93, 70));
+                InventoryService.gI().addItemBag(player, nr, 0);
+                sendEffectCombineDB(player, item.template.iconID);
+            }
+            InventoryService.gI().subQuantityItemsBag(player, item, 7);
+            Service.getInstance().sendMoney(player);
+            InventoryService.gI().sendItemBags(player);
+            reOpenItemCombine(player);
         }
     }
 
     private void nangCapSKH(Player player) {
         if (player.combineNew.itemsCombine.size() == 3) {
-
             Item SKH = null, doThan = null, daNangCap = null;
             for (Item item : player.combineNew.itemsCombine) {
                 if (item.isNotNullItem()) {
@@ -2782,8 +2943,12 @@ public class CombineServiceNew {
             }
 
             int levelTrangBi = 0;
-
             int paramSKH = 0;
+
+            if (SKH == null || doThan == null || daNangCap == null) {
+                Service.getInstance().sendThongBao(player, "Không đủ vật phẩm");
+                return;
+            }
 
             for (ItemOption io : SKH.itemOptions) {
                 for (int option = 127; option <= 135; option++) {
@@ -2797,43 +2962,50 @@ public class CombineServiceNew {
                     }
                 }
             }
-            // Start Combie//
-            if (SKH != null && doThan != null && daNangCap != null) {
-                if (player.inventory.gold >= player.combineNew.goldCombine) {
-                    if (Util.isTrue(50, 100)) {
-                        for (int i = 1; i < SKH.itemOptions.size(); i++) {
-                            if (SKH.itemOptions.get(i).optionTemplate.id >= 127
-                                    && SKH.itemOptions.get(i).optionTemplate.id <= 135) {
-                                SKH.itemOptions.get(i).param += 1;
-                            }
-                            if (SKH.itemOptions.get(i).optionTemplate.id >= 136
-                                    && SKH.itemOptions.get(i).optionTemplate.id <= 144) {
-                                SKH.itemOptions.get(i).param += 10;
-                            }
-                        }
-                        InventoryService.gI().subQuantityItemsBag(player, doThan, 1);
-                        InventoryService.gI().subQuantityItemsBag(player, daNangCap, 1);
-                        InventoryService.gI().sendItemBags(player);
-                        player.inventory.gold -= 2000000000L;
-                        Service.getInstance().sendMoney(player);
-                        sendEffectSuccessCombine(player);
-                        return;
-                    } else {
-                        InventoryService.gI().subQuantityItemsBag(player, doThan, 1);
-                        InventoryService.gI().subQuantityItemsBag(player, daNangCap, 1);
-                        InventoryService.gI().sendItemBags(player);
-                        player.inventory.gold -= 2000000000L;
-                        Service.getInstance().sendMoney(player);
-                        sendEffectFailCombine(player);
-                        return;
-                    }
-                } else {
-                    Service.getInstance().sendThongBao(player, "Không đủ vàng");
-                }
-            } else {
+
+            if (doThan.quantity < 1 || daNangCap.quantity < 1) {
                 Service.getInstance().sendThongBao(player, "Không đủ vật phẩm");
+                return;
             }
-            // End Combie//
+
+            long cost = 2000000000L;
+            if (!player.inventory.hasGold(cost)) {
+                long missing = cost - player.inventory.gold;
+                Service.getInstance().sendThongBao(player, "Không đủ vàng, còn thiếu "
+                        + Util.numberToMoney(missing > 0 ? missing : cost) + " vàng");
+                return;
+            }
+
+            if (!player.inventory.trySpendGold(cost)) {
+                Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+                return;
+            }
+
+            if (Util.isTrue(50, 100)) {
+                for (int i = 1; i < SKH.itemOptions.size(); i++) {
+                    if (SKH.itemOptions.get(i).optionTemplate.id >= 127
+                            && SKH.itemOptions.get(i).optionTemplate.id <= 135) {
+                        SKH.itemOptions.get(i).param += 1;
+                    }
+                    if (SKH.itemOptions.get(i).optionTemplate.id >= 136
+                            && SKH.itemOptions.get(i).optionTemplate.id <= 144) {
+                        SKH.itemOptions.get(i).param += 10;
+                    }
+                }
+                InventoryService.gI().subQuantityItemsBag(player, doThan, 1);
+                InventoryService.gI().subQuantityItemsBag(player, daNangCap, 1);
+                InventoryService.gI().sendItemBags(player);
+                Service.getInstance().sendMoney(player);
+                sendEffectSuccessCombine(player);
+                return;
+            } else {
+                InventoryService.gI().subQuantityItemsBag(player, doThan, 1);
+                InventoryService.gI().subQuantityItemsBag(player, daNangCap, 1);
+                InventoryService.gI().sendItemBags(player);
+                Service.getInstance().sendMoney(player);
+                sendEffectFailCombine(player);
+                return;
+            }
         }
     }
 
@@ -2872,10 +3044,6 @@ public class CombineServiceNew {
                 int countDaNangCap = player.combineNew.countDaNangCap;
                 int gold = player.combineNew.goldCombine;
                 short countDaBaoVe = player.combineNew.countDaBaoVe;
-                if (player.inventory.gold < gold) {
-                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
-                    return;
-                }
 
                 if (itemDNC.quantity < countDaNangCap) {
                     return;
@@ -2898,65 +3066,84 @@ public class CombineServiceNew {
                         break;
                     }
                 }
-                if (level < MAX_LEVEL_ITEM) {
-                    player.inventory.gold -= gold;
-                    ItemOption option = null;
-                    ItemOption option2 = null;
-                    for (ItemOption io : itemDo.itemOptions) {
-                        if (io.optionTemplate.id == 47
-                                || io.optionTemplate.id == 6
-                                || io.optionTemplate.id == 0
-                                || io.optionTemplate.id == 7
-                                || io.optionTemplate.id == 14
-                                || io.optionTemplate.id == 22
-                                || io.optionTemplate.id == 23) {
-                            option = io;
-                        } else if (io.optionTemplate.id == 27
-                                || io.optionTemplate.id == 28) {
-                            option2 = io;
-                        }
+                if (level >= MAX_LEVEL_ITEM) {
+                    Service.getInstance().sendThongBao(player, "Trang bị đã đạt cấp tối đa");
+                    return;
+                }
+
+                if (gold > 0 && !player.inventory.hasGold(gold)) {
+                    long missing = gold - player.inventory.gold;
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện, còn thiếu "
+                            + Util.numberToMoney(missing > 0 ? missing : gold) + " vàng");
+                    return;
+                }
+                if (gold > 0 && !player.inventory.trySpendGold(gold)) {
+                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
+                    return;
+                }
+
+                ItemOption option = null;
+                ItemOption option2 = null;
+                for (ItemOption io : itemDo.itemOptions) {
+                    if (io.optionTemplate.id == 47
+                            || io.optionTemplate.id == 6
+                            || io.optionTemplate.id == 0
+                            || io.optionTemplate.id == 7
+                            || io.optionTemplate.id == 14
+                            || io.optionTemplate.id == 22
+                            || io.optionTemplate.id == 23) {
+                        option = io;
+                    } else if (io.optionTemplate.id == 27
+                            || io.optionTemplate.id == 28) {
+                        option2 = io;
                     }
-                    if (Util.isTrue(player.combineNew.ratioCombine, 100)) {
+                }
+                if (Util.isTrue(player.combineNew.ratioCombine, 100)) {
+                    if (option != null) {
                         if (option.optionTemplate.id == 14) {
                             option.param += 1;
                         } else {
                             option.param += (option.param * 10 / 100);
                         }
-                        if (option2 != null) {
-                            option2.param += (option2.param * 10 / 100);
-                        }
-                        if (optionLevel == null) {
-                            itemDo.itemOptions.add(new ItemOption(72, 1));
-                        } else {
-                            optionLevel.param++;
-                        }
-                        if (optionLevel != null && optionLevel.param >= 5) {
-                            ServerNotify.gI().notify("Chúc mừng " + player.name + " vừa nâng cấp "
-                                    + "thành công " + itemDo.template.name + " lên +" + optionLevel.param);
-                        }
-                        sendEffectSuccessCombine(player);
+                    }
+                    if (option2 != null) {
+                        option2.param += (option2.param * 10 / 100);
+                    }
+                    if (optionLevel == null) {
+                        itemDo.itemOptions.add(new ItemOption(72, 1));
                     } else {
-                        if ((level == 2 || level == 4 || level == 6) && (player.combineNew.itemsCombine.size() != 3)) {
+                        optionLevel.param++;
+                    }
+                    if (optionLevel != null && optionLevel.param >= 5) {
+                        ServerNotify.gI().notify("Chúc mừng " + player.name + " vừa nâng cấp "
+                                + "thành công " + itemDo.template.name + " lên +" + optionLevel.param);
+                    }
+                    sendEffectSuccessCombine(player);
+                } else {
+                    if ((level == 2 || level == 4 || level == 6) && (player.combineNew.itemsCombine.size() != 3)) {
+                        if (option != null) {
                             if (option.optionTemplate.id == 14) {
                                 option.param -= 1;
                             } else {
                                 option.param -= (option.param * 15 / 100);
                             }
-                            if (option2 != null) {
-                                option2.param -= (option2.param * 15 / 100);
-                            }
+                        }
+                        if (option2 != null) {
+                            option2.param -= (option2.param * 15 / 100);
+                        }
+                        if (optionLevel != null) {
                             optionLevel.param--;
                         }
-                        sendEffectFailCombine(player);
                     }
-                    if (player.combineNew.itemsCombine.size() == 3) {
-                        InventoryService.gI().subQuantityItemsBag(player, itemDBV, countDaBaoVe);
-                    }
-                    InventoryService.gI().subQuantityItemsBag(player, itemDNC, player.combineNew.countDaNangCap);
-                    InventoryService.gI().sendItemBags(player);
-                    Service.getInstance().sendMoney(player);
-                    reOpenItemCombine(player);
+                    sendEffectFailCombine(player);
                 }
+                if (player.combineNew.itemsCombine.size() == 3) {
+                    InventoryService.gI().subQuantityItemsBag(player, itemDBV, countDaBaoVe);
+                }
+                InventoryService.gI().subQuantityItemsBag(player, itemDNC, player.combineNew.countDaNangCap);
+                InventoryService.gI().sendItemBags(player);
+                Service.getInstance().sendMoney(player);
+                reOpenItemCombine(player);
             }
         }
     }

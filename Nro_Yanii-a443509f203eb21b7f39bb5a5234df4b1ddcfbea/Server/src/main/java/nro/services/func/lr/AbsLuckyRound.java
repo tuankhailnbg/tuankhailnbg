@@ -27,6 +27,13 @@ public abstract class AbsLuckyRound {
     protected List<Integer> icons = new ArrayList<>();
 
     public void payAndGetStarted(Player player, byte quantity) {
+        if (quantity <= 0) {
+            return;
+        }
+        if (quantity > InventoryService.gI().getCountEmptyListItem(player.inventory.itemsBoxCrackBall)) {
+            Service.getInstance().sendThongBao(player, "Rương phụ đã đầy");
+            return;
+        }
 
         Item itm = InventoryService.gI().findItemBagByTemp(player, ticket);
         int numTicket = 0;
@@ -39,23 +46,19 @@ public abstract class AbsLuckyRound {
         }
         q -= numTicket;
         int price = q * this.price;
-        boolean r = checkMoney(player, price);
-        if (r) {
-            if (quantity > InventoryService.gI().getCountEmptyListItem(player.inventory.itemsBoxCrackBall)) {
-                Service.getInstance().sendThongBao(player, "Rương phụ đã đầy");
-                return;
-            }
-            if (price > 0) {
-                payWithMoney(player, price);
-                Service.getInstance().sendMoney(player);
-            }
-            if (itm != null) {
-                InventoryService.gI().subQuantityItemsBag(player, itm, numTicket);
-                InventoryService.gI().sendItemBags(player);
-            }
-            List<Item> list = reward(player, quantity);
-            result(player, list);
+        if (price > 0 && !checkMoney(player, price)) {
+            return;
         }
+        if (price > 0) {
+            payWithMoney(player, price);
+            Service.getInstance().sendMoney(player);
+        }
+        if (itm != null && numTicket > 0) {
+            InventoryService.gI().subQuantityItemsBag(player, itm, numTicket);
+            InventoryService.gI().sendItemBags(player);
+        }
+        List<Item> list = reward(player, quantity);
+        result(player, list);
     }
 
     public abstract boolean checkMoney(Player player, int price);
