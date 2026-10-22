@@ -14,6 +14,7 @@ public class Inventory {
 
     public static final long LIMIT_GOLD = 500_000_000_000L;
     public static final long MAX_GOLD_LIMIT = 1_000_000_000_000L;
+    public static final long MAX_BONUS_GOLD = MAX_GOLD_LIMIT - LIMIT_GOLD;
 
     private Player player;
 
@@ -49,14 +50,9 @@ public class Inventory {
     }
 
     public long getGoldLimit() {
-        if (this.goldLimit < 0) {
-            this.goldLimit = 0;
-        }
-        long total = goldLimit + LIMIT_GOLD;
-        if (total > MAX_GOLD_LIMIT) {
-            return MAX_GOLD_LIMIT;
-        }
-        return total;
+        long clampedBonus = Math.max(0L, Math.min(this.goldLimit, MAX_BONUS_GOLD));
+        this.goldLimit = clampedBonus;
+        return LIMIT_GOLD + clampedBonus;
     }
 
     public long getGoldDisplay() {
@@ -264,9 +260,7 @@ public class Inventory {
                     (player != null ? player.id : -1), (player != null ? player.name : "unknown"), this.ruby));
             this.ruby = 0;
         }
-        if (this.goldLimit < 0) {
-            this.goldLimit = 0;
-        }
+        this.goldLimit = Math.max(0L, Math.min(this.goldLimit, MAX_BONUS_GOLD));
     }
 
     public void dispose() {

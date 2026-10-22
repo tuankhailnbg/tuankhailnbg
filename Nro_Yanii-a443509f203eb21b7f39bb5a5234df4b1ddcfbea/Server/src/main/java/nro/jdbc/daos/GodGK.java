@@ -182,7 +182,8 @@ public class GodGK {
                     player.inventory.gem = Math.max(0, Integer.parseInt(dataArray.get(1).toString()));
                     player.inventory.ruby = Math.max(0, Integer.parseInt(dataArray.get(2).toString()));
                     if (dataArray.size() >= 4) {
-                        player.inventory.goldLimit = Math.max(0, Long.parseLong(dataArray.get(3).toString()));
+                        long loadedLimit = Long.parseLong(dataArray.get(3).toString());
+                        player.inventory.goldLimit = Math.max(0L, Math.min(loadedLimit, nro.models.player.Inventory.MAX_BONUS_GOLD));
                     }
                     dataArray.clear();
 

@@ -142,30 +142,36 @@ public class InventoryService {
 
         // mở rộng hành trang - rương đồ
         if (item.template.id == 517) {
-            if (player.inventory.itemsBag.size() < 60) {
-                player.inventory.itemsBag.add(ItemService.gI().createItemNull());
-                return true;
-            } else {
-                Service.getInstance().sendThongBaoOK(player, "Hành trang của bạn đã đạt tối đa");
-                return false;
+            synchronized (player.inventory) {
+                if (player.inventory.itemsBag.size() < 60) {
+                    player.inventory.itemsBag.add(ItemService.gI().createItemNull());
+                    return true;
+                } else {
+                    Service.getInstance().sendThongBaoOK(player, "Hành trang của bạn đã đạt tối đa");
+                    return false;
+                }
             }
         } else if (item.template.id == 518) {
-            if (player.inventory.itemsBox.size() < 60) {
-                player.inventory.itemsBox.add(ItemService.gI().createItemNull());
-                return true;
-            } else {
-                Service.getInstance().sendThongBaoOK(player, "Rương đồ của bạn đã đạt tối đa");
-                return false;
+            synchronized (player.inventory) {
+                if (player.inventory.itemsBox.size() < 60) {
+                    player.inventory.itemsBox.add(ItemService.gI().createItemNull());
+                    return true;
+                } else {
+                    Service.getInstance().sendThongBaoOK(player, "Rương đồ của bạn đã đạt tối đa");
+                    return false;
+                }
             }
         } else if (item.template.id == 988) {
-            if (player.inventory.getGoldLimit() < Inventory.MAX_GOLD_LIMIT) {
-                player.inventory.goldLimit += 100000000;
-                Service.getInstance().sendThongBao(player, "Giới hạn vàng của bạn đã tăng lên 100Tr\n"
-                        + "Giới hạn vàng hiện tại của bạn là " + Util.numberToMoney(player.inventory.getGoldLimit()));
-                return true;
-            } else {
-                Service.getInstance().sendThongBaoOK(player, "Giới hạn vàng của bạn đã đạt tối đa");
-                return false;
+            synchronized (player.inventory) {
+                if (player.inventory.getGoldLimit() < Inventory.MAX_GOLD_LIMIT) {
+                    player.inventory.goldLimit = Math.min(player.inventory.goldLimit + 100000000L, Inventory.MAX_BONUS_GOLD);
+                    Service.getInstance().sendThongBao(player, "Giới hạn vàng của bạn đã tăng lên 100Tr\n"
+                            + "Giới hạn vàng hiện tại của bạn là " + Util.numberToMoney(player.inventory.getGoldLimit()));
+                    return true;
+                } else {
+                    Service.getInstance().sendThongBaoOK(player, "Giới hạn vàng của bạn đã đạt tối đa");
+                    return false;
+                }
             }
         }
         return addItemList(player.inventory.itemsBag, item, maxQuantity);
@@ -327,6 +333,127 @@ public class InventoryService {
             if (!items.get(i).isNotNullItem()) {
                 items.set(i, ItemService.gI().copyItem(item));
                 item.quantity = 0;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean canAddItemBag(Player player, Item item, int maxQuantity) {
+        if (player == null || player.inventory == null || player.inventory.itemsBag == null || item == null || item.template == null) {
+            return false;
+        }
+
+        // quả trứng
+        if (item.template.id == 568) {
+            return player.mabuEgg == null;
+        }
+
+        // tennis spaceship
+        if (item.template.id == 453) {
+            return !player.haveTennisSpaceShip;
+        }
+
+        // đùi gà nướng
+        if (item.template.id == 74) {
+            return true;
+        }
+
+        // gold, gem, ruby
+        switch (item.template.type) {
+            case 9:
+                return (player.inventory.gold + item.quantity <= player.inventory.getGoldLimit());
+            case 10:
+                return true;
+            case 34:
+                return true;
+        }
+
+        // mở rộng hành trang - rương đồ - gold limit
+        if (item.template.id == 517) {
+            return player.inventory.itemsBag.size() < 60;
+        } else if (item.template.id == 518) {
+            return player.inventory.itemsBox.size() < 60;
+        } else if (item.template.id == 988) {
+            return player.inventory.getGoldLimit() < Inventory.MAX_GOLD_LIMIT;
+        }
+
+        return canAddItemList(player.inventory.itemsBag, item, maxQuantity);
+    }
+
+    public boolean canAddItemList(List<Item> items, Item item, int maxQuantity) {
+        if (items == null || item == null || item.template == null || item.quantity <= 0 || item.quantity > 2_000_000_000) {
+            return false;
+        }
+
+        List<ItemOption> optionsToCheck = item.itemOptions;
+        if (optionsToCheck == null || optionsToCheck.isEmpty()) {
+            optionsToCheck = java.util.Collections.singletonList(new ItemOption(73, 0));
+        }
+
+        // item cộng thêm chỉ số param: tự động luyện tập
+        int optionId = isItemIncrementalOption(item);
+        if (optionId != -1) {
+            for (Item it : items) {
+                if (it != null && it.isNotNullItem() && it.template.id == item.template.id) {
+                    for (ItemOption io : it.itemOptions) {
+                        if (io.optionTemplate.id == optionId) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            for (Item it : items) {
+                if (it == null || !it.isNotNullItem()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // item tăng số lượng
+        if (isItemIncremental(item)) {
+            boolean isExempt = isExemptFromMaxQuantity(item);
+
+            if (maxQuantity > 0 && !isExempt) {
+                long matchingFreeCapacity = 0;
+                int emptySlotCount = 0;
+
+                for (Item it : items) {
+                    if (it != null && it.isNotNullItem()) {
+                        if (it.template.id == item.template.id && areItemOptionsEqual(it.itemOptions, optionsToCheck)) {
+                            if (it.quantity < maxQuantity) {
+                                matchingFreeCapacity += (maxQuantity - it.quantity);
+                            }
+                        }
+                    } else {
+                        emptySlotCount++;
+                    }
+                }
+
+                long totalCapacity = matchingFreeCapacity + ((long) emptySlotCount * maxQuantity);
+                return (long) item.quantity <= totalCapacity;
+            } else {
+                for (Item it : items) {
+                    if (it != null && it.isNotNullItem() && it.template.id == item.template.id && areItemOptionsEqual(it.itemOptions, optionsToCheck)) {
+                        long totalQty = (long) it.quantity + (long) item.quantity;
+                        if (totalQty <= 2_000_000_000L) {
+                            return true;
+                        }
+                    }
+                }
+                for (Item it : items) {
+                    if (it == null || !it.isNotNullItem()) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
+        // item không tăng số lượng (equipment, ...)
+        for (Item it : items) {
+            if (it == null || !it.isNotNullItem()) {
                 return true;
             }
         }
