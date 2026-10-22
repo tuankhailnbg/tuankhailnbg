@@ -383,15 +383,6 @@ public class ShopService {
                 return;
             }
 
-            if (is.temp.id == 361) {
-                Item item = ItemService.gI().createNewItem((short) 361, 10);
-                InventoryService.gI().addItemBag(player, item, 9999);
-                InventoryService.gI().sendItemBags(player);
-                Service.getInstance().sendMoney(player);
-                Service.getInstance().sendThongBao(player, "Mua thành công " + is.temp.name);
-                return;
-            }
-
             int gold = is.gold;
             int gem = is.gem;
             int itemExchange = is.itemExchange;
@@ -577,24 +568,33 @@ public class ShopService {
                     }
                     break;
                 case ConstNpc.SHOP_WHIS_THIEN_SU:
-                    Item itemWhis = ItemService.gI().createItemFromItemShop(is);
-                    if (InventoryService.gI().addItemBag(player, itemWhis, 99)) {
+                    Item itemWhis = (is.temp.id == 361)
+                            ? ItemService.gI().createNewItem((short) 361, 10)
+                            : ItemService.gI().createItemFromItemShop(is);
+                    int maxBagWhis = (is.temp.id == 361) ? 9999 : 99;
+                    if (InventoryService.gI().addItemBag(player, itemWhis, maxBagWhis)) {
                         InventoryService.gI().sendItemBags(player);
                         Service.getInstance().sendThongBao(player, "Đổi thành công " + is.temp.name);
                         success = true;
                     }
                     break;
                 case ConstNpc.SHOP_SU_KIEN_TET:
-                    Item itemTet = ItemService.gI().createItemFromItemShop(is);
-                    if (InventoryService.gI().addItemBag(player, itemTet, 99)) {
+                    Item itemTet = (is.temp.id == 361)
+                            ? ItemService.gI().createNewItem((short) 361, 10)
+                            : ItemService.gI().createItemFromItemShop(is);
+                    int maxBagTet = (is.temp.id == 361) ? 9999 : 99;
+                    if (InventoryService.gI().addItemBag(player, itemTet, maxBagTet)) {
                         InventoryService.gI().sendItemBags(player);
                         Service.getInstance().sendThongBao(player, "Bạn nhận được " + is.temp.name);
                         success = true;
                     }
                     break;
                 default:
-                    Item itemDefault = ItemService.gI().createItemFromItemShop(is);
-                    if (InventoryService.gI().addItemBag(player, itemDefault, 99)) {
+                    Item itemDefault = (is.temp.id == 361)
+                            ? ItemService.gI().createNewItem((short) 361, 10)
+                            : ItemService.gI().createItemFromItemShop(is);
+                    int maxBagQuantity = (is.temp.id == 361) ? 9999 : 99;
+                    if (InventoryService.gI().addItemBag(player, itemDefault, maxBagQuantity)) {
                         InventoryService.gI().sendItemBags(player);
                         Service.getInstance().sendThongBao(player, "Mua thành công " + is.temp.name);
                         if (is.temp.id == 517 || is.temp.id == 518) {
