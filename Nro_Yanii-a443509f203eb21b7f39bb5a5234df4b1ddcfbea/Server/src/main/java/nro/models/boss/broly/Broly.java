@@ -27,7 +27,7 @@ import org.apache.commons.lang3.time.StopWatch;
 
 public class Broly extends Boss {
 
-    static final int MAX_HP = 50000000;
+    static final int MAX_HP = (int) Math.round(50000000L * 1.15);
 
     private final Map angryPlayers;
     private final List<Player> playersAttack;

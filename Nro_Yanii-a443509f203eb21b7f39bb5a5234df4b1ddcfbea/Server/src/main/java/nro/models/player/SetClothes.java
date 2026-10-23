@@ -35,10 +35,17 @@ public class SetClothes {
     public void setup() {
         setDefault();
         setupSKT();
+        if (this.player == null || this.player.isBoss || this.player.inventory == null || this.player.inventory.itemsBody == null) {
+            return;
+        }
+        int bodySize = this.player.inventory.itemsBody.size();
+        if (bodySize < 5) {
+            return;
+        }
         this.godClothes = true;
         for (int i = 0; i < 5; i++) {
             Item item = this.player.inventory.itemsBody.get(i);
-            if (item.isNotNullItem()) {
+            if (item != null && item.isNotNullItem()) {
                 if (item.template.id > 567 || item.template.id < 555) {
                     this.godClothes = false;
                     break;
@@ -48,20 +55,22 @@ public class SetClothes {
                 break;
             }
         }
-        Item ct = this.player.inventory.itemsBody.get(5);
-        if (ct.isNotNullItem()) {
-            switch (ct.template.id) {
-                case 618:
-                case 619:
-                case 620:
-                case 621:
-                case 622:
-                case 623:
-                case 624:
-                case 626:
-                case 627:
-                    this.ctHaiTac = ct.template.id;
-                    break;
+        if (bodySize > 5) {
+            Item ct = this.player.inventory.itemsBody.get(5);
+            if (ct != null && ct.isNotNullItem()) {
+                switch (ct.template.id) {
+                    case 618:
+                    case 619:
+                    case 620:
+                    case 621:
+                    case 622:
+                    case 623:
+                    case 624:
+                    case 626:
+                    case 627:
+                        this.ctHaiTac = ct.template.id;
+                        break;
+                }
             }
         }
     }

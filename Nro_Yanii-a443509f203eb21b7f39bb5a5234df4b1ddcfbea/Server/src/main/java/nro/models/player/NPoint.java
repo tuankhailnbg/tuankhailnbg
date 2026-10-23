@@ -372,17 +372,19 @@ public class NPoint {
 
     private void setPointWhenWearClothes() {
         resetPoint();
-        if (this.player != null && this.player.setClothes != null) {
+        if (this.player != null && !this.player.isBoss && this.player.setClothes != null) {
             this.player.setClothes.setup();
         }
-        for (Item item : this.player.inventory.itemsBody) {
-            if (item.isNotNullItem()) {
-                int tempID = item.template.id;
-                if (tempID >= 592 && tempID <= 594) {
-                    teleport = true;
-                }
-                for (ItemOption io : item.itemOptions) {
-                    setPoint(io);
+        if (this.player != null && this.player.inventory != null && this.player.inventory.itemsBody != null) {
+            for (Item item : this.player.inventory.itemsBody) {
+                if (item != null && item.isNotNullItem()) {
+                    int tempID = item.template.id;
+                    if (tempID >= 592 && tempID <= 594) {
+                        teleport = true;
+                    }
+                    for (ItemOption io : item.itemOptions) {
+                        setPoint(io);
+                    }
                 }
             }
         }

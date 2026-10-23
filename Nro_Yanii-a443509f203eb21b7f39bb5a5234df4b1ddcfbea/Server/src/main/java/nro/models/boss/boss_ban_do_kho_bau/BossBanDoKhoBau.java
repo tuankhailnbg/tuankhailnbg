@@ -28,7 +28,14 @@ public abstract class BossBanDoKhoBau extends Boss {
     }
 
     private void spawn(byte level) {
-        this.nPoint.hpg = (int) (level * this.data.hp[0][0]);
+        long calcHp = (long) level * this.data.hp[0][0];
+        long newHp = Math.round(calcHp * 1.15);
+        if (newHp > Integer.MAX_VALUE) {
+            newHp = Integer.MAX_VALUE;
+        } else if (newHp < 1) {
+            newHp = 1;
+        }
+        this.nPoint.hpg = (int) newHp;
         switch (this.data.typeDame) {
             case DAME_PERCENT_HP_THOU:
                 this.nPoint.dameg = (int) (this.nPoint.hpg / 1000 * this.data.dame);

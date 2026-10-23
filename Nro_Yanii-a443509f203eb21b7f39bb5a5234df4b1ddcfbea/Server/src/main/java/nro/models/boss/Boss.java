@@ -176,6 +176,13 @@ public abstract class Boss extends Player implements BossInterface {
         } else {
             hp = Util.nextInt(arrHp[0], arrHp[1]);
         }
+        long calcHp = Math.round((long) hp * 1.15);
+        if (calcHp > Integer.MAX_VALUE) {
+            calcHp = Integer.MAX_VALUE;
+        } else if (calcHp < 1) {
+            calcHp = 1;
+        }
+        hp = (int) calcHp;
         switch (this.typeHp) {
             case HP_NORMAL:
                 this.nPoint.hpg = (int) hp;
@@ -209,6 +216,7 @@ public abstract class Boss extends Player implements BossInterface {
                 break;
         }
         this.nPoint.calPoint();
+        this.nPoint.setFullHpMp();
         this.outfit = data.outfit;
         this.mapJoin = data.mapJoin;
         if (data.timeDelayLeaveMap != -1) {
@@ -471,6 +479,7 @@ public abstract class Boss extends Player implements BossInterface {
             }
         }
         if (this.zone != null) {
+            this.nPoint.setFullHpMp();
             if (this.name == "Karin") {
                 ChangeMapService.gI().changeMap(this, 46, this.zone.zoneId, 420, 408);
                 System.out.println("BOSS " + this.name + " (" + this.id + ")" + ": " + this.zone.map.mapName

@@ -52,8 +52,14 @@ public class Boss_Whis extends FutureBoss {
         this.zone = zone;
         this.location.x = x;
         this.location.y = y;
-        this.nPoint.hpMax += player.levelKillWhis * 100000;
-        this.nPoint.hpg += player.levelKillWhis * 100000;
+        long bonusHp = Math.round(player.levelKillWhis * 100000L * 1.15);
+        if ((long) this.nPoint.hpMax + bonusHp > Integer.MAX_VALUE) {
+            this.nPoint.hpMax = Integer.MAX_VALUE;
+            this.nPoint.hpg = Integer.MAX_VALUE;
+        } else {
+            this.nPoint.hpMax += (int) bonusHp;
+            this.nPoint.hpg += (int) bonusHp;
+        }
         this.nPoint.mpg += player.levelKillWhis * 100000;
         this.nPoint.mpMax += player.levelKillWhis * 100000;
         this.nPoint.dame += player.levelKillWhis * 1000;
