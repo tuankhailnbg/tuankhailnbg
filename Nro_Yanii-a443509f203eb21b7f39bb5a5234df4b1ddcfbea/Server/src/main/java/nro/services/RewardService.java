@@ -4,6 +4,7 @@ import nro.attr.Attribute;
 import nro.consts.ConstAttribute;
 import nro.consts.ConstEvent;
 import nro.consts.ConstItem;
+import nro.consts.ConstMap;
 import nro.consts.ConstMob;
 import nro.event.Event;
 import nro.lib.RandomCollection;
@@ -41,7 +42,42 @@ import java.util.logging.Logger;
  */
 public class RewardService {
 
-    public static final int SKH_DROP_RATE = 15;
+    public static final int SKH_DROP_RATE = 5;
+
+    /**
+     * Danh sách 4 map đầu tiên của 3 hành tinh được phép rơi Set Kích Hoạt (SKH):
+     * - Trái Đất (Planet 0): Map 1 (Đồi hoa cúc), Map 2 (Thung lũng tre), Map 3 (Rừng nấm), Map 4 (Rừng xương)
+     * - Namếc    (Planet 1): Map 8 (Đồi nấm tím), Map 9 (Thị trấn Moori), Map 11 (Thung lũng Maima), Map 12 (Vực maima)
+     * - Xayda    (Planet 2): Map 15 (Đồi hoang), Map 16 (Làng Plant), Map 17 (Rừng nguyên sinh), Map 18 (Rừng thông Xayda)
+     */
+    public static final int[] ALLOWED_SKH_MAP_IDS = {
+            // Trái Đất (Planet 0)
+            ConstMap.DOI_HOA_CUC,      // 1: Đồi hoa cúc
+            ConstMap.THUNG_LUNG_TRE,    // 2: Thung lũng tre
+            ConstMap.RUNG_NAM,          // 3: Rừng nấm
+            ConstMap.RUNG_XUONG,        // 4: Rừng xương
+
+            // Namếc (Planet 1)
+            ConstMap.DOI_NAM_TIM,       // 8: Đồi nấm tím
+            ConstMap.THI_TRAN_MOORI,    // 9: Thị trấn Moori
+            ConstMap.THUNG_LUNG_MAIMA,  // 11: Thung lũng Maima
+            ConstMap.VUC_MAIMA,         // 12: Vực maima
+
+            // Xayda (Planet 2)
+            ConstMap.DOI_HOANG,         // 15: Đồi hoang
+            ConstMap.LANG_PLANT,        // 16: Làng Plant
+            ConstMap.RUNG_NGUYEN_SINH,  // 17: Rừng nguyên sinh
+            ConstMap.RUNG_THONG_XAYDA   // 18: Rừng thông Xayda
+    };
+
+    public static boolean isAllowedSKHMap(int mapId) {
+        for (int id : ALLOWED_SKH_MAP_IDS) {
+            if (id == mapId) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     // id option set kich hoat (tên set, hiệu ứng set, tỉ lệ, type tỉ lệ)
     public static final int[][][] ACTIVATION_SET = {
@@ -115,8 +151,10 @@ public class RewardService {
         int mapid = player.zone.map.mapId;
         List<ItemMap> list = new ArrayList<>();
 
-        // Rơi Set Kích Hoạt (SKH) chính xác 15% độc lập cho quái thường
-        if (player != null && mob != null && mob.tempId != ConstMob.MOC_NHAN
+        // Rơi Set Kích Hoạt (SKH) chính xác 5% độc lập cho quái thường tại 4 map đầu mỗi hành tinh
+        int mobMapId = (mob != null && mob.zone != null && mob.zone.map != null) ? mob.zone.map.mapId : mapid;
+        if (player != null && mob != null && isAllowedSKHMap(mobMapId)
+                && mob.tempId != ConstMob.MOC_NHAN
                 && mob.tempId != ConstMob.HIRUDEGARN
                 && mob.tempId != ConstMob.VUA_BACH_TUOC
                 && mob.tempId != ConstMob.ROBOT_BAO_VE
