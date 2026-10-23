@@ -680,7 +680,7 @@ public class AdminBuffItemService {
 
         NpcService.gI().createMenuConMeo(admin, ConstNpc.BUFF_ITEM_OPTIONS, 17997,
                 sb.toString(),
-                "Mở Web\n(Checkbox)",
+                "Chọn chỉ số\ntrong game",
                 "Chỉ số\nphổ biến",
                 "Tìm & Thêm\nOption",
                 "Nhập chuỗi\nOption",
