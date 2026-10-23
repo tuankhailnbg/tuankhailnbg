@@ -6424,7 +6424,7 @@ public class NpcFactory {
                     case ConstNpc.BUFF_ITEM_OPTIONS:
                         switch (select) {
                             case 0:
-                                AdminBuffItemService.gI().sendWebAdminLink(player);
+                                AdminBuffItemService.gI().showPopularOptions(player);
                                 break;
                             case 1:
                                 AdminBuffItemService.gI().showPopularOptions(player);
