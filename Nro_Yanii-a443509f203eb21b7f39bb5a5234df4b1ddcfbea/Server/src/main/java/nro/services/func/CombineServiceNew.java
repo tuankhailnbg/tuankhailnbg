@@ -2287,41 +2287,50 @@ public class CombineServiceNew {
     }
 
     private void dapDoKichHoatCaoCap(Player player) {
-        if (player.combineNew.itemsCombine.size() == 2) {
+        if (player.combineNew == null) {
+            return;
+        }
+        synchronized (player.combineNew) {
+            if (player.combineNew.itemsCombine.size() != 2) {
+                Service.getInstance().sendThongBao(player, "Cần đúng 2 món đồ hủy diệt để chuyển hóa!");
+                return;
+            }
             List<Item> items = player.combineNew.itemsCombine;
-            boolean hasAo = false, hasQuan = false, hasGang = false, hasGiay = false, hasRada = false;
-            for (Item it : items) {
-                if (it == null || !isDestroyClothes(it.template.id))
-                    continue;
-                switch (it.template.type) {
-                    case 0:
-                        hasAo = true;
-                        break;
-                    case 1:
-                        hasQuan = true;
-                        break;
-                    case 2:
-                        hasGang = true;
-                        break;
-                    case 3:
-                        hasGiay = true;
-                        break;
-                    case 4:
-                        hasRada = true;
-                        break;
+            Item item1 = items.get(0);
+            Item item2 = items.get(1);
+
+            if (item1 == null || item2 == null || item1 == item2
+                    || !isDestroyClothes(item1.template.id) || !isDestroyClothes(item2.template.id)) {
+                Service.getInstance().sendThongBao(player, "Cần đúng 2 món đồ hủy diệt hợp lệ!");
+                return;
+            }
+
+            // Kiểm tra hai món có thực sự nằm trong hành trang của người chơi không
+            boolean found1 = false;
+            boolean found2 = false;
+            for (Item it : player.inventory.itemsBag) {
+                if (it != null && it.isNotNullItem()) {
+                    if (it == item1) found1 = true;
+                    if (it == item2) found2 = true;
                 }
             }
-            if (hasAo && hasQuan && hasGang && hasGiay && hasRada) {
-                if (InventoryService.gI().getCountEmptyBag(player) <= 0) {
-                    Service.getInstance().sendThongBao(player, "Hành trang đã đầy");
-                    return;
-                }
-                if (!player.inventory.hasGold(COST_DAP_DO_KICH_HOAT)) {
-                    long missing = COST_DAP_DO_KICH_HOAT - player.inventory.gold;
-                    Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện, còn thiếu "
-                            + Util.numberToMoney(missing > 0 ? missing : COST_DAP_DO_KICH_HOAT) + " vàng");
-                    return;
-                }
+            if (!found1 || !found2) {
+                Service.getInstance().sendThongBao(player, "Vật phẩm nguyên liệu không tồn tại trong hành trang");
+                return;
+            }
+
+            if (InventoryService.gI().getCountEmptyBag(player) <= 0) {
+                Service.getInstance().sendThongBao(player, "Hành trang đã đầy");
+                return;
+            }
+            if (!player.inventory.hasGold(COST_DAP_DO_KICH_HOAT)) {
+                long missing = COST_DAP_DO_KICH_HOAT - player.inventory.gold;
+                Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện, còn thiếu "
+                        + Util.numberToMoney(missing > 0 ? missing : COST_DAP_DO_KICH_HOAT) + " vàng");
+                return;
+            }
+
+            synchronized (player.inventory) {
                 if (!player.inventory.trySpendGold(COST_DAP_DO_KICH_HOAT)) {
                     Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện");
                     return;
@@ -2340,12 +2349,11 @@ public class CombineServiceNew {
                     id = soluongitem - 1;
                 }
 
-                sendEffectSuccessCombine(player);
-
-                Item firstItem = items.get(0);
+                Item firstItem = item1;
                 int gender = firstItem.template.gender;
-                if (gender == 3)
+                if (gender == 3) {
                     gender = player.gender;
+                }
 
                 Item item = ItemService.gI().createNewItem(
                         (short) ConstItem.LIST_ITEM_CLOTHES[gender][firstItem.template.type][id]);
@@ -2353,17 +2361,15 @@ public class CombineServiceNew {
                 RewardService.gI().initBaseOptionClothes(item.template.id, item.template.type, item.itemOptions);
                 RewardService.gI().initActivationOption(gender, item.template.type, item.itemOptions);
 
+                InventoryService.gI().subQuantityItemsBag(player, item1, 1);
+                InventoryService.gI().subQuantityItemsBag(player, item2, 1);
+
                 InventoryService.gI().addItemBag(player, item, 0);
 
-                for (Item it : items) {
-                    InventoryService.gI().subQuantityItemsBag(player, it, 1);
-                }
-
+                sendEffectSuccessCombine(player);
                 InventoryService.gI().sendItemBags(player);
                 Service.getInstance().sendMoney(player);
                 reOpenItemCombine(player);
-            } else {
-                Service.getInstance().sendThongBao(player, "Cần đủ 2 món huỷ diệt: Áo, Quần, Găng, Giày, Rada");
             }
         }
     }

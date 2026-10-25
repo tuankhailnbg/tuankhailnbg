@@ -405,12 +405,6 @@ public class ShopService {
             return false;
         }
 
-        if (player.nPoint.power < is.temp.strRequire) {
-            Service.gI().sendThongBao(player, "Không đủ sức mạnh để mua cải trang này");
-            Service.getInstance().sendMoney(player);
-            return false;
-        }
-
         if (player.iDMark.getShopId() == ConstNpc.SHOP_SANTA_3) {
             Service.gI().sendThongBao(player, "Bạn chưa mở khóa danh hiệu này");
             Service.getInstance().sendMoney(player);

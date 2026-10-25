@@ -19,12 +19,12 @@ public class RewardBlackBall {
 
     private static final int TIME_REWARD = 79200000;
 
-    public static final int R1S = 24; // +SDG
-    public static final int R2S = 40; // +HP
-    public static final int R3S = 40; // +KI
-    public static final int R4S = 10; // CHI MANG
-    public static final int R5S = 16; // GIAP
-    public static final int R6S = 16; // NE DON
+    public static final int R1S = 12; // +SDG (gốc 24, giảm 50%)
+    public static final int R2S = 20; // +HP (gốc 40, giảm 50%)
+    public static final int R3S = 20; // +KI (gốc 40, giảm 50%)
+    public static final int R4S = 5;  // CHI MANG (gốc 10, giảm 50%)
+    public static final int R5S = 8;  // GIAP (gốc 16, giảm 50%)
+    public static final int R6S = 8;  // NE DON (gốc 16, giảm 50%)
     public static final int R7S = 2; // ruby
 
     public static final int TIME_WAIT = 3600000;

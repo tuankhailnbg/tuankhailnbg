@@ -46,6 +46,11 @@ public class Trade {
     private int goldTrade2;
 
     public byte accept;
+    private boolean locked1;
+    private boolean locked2;
+    private boolean accept1;
+    private boolean accept2;
+    private boolean isFinished;
 
     private long lastTimeStart;
     private boolean start;
@@ -87,60 +92,46 @@ public class Trade {
         }
     }
 
-    public void addItemTrade(Player pl, byte index, int quantity) {
-        // System.out.println("quantity: " + quantity);
-        if (pl.getSession().actived) {
-            // if (pl.nPoint.power >= 40_000_000_000L) {
-            if (index == -1) {
-                if (quantity < 0 || !pl.inventory.hasGold(quantity)) {
-                    return;
-                }
-                if (pl.equals(this.player1)) {
-                    goldTrade1 = quantity;
-                } else {
-                    goldTrade2 = quantity;
-                }
+    public synchronized void addItemTrade(Player pl, byte index, int quantity) {
+        if (isFinished || pl == null) {
+            return;
+        }
+        if (pl.equals(this.player1) && (locked1 || accept1)) {
+            return;
+        }
+        if (pl.equals(this.player2) && (locked2 || accept2)) {
+            return;
+        }
+        if (index == -1) {
+            if (quantity < 0 || !pl.inventory.hasGold(quantity)) {
+                return;
+            }
+            if (pl.equals(this.player1)) {
+                goldTrade1 = quantity;
             } else {
-                Item item = null;
-                if (pl.equals(this.player1)) {
-                    item = itemsBag1.get(index);
-                } else {
-                    item = itemsBag2.get(index);
-                }
-                if (quantity > item.quantity || quantity < 0) {
-                    return;
-                }
-                if (isItemCannotTran(item)) {
-                    removeItemTrade(pl, index);
-                } else {
-                    if (quantity > 999999999) {
-                        int n = quantity / 999999999;
-                        int left = quantity % 999999999;
-                        for (int i = 0; i < n; i++) {
-                            Item itemTrade = ItemService.gI().copyItem(item);
-                            itemTrade.quantity = 999999999;
-                            if (pl.equals(this.player1)) {
-                                InventoryService.gI().subQuantityItem(itemsBag1, item, itemTrade.quantity);
-                                itemsTrade1.add(itemTrade);
-                            } else {
-                                InventoryService.gI().subQuantityItem(itemsBag2, item, itemTrade.quantity);
-                                itemsTrade2.add(itemTrade);
-                            }
-                        }
-                        if (left > 0) {
-                            Item itemTrade = ItemService.gI().copyItem(item);
-                            itemTrade.quantity = left;
-                            if (pl.equals(this.player1)) {
-                                InventoryService.gI().subQuantityItem(itemsBag1, item, itemTrade.quantity);
-                                itemsTrade1.add(itemTrade);
-                            } else {
-                                InventoryService.gI().subQuantityItem(itemsBag2, item, itemTrade.quantity);
-                                itemsTrade2.add(itemTrade);
-                            }
-                        }
-                    } else {
+                goldTrade2 = quantity;
+            }
+        } else {
+            Item item = null;
+            if (pl.equals(this.player1)) {
+                if (index < 0 || index >= itemsBag1.size()) return;
+                item = itemsBag1.get(index);
+            } else {
+                if (index < 0 || index >= itemsBag2.size()) return;
+                item = itemsBag2.get(index);
+            }
+            if (item == null || quantity > item.quantity || quantity < 0) {
+                return;
+            }
+            if (isItemCannotTran(item)) {
+                removeItemTrade(pl, index);
+            } else {
+                if (quantity > 999999999) {
+                    int n = quantity / 999999999;
+                    int left = quantity % 999999999;
+                    for (int i = 0; i < n; i++) {
                         Item itemTrade = ItemService.gI().copyItem(item);
-                        itemTrade.quantity = quantity != 0 ? quantity : 1;
+                        itemTrade.quantity = 999999999;
                         if (pl.equals(this.player1)) {
                             InventoryService.gI().subQuantityItem(itemsBag1, item, itemTrade.quantity);
                             itemsTrade1.add(itemTrade);
@@ -149,12 +140,29 @@ public class Trade {
                             itemsTrade2.add(itemTrade);
                         }
                     }
+                    if (left > 0) {
+                        Item itemTrade = ItemService.gI().copyItem(item);
+                        itemTrade.quantity = left;
+                        if (pl.equals(this.player1)) {
+                            InventoryService.gI().subQuantityItem(itemsBag1, item, itemTrade.quantity);
+                            itemsTrade1.add(itemTrade);
+                        } else {
+                            InventoryService.gI().subQuantityItem(itemsBag2, item, itemTrade.quantity);
+                            itemsTrade2.add(itemTrade);
+                        }
+                    }
+                } else {
+                    Item itemTrade = ItemService.gI().copyItem(item);
+                    itemTrade.quantity = quantity != 0 ? quantity : 1;
+                    if (pl.equals(this.player1)) {
+                        InventoryService.gI().subQuantityItem(itemsBag1, item, itemTrade.quantity);
+                        itemsTrade1.add(itemTrade);
+                    } else {
+                        InventoryService.gI().subQuantityItem(itemsBag2, item, itemTrade.quantity);
+                        itemsTrade2.add(itemTrade);
+                    }
                 }
             }
-        } else {
-            Service.getInstance().sendThongBaoFromAdmin(pl,
-                    "|2|Vui Lòng Kích Hoạt Tài Khoản Để Sửa Dụng Chức Năng!");
-            removeItemTrade(pl, index);
         }
     }
 
@@ -266,7 +274,15 @@ public class Trade {
         this.itemsTrade2 = null;
     }
 
-    public void lockTran(Player pl) {
+    public synchronized void lockTran(Player pl) {
+        if (isFinished || pl == null) {
+            return;
+        }
+        if (pl.equals(player1)) {
+            locked1 = true;
+        } else if (pl.equals(player2)) {
+            locked2 = true;
+        }
         Message msg;
         try {
             msg = new Message(-86);
@@ -317,10 +333,18 @@ public class Trade {
         }
     }
 
-    public void acceptTrade() {
-        this.accept++;
-        if (this.accept == 2) {
+    public synchronized void acceptTrade(Player pl) {
+        if (isFinished || !locked1 || !locked2 || pl == null) {
+            return;
+        }
+        if (pl.equals(player1)) {
+            accept1 = true;
+        } else if (pl.equals(player2)) {
+            accept2 = true;
+        }
+        if (accept1 && accept2) {
             this.startTrade();
+            this.dispose();
         }
     }
 

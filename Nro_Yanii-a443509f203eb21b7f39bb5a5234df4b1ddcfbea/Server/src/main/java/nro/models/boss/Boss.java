@@ -113,6 +113,7 @@ public abstract class Boss extends Player implements BossInterface {
     protected HashMap<Integer, BossData> nextLevel;
     public int bossType;
     private boolean canUpdate;
+    protected boolean rewarded;
 
     public void changeStatus(byte status) {
         this.status = status;
@@ -125,6 +126,7 @@ public abstract class Boss extends Player implements BossInterface {
         this.skillsSpecial = new ArrayList<>();
         this.data = data;
         this.isBoss = true;
+        this.rewarded = false;
         this.initTalk();
         this.respawn();
         setJustRest();
@@ -144,11 +146,13 @@ public abstract class Boss extends Player implements BossInterface {
         this.data = map.get((int) this.bossType);
         this.isBoss = true;
         this.canUpdate = true;
+        this.rewarded = false;
         this.initTalk();
         initBoss();
     }
 
     public final void initBoss() {
+        this.rewarded = false;
         this.respawn();
         setJustRest();
         if (!(this instanceof CBoss)) {
@@ -350,8 +354,6 @@ public abstract class Boss extends Player implements BossInterface {
     protected int nextLevel(int damage, Player plAtt) {
         if (damage >= this.nPoint.hp && isNotLastTypeBoss()) {
             canUpLevel = true;
-            rewards(plAtt);
-            notifyPlayeKill(plAtt);
             this.changeToIdle();
             return this.nPoint.hp - 1;
         }
@@ -427,8 +429,18 @@ public abstract class Boss extends Player implements BossInterface {
             damage = methodBeforeGetDamage(damage, plAtt);
             this.nPoint.subHP(damage);
             if (isDie()) {
-                rewards(plAtt);
-                notifyPlayeKill(plAtt);
+                boolean shouldReward = false;
+                synchronized (this) {
+                    if (!this.rewarded) {
+                        this.rewarded = true;
+                        shouldReward = true;
+                    }
+                }
+                if (shouldReward) {
+                    rewards(plAtt);
+                    RewardService.gI().rewardBossDrop(this, plAtt);
+                    notifyPlayeKill(plAtt);
+                }
                 die();
             }
             return damage;
@@ -603,6 +615,7 @@ public abstract class Boss extends Player implements BossInterface {
 
     @Override
     public void respawn() {
+        this.rewarded = false;
         this.init();
         this.indexTalkBefore = 0;
         this.indexTalkAfter = 0;
@@ -838,15 +851,13 @@ public abstract class Boss extends Player implements BossInterface {
             }
             itemId = rd.next();
         } else {
-            itemId = Util.nextInt(16, 17);
+            return;
         }
 
         ItemMap itemMap = new ItemMap(this.zone, itemId, 1, x, y, player.id);
-        if (itemId != 16 && itemId != 17) {
-            RewardService.gI().initBaseOptionClothes(itemMap.itemTemplate.id,
-                    itemMap.itemTemplate.type,
-                    itemMap.options);
-        }
+        RewardService.gI().initBaseOptionClothes(itemMap.itemTemplate.id,
+                itemMap.itemTemplate.type,
+                itemMap.options);
         Service.getInstance().dropItemMap(zone, itemMap);
     }
 

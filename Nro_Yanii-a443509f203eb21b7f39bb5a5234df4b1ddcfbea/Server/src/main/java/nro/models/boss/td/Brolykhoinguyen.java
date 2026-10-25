@@ -44,17 +44,7 @@ public class Brolykhoinguyen extends FutureBoss {
         ItemMap itemMap = null;
         int x = this.location.x;
         int y = this.zone.map.yPhysicInTop(x, this.location.y - 24);
-        if (Util.isTrue(1, 100)) {
-            int[] set1 = {565, 560, 562, 564, 566, 561};
-            itemMap = new ItemMap(this.zone, set1[Util.nextInt(0, set1.length - 1)], 1, x, y, pl.id);
-            RewardService.gI().initBaseOptionClothes(itemMap.itemTemplate.id, itemMap.itemTemplate.type,
-                    itemMap.options);
-        } else if (Util.isTrue(1, 30)) {
-            int[] set2 = {555, 556, 563, 557, 558, 559, 567};
-            itemMap = new ItemMap(this.zone, set2[Util.nextInt(0, set2.length - 1)], 1, x, y, pl.id);
-            RewardService.gI().initBaseOptionClothes(itemMap.itemTemplate.id, itemMap.itemTemplate.type,
-                    itemMap.options);
-        } else if (Util.isTrue(1, 50)) {
+        if (Util.isTrue(1, 50)) {
             itemMap = new ItemMap(this.zone, 400, 1, x, y, pl.id);
         } else if (Util.isTrue(1, 30)) {
             itemMap = new ItemMap(this.zone, 2144, 1, x, y, pl.id);

@@ -1431,7 +1431,7 @@ public class NPoint {
         this.tiemNang += tiemNang;
     }
 
-    public void increasePoint(byte type, short point) {
+    public synchronized void increasePoint(byte type, short point) {
         if (powerLimit == null) {
             initPowerLimit();
         }
@@ -1485,10 +1485,11 @@ public class NPoint {
             }
         }
         if (type == 3) {
-            tiemNangUse = 2 * (this.defg + 5) / 2 * 100000;
+            tiemNangUse = (long) point * (2L * (this.defg + 5) + (point - 1)) / 2L * 100000L;
             if ((this.defg + point) <= powerLimit.getDefense()) {
                 if (doUseTiemNang(tiemNangUse)) {
-                    defg += point;
+                    this.defg += point;
+                    setDef();
                     updatePoint = true;
                 }
             } else {

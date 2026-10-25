@@ -33,13 +33,6 @@ public class XenBoHung1 extends FutureBoss {
 
     @Override
     public void rewards(Player pl) {
-        if (Util.isTrue(1, 30)) {
-            ItemMap itemMap = null;
-            int x = this.location.x;
-            int y = this.zone.map.yPhysicInTop(x, this.location.y - 24);
-            itemMap = new ItemMap(pl.zone, 16, 1, x, y, pl.id);
-            Service.getInstance().dropItemMap(zone, itemMap);
-        }
         TaskService.gI().checkDoneTaskKillBoss(pl, this);
         generalRewards(pl);
     }
