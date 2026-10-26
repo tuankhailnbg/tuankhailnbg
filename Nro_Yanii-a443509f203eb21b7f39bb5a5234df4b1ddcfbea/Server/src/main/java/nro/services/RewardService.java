@@ -99,7 +99,7 @@ public class RewardService {
         return false;
     }
 
-    private static boolean isActivationSetItem(ItemMap itemMap) {
+    public static boolean isActivationSetItem(ItemMap itemMap) {
         if (itemMap == null || itemMap.options == null) {
             return false;
         }
@@ -110,6 +110,13 @@ public class RewardService {
             }
         }
         return false;
+    }
+
+    public static void removeActivationSetOutsideAllowedMap(int mapId, List<ItemMap> items) {
+        if (items == null || items.isEmpty() || isAllowedSKHMap(mapId)) {
+            return;
+        }
+        items.removeIf(RewardService::isActivationSetItem);
     }
 
     // id option set kich hoat (tên set, hiệu ứng set, tỉ lệ, type tỉ lệ)
@@ -595,9 +602,7 @@ public class RewardService {
         // Hàng rào cuối: ngoài đúng 4 map đầu của mỗi hành tinh, tuyệt đối
         // không cho bất kỳ vật phẩm mang option Set Kích Hoạt đi ra từ luồng drop quái.
         // Điều này chặn cả dữ liệu reward cũ hoặc event nếu vô tình tạo SKH ở map khác.
-        if (!isAllowedSKHMap(mobMapId)) {
-            list.removeIf(RewardService::isActivationSetItem);
-        }
+        removeActivationSetOutsideAllowedMap(mobMapId, list);
 
         return list;
     }
