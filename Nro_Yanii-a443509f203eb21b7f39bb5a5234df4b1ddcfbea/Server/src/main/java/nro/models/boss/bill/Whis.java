@@ -33,9 +33,7 @@ public class Whis extends Boss {
     @Override
     public void joinMap() {
         super.joinMap();
-        Boss bill = BossFactory.createBoss(BossFactory.BILL);
-        bill.zone = this.zone;
-        bill.secondTimeRestToNextTimeAppear = 0;
+        BossFactory.createBoss(BossFactory.BILL).zone = this.zone;
     }
 
     @Override
