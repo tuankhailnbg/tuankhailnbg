@@ -196,18 +196,11 @@ public class RewardService {
             gold.quantity = 1000000;
             Service.getInstance().dropItemMap(boss.zone, gold);
 
-            // Xet them do Than Linh theo bang ty le HP:
-            // < 500M: 0% | 500M - <1B: 15% | 1B - <2B: 20% | >= 2B: 50%
-            int thanLinhRate = 0;
-            if (maxHp >= 2_000_000_000L) {
-                thanLinhRate = 50;
-            } else if (maxHp >= 1_000_000_000L) {
-                thanLinhRate = 20;
-            } else if (maxHp >= 500_000_000L) {
-                thanLinhRate = 15;
-            }
+            // Boss tương lai: cố định 15% rơi 1 món Thần Linh.
+            // Ngọc Rồng 3 sao và 1.000.000 vàng vẫn luôn rơi ở phía trên.
+            int thanLinhRate = 15;
 
-            if (thanLinhRate > 0 && Util.isTrue(thanLinhRate, 100)) {
+            if (Util.isTrue(thanLinhRate, 100)) {
                 ItemMap thanLinh = dropOneItemThanLinh(boss.zone, x + Util.nextInt(-30, 30), y, killer);
                 if (thanLinh != null) {
                     Service.getInstance().dropItemMap(boss.zone, thanLinh);
