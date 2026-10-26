@@ -826,43 +826,8 @@ public class GodGK {
                             }
                         }
 
-                        // Client đọc cố định 4 slot skill đệ tử.
-                        while (pet.playerSkill.skills.size() < 4) {
-                            pet.playerSkill.skills.add(SkillUtil.createEmptySkill());
-                        }
-                        while (pet.playerSkill.skills.size() > 4) {
-                            pet.playerSkill.skills.remove(pet.playerSkill.skills.size() - 1);
-                        }
-
-                        // Phục hồi slot đã bị lần lỗi cũ ghi thành [-1,0].
-                        // Chỉ mở lại khi đệ đã đạt đúng mốc sức mạnh của slot đó.
-                        Skill petSkill1 = pet.playerSkill.skills.get(0);
-                        if (petSkill1 == null || petSkill1.skillId == -1
-                                || petSkill1.template == null || petSkill1.template.id < 0) {
-                            pet.playerSkill.skills.set(0,
-                                    SkillUtil.createSkill(nro.utils.Util.nextInt(0, 2) * 2, 1));
-                        }
-
-                        Skill petSkill2 = pet.playerSkill.skills.get(1);
-                        if (pet.nPoint.power >= 150_000_000L
-                                && (petSkill2 == null || petSkill2.skillId == -1
-                                || petSkill2.template == null || petSkill2.template.id < 0)) {
-                            pet.openSkill2();
-                        }
-
-                        Skill petSkill3 = pet.playerSkill.skills.get(2);
-                        if (pet.nPoint.power >= 1_500_000_000L
-                                && (petSkill3 == null || petSkill3.skillId == -1
-                                || petSkill3.template == null || petSkill3.template.id < 0)) {
-                            pet.openSkill3();
-                        }
-
-                        Skill petSkill4 = pet.playerSkill.skills.get(3);
-                        if (pet.nPoint.power >= 20_000_000_000L
-                                && (petSkill4 == null || petSkill4.skillId == -1
-                                || petSkill4.template == null || petSkill4.template.id < 0)) {
-                            pet.openSkill4();
-                        }
+                        // Chuẩn hóa và phục hồi skill theo đúng gender/power của đệ.
+                        pet.repairSkillSlots();
                         pet.nPoint.hp = hp;
                         pet.nPoint.mp = mp;
                         // pet.nPoint.calPoint();
