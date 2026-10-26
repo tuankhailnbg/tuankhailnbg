@@ -30,13 +30,8 @@ public abstract class BossKhiGasHuyDiet extends Boss {
         this.spawn(KhiGas.level);
     }
     private void spawn(byte level) {
-        long calcHp = (long) level * this.data.hp[0][0];
-        long newHp = Math.round(calcHp * 1.15);
-        if (newHp > Integer.MAX_VALUE) {
-            newHp = Integer.MAX_VALUE;
-        } else if (newHp < 1) {
-            newHp = 1;
-        }
+        long newHp = (long) level * this.data.hp[0][0];
+        newHp = Math.max(1L, Math.min(newHp, Integer.MAX_VALUE));
         this.nPoint.hpg = (int) newHp;
         switch (this.data.typeDame) {
             case DAME_PERCENT_HP_THOU:
