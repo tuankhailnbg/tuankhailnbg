@@ -126,6 +126,11 @@ public class MobService {
         try {
             itemReward = RewardService.gI().getRewardItems(player, mob,
                     mob.location.x + Util.nextInt(-10, 10), mob.zone.map.yPhysicInTop(mob.location.x, mob.location.y));
+
+            // Hàng rào cuối tại đúng luồng chết quái: ngoài 4 map đầu mỗi hành tinh
+            // tuyệt đối không cho vật phẩm mang option Set Kích Hoạt đi ra client.
+            RewardService.removeActivationSetOutsideAllowedMap(mob.zone.map.mapId, itemReward);
+
             msg.writer().writeByte(itemReward.size()); // sl item roi
             for (ItemMap itemMap : itemReward) {
                 msg.writer().writeShort(itemMap.itemMapId);// itemmapid
