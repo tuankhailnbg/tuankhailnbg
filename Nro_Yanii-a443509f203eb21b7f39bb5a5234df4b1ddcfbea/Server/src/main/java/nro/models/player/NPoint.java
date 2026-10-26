@@ -196,17 +196,12 @@ public class NPoint {
      */
     public void calPoint() {
         try {
-            if (this.player != null && this.player.pet != null && this.player.pet.nPoint != null) {
+            if (this.player.pet != null) {
                 this.player.pet.nPoint.setPointWhenWearClothes();
             }
             this.setPointWhenWearClothes();
         } catch (Exception e) {
             e.printStackTrace();
-            try {
-                this.setBasePoint();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
         }
     }
 
@@ -547,171 +542,139 @@ public class NPoint {
     }
 
     private void setHpMax() {
-        long hp = (long) this.hpg + this.hpAdd;
+        this.hpMax = this.hpg;
+        this.hpMax += this.hpAdd;
         // đồ
-        if (this.tlHp != null) {
-            for (Integer tl : this.tlHp) {
-                if (tl != null) {
-                    hp += calPercent(hp, tl);
-                }
-            }
+        for (Integer tl : this.tlHp) {
+            this.hpMax += calPercent(this.hpMax, tl);
         }
 
         if (player.DH1) {
-            hp += calPercent(hp, player.ChiSoHP_1);
+            this.hpMax += calPercent(this.hpMax, player.ChiSoHP_1);
         }
         if (player.DH2) {
-            hp += calPercent(hp, player.ChiSoHP_2);
+            this.hpMax += calPercent(this.hpMax, player.ChiSoHP_2);
         }
         if (player.DH3) {
-            hp += calPercent(hp, player.ChiSoHP_3);
+            this.hpMax += calPercent(this.hpMax, player.ChiSoHP_3);
         }
         if (player.DH4) {
-            hp += calPercent(hp, player.ChiSoHP_4);
+            this.hpMax += calPercent(this.hpMax, player.ChiSoHP_4);
         }
         if (player.DH5) {
-            hp += calPercent(hp, player.ChiSoHP_5);
+            this.hpMax += calPercent(this.hpMax, player.ChiSoHP_5);
         }
 
         // set nappa
-        if (this.player.setClothes != null && this.player.setClothes.nappa == 5) {
-            hp += calPercent(hp, 100);
+        if (this.player.setClothes.nappa == 5) {
+            this.hpMax += calPercent(this.hpMax, 100);
         }
         // ngọc rồng đen 2 sao
-        if (this.player.rewardBlackBall != null && this.player.rewardBlackBall.timeOutOfDateReward != null
-                && this.player.rewardBlackBall.timeOutOfDateReward.length > 1
-                && this.player.rewardBlackBall.timeOutOfDateReward[1] > System.currentTimeMillis()) {
-            hp += calPercent(hp, RewardBlackBall.R2S);
+        if (this.player.rewardBlackBall.timeOutOfDateReward[1] > System.currentTimeMillis()) {
+            this.hpMax += calPercent(this.hpMax, RewardBlackBall.R2S);
         }
         // BIẾN HÌNH
-        if (this.player.effectSkill != null && this.player.effectSkill.isBienHinh) {
+        if (this.player.effectSkill.isBienHinh) {
             if (!this.player.isPet || (this.player.isPet
                     && ((Pet) this.player).status != Pet.FUSION)) {
                 int percent = SkillUtil.getPercentHpMonkey(player.effectSkill.levelBienHinh);
-                hp += calPercent(hp, percent);
+                this.hpMax += calPercent(this.hpMax, percent);
             }
         }
         // khỉ
-        if (this.player.effectSkill != null && this.player.effectSkill.isMonkey) {
+        if (this.player.effectSkill.isMonkey) {
             if (!this.player.isPet || (this.player.isPet
                     && ((Pet) this.player).status != Pet.FUSION)) {
                 int percent = SkillUtil.getPercentHpMonkey(player.effectSkill.levelMonkey);
-                hp += calPercent(hp, percent);
+                this.hpMax += calPercent(this.hpMax, percent);
             }
         }
         /// bông tai cấp 2
         if (this.player.isPet && ((Pet) this.player).isMabu
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
                 && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            hp += calPercent(hp, 10);
+            this.hpMax += calPercent(this.hpMax, 10);
         }
         /// Đệ vip
         if (this.player.isPet && ((Pet) this.player).isBulo
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
                 && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            hp += calPercent(hp, 20);
+            this.hpMax += calPercent(this.hpMax, 20);
         }
         if (this.player.isPet && ((Pet) this.player).isCellBao
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
                 && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            hp += calPercent(hp, 40);
+            this.hpMax += calPercent(this.hpMax, 40);
         }
         if (this.player.isPet && ((Pet) this.player).isBillNhi
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
                 && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            hp += calPercent(hp, 30);
+            this.hpMax += calPercent(this.hpMax, 30);
         }
         if (this.player.isPet && ((Pet) this.player).isFideTrau
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
                 && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            hp += calPercent(hp, 30);
+            this.hpMax += calPercent(this.hpMax, 30);
         }
         /// end
         // bông tai cấp 1
         if (this.player.isPet && ((Pet) this.player).isMabu
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
                 && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            hp += calPercent(hp, 10);
+            this.hpMax += calPercent(this.hpMax, 10);
         }
         if (this.player.isPet && ((Pet) this.player).isBulo
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
                 && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            hp += calPercent(hp, 20);
+            this.hpMax += calPercent(this.hpMax, 20);
         }
         if (this.player.isPet && ((Pet) this.player).isCellBao
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
                 && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            hp += calPercent(hp, 40);
+            this.hpMax += calPercent(this.hpMax, 40);
         }
         if (this.player.isPet && ((Pet) this.player).isBillNhi
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
                 && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            hp += calPercent(hp, 30);
+            this.hpMax += calPercent(this.hpMax, 30);
         }
         if (this.player.isPet && ((Pet) this.player).isFideTrau
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
                 && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            hp += calPercent(hp, 30);
+            this.hpMax += calPercent(this.hpMax, 30);
         }
         // phù
-        if (this.player.zone != null && this.player.zone.map != null
-                && MapService.gI().isMapBlackBallWar(this.player.zone.map.mapId)
-                && this.player.effectSkin != null) {
-            hp *= this.player.effectSkin.xHPKI;
+        if (this.player.zone != null && MapService.gI().isMapBlackBallWar(this.player.zone.map.mapId)) {
+            this.hpMax *= this.player.effectSkin.xHPKI;
         }
         // +hp đệ
-        if (this.player.fusion != null && this.player.fusion.typeFusion != ConstPlayer.NON_FUSION
-                && this.player.pet != null && this.player.pet.nPoint != null) {
-            hp += this.player.pet.nPoint.hpMax;
+        if (this.player.fusion.typeFusion != ConstPlayer.NON_FUSION) {
+            this.hpMax += this.player.pet.nPoint.hpMax;
         }
         // huýt sáo
-        if (this.player.effectSkill != null && (!this.player.isPet
+        if (!this.player.isPet
                 || (this.player.isPet
-                        && ((Pet) this.player).status != Pet.FUSION))) {
+                        && ((Pet) this.player).status != Pet.FUSION)) {
             if (this.player.effectSkill.tiLeHPHuytSao != 0) {
-                hp += calPercent(hp, this.player.effectSkill.tiLeHPHuytSao);
+                this.hpMax += calPercent(this.hpMax, this.player.effectSkill.tiLeHPHuytSao);
             }
         }
         // bổ huyết
         if (this.player.itemTime != null && this.player.itemTime.isUseBoHuyet) {
-            hp *= 2;
+            this.hpMax *= 2;
         }
         // bổ huyết 2
         if (this.player.itemTime != null && this.player.itemTime.isUseBoHuyet2) {
-            hp += calPercent(hp, 120);
+            this.hpMax += calPercent(hpMax, 120);
         }
-        // Chỉ áp dụng hiệu ứng map Cold cho người chơi (KHÔNG áp dụng cho Boss)
-        if (!this.player.isBoss && this.player.zone != null && this.player.zone.map != null
-                && MapService.gI().isMapCold(this.player.zone.map)
+        if (this.player.zone != null && MapService.gI().isMapCold(this.player.zone.map)
                 && !this.isKhongLanh) {
-            hp /= 2;
+            this.hpMax /= 2;
         }
         if (!player.isBoss) {
-            try {
-                if (ServerManager.gI() != null && ServerManager.gI().getAttributeManager() != null) {
-                    Attribute at = ServerManager.gI().getAttributeManager().find(ConstAttribute.HP);
-                    if (at != null && !at.isExpired()) {
-                        hp += calPercent(hp, at.getValue());
-                    }
-                }
-            } catch (Exception ignored) {
+            Attribute at = ServerManager.gI().getAttributeManager().find(ConstAttribute.HP);
+            if (at != null && !at.isExpired()) {
+                hpMax += calPercent(hpMax, at.getValue());
             }
         }
         if (this.player.itemTime != null) {
             if (this.player.itemTime.isUseBanhTet) {
-                hp += calPercent(hp, 20);
+                hpMax += calPercent(hpMax, 20);
             }
         }
         if (player.getBuff() == Buff.BUFF_HP) {
-            hp += calPercent(hp, 20);
+            hpMax += calPercent(hpMax, 20);
         }
-
-        if (hp > Integer.MAX_VALUE) {
-            hp = Integer.MAX_VALUE;
-        } else if (hp < 1) {
-            hp = (this.player.isBoss && this.hpg > 0) ? Math.min(this.hpg, Integer.MAX_VALUE) : 1;
-        }
-        this.hpMax = (int) hp;
     }
 
     // (hp sư phụ + hp đệ tử ) + 15%
@@ -719,8 +682,6 @@ public class NPoint {
     private void setHp() {
         if (this.hp > this.hpMax) {
             this.hp = this.hpMax;
-        } else if (this.hp < 0) {
-            this.hp = 0;
         }
     }
 
@@ -836,14 +797,9 @@ public class NPoint {
             this.mpMax += calPercent(this.mpMax, 20);
         }
         if (!player.isBoss) {
-            try {
-                if (ServerManager.gI() != null && ServerManager.gI().getAttributeManager() != null) {
-                    Attribute at = ServerManager.gI().getAttributeManager().find(ConstAttribute.KI);
-                    if (at != null && !at.isExpired()) {
-                        mpMax += calPercent(mpMax, at.getValue());
-                    }
-                }
-            } catch (Exception ignored) {
+            Attribute at = ServerManager.gI().getAttributeManager().find(ConstAttribute.KI);
+            if (at != null && !at.isExpired()) {
+                mpMax += calPercent(mpMax, at.getValue());
             }
         }
         if (this.player.itemTime != null) {
@@ -859,8 +815,6 @@ public class NPoint {
     private void setMp() {
         if (this.mp > this.mpMax) {
             this.mp = this.mpMax;
-        } else if (this.mp < 0) {
-            this.mp = 0;
         }
     }
 
@@ -960,26 +914,18 @@ public class NPoint {
         // giảm dame
         this.dame -= calPercent(this.dame, tlSubSD);
         // map cold
-        if (!this.player.isBoss && this.player.zone != null && this.player.zone.map != null
-                && MapService.gI().isMapCold(this.player.zone.map)
+        if (this.player.zone != null && MapService.gI().isMapCold(this.player.zone.map)
                 && !this.isKhongLanh) {
             this.dame /= 2;
         }
         // ngọc rồng đen 1 sao
-        if (this.player.rewardBlackBall != null && this.player.rewardBlackBall.timeOutOfDateReward != null
-                && this.player.rewardBlackBall.timeOutOfDateReward.length > 0
-                && this.player.rewardBlackBall.timeOutOfDateReward[0] > System.currentTimeMillis()) {
+        if (this.player.rewardBlackBall.timeOutOfDateReward[0] > System.currentTimeMillis()) {
             this.dame += calPercent(this.dame, RewardBlackBall.R1S);
         }
         if (!player.isBoss) {
-            try {
-                if (ServerManager.gI() != null && ServerManager.gI().getAttributeManager() != null) {
-                    Attribute at = ServerManager.gI().getAttributeManager().find(ConstAttribute.SUC_DANH);
-                    if (at != null && !at.isExpired()) {
-                        this.dame += calPercent(dame, at.getValue());
-                    }
-                }
-            } catch (Exception ignored) {
+            Attribute at = ServerManager.gI().getAttributeManager().find(ConstAttribute.SUC_DANH);
+            if (at != null && !at.isExpired()) {
+                this.dame += calPercent(dame, at.getValue());
             }
         }
         if (this.player.itemTime != null) {
@@ -1109,46 +1055,26 @@ public class NPoint {
     }
 
     public void addHp(long hp) {
-        long newHp = (long) this.hp + hp;
-        if (newHp > this.hpMax) {
-            newHp = this.hpMax;
-        } else if (newHp < 0) {
-            newHp = 0;
+        this.hp += hp;
+        if (this.hp > this.hpMax) {
+            this.hp = this.hpMax;
         }
-        this.hp = (int) newHp;
     }
 
     public void subHp(long hp) {
-        long newHp = (long) this.hp - hp;
-        if (newHp < 0) {
-            newHp = 0;
-        }
-        this.hp = (int) newHp;
+        this.hp -= hp;
     }
 
     public void addMp(long mp) {
-        long newMp = (long) this.mp + mp;
-        if (newMp > this.mpMax) {
-            newMp = this.mpMax;
-        } else if (newMp < 0) {
-            newMp = 0;
+        this.mp += mp;
+        if (this.mp > this.mpMax) {
+            this.mp = this.mpMax;
         }
-        this.mp = (int) newMp;
-    }
-
-    public void subMp(long mp) {
-        long newMp = (long) this.mp - mp;
-        if (newMp < 0) {
-            newMp = 0;
-        }
-        this.mp = (int) newMp;
     }
 
     public void setHp(long hp) {
         if (hp > this.hpMax) {
             this.hp = this.hpMax;
-        } else if (hp < 0) {
-            this.hp = 0;
         } else {
             this.hp = (int) hp;
         }
@@ -1157,8 +1083,6 @@ public class NPoint {
     public void setMp(long mp) {
         if (mp > this.mpMax) {
             this.mp = this.mpMax;
-        } else if (mp < 0) {
-            this.mp = 0;
         } else {
             this.mp = (int) mp;
         }
@@ -1385,14 +1309,9 @@ public class NPoint {
                 tiemNang += calPercent(tiemNang, 20);
             }
             if (player.isPet) {
-                try {
-                    if (ServerManager.gI() != null && ServerManager.gI().getAttributeManager() != null) {
-                        Attribute at = ServerManager.gI().getAttributeManager().find(ConstAttribute.TNSM);
-                        if (at != null && !at.isExpired()) {
-                            tiemNang += calPercent(tiemNang, at.getValue());
-                        }
-                    }
-                } catch (Exception ignored) {
+                Attribute at = ServerManager.gI().getAttributeManager().find(ConstAttribute.TNSM);
+                if (at != null && !at.isExpired()) {
+                    tiemNang += calPercent(tiemNang, at.getValue());
                 }
             }
             if (this.player.isPet) {
@@ -1667,31 +1586,41 @@ public class NPoint {
 
     public void setAttributeOverLimit() {
         int max = Integer.MAX_VALUE;
-        if (this.hpMax < 0 || this.hpMax > max) {
-            this.hpMax = max;
+        int min = -100000000;
+        if (this.hpMax < 0) {
+            if (this.hpMax < min) {
+                this.hpMax = max;
+            } else {
+                this.hpMax = 1;
+            }
         }
-        if (this.hpMax < 1) {
-            this.hpMax = (this.player != null && this.player.isBoss && this.hpg > 0) ? Math.min(this.hpg, max) : 1;
+        if (this.mpMax < 0) {
+            if (this.mpMax < min) {
+                this.mpMax = max;
+            } else {
+                this.mpMax = 1;
+            }
         }
-        if (this.mpMax < 0 || this.mpMax > max) {
-            this.mpMax = max;
+        if (this.dame < 0) {
+            if (this.dame < min) {
+                this.dame = max;
+            } else {
+                this.dame = 1;
+            }
         }
-        if (this.mpMax < 1) {
-            this.mpMax = 1;
-        }
-        if (this.dame < 0 || this.dame > max) {
-            this.dame = max;
-        }
-        if (this.dame < 1) {
-            this.dame = 1;
-        }
-        if (this.def < 0 || this.def > max) {
-            this.def = max;
+        if (this.def < 0) {
+            if (this.def < min) {
+                this.def = max;
+            } else {
+                this.def = 1;
+            }
         }
         if (this.crit < 0) {
-            this.crit = 0;
-        } else if (this.crit > 100) {
-            this.crit = 100;
+            if (this.crit < min) {
+                this.crit = max;
+            } else {
+                this.crit = 1;
+            }
         }
         setHp();
         setMp();
