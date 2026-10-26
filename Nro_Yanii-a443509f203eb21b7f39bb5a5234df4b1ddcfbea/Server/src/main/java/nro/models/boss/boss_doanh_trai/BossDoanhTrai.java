@@ -61,13 +61,8 @@ public abstract class BossDoanhTrai extends Boss {
                         }
                     }
                 }
-                long calcHp = (long) (this.highestDame * this.xDameForHp);
-                long newHp = Math.round(calcHp * 1.15);
-                if (newHp > Integer.MAX_VALUE) {
-                    newHp = Integer.MAX_VALUE;
-                } else if (newHp < 1) {
-                    newHp = 1;
-                }
+                long newHp = this.highestDame * this.xDameForHp;
+                newHp = Math.max(1L, Math.min(newHp, Integer.MAX_VALUE));
                 this.nPoint.hpg = (int) newHp;
                 this.nPoint.calPoint();
                 this.nPoint.setFullHpMp();
