@@ -49,7 +49,9 @@ import java.util.logging.Logger;
  */
 public class RewardService {
 
+    // 0,5% = 5 / 1000 quái.
     public static final int SKH_DROP_RATE = 5;
+    public static final int SKH_DROP_RATE_BASE = 1000;
 
     /**
      * Danh sách 4 map đầu tiên của 3 hành tinh được phép rơi Set Kích Hoạt (SKH):
@@ -80,6 +82,30 @@ public class RewardService {
     public static boolean isAllowedSKHMap(int mapId) {
         for (int id : ALLOWED_SKH_MAP_IDS) {
             if (id == mapId) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isActivationSetOptionId(int optionId) {
+        for (int[][] planetSets : ACTIVATION_SET) {
+            for (int[] set : planetSets) {
+                if (optionId == set[0] || optionId == set[1]) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean isActivationSetItem(ItemMap itemMap) {
+        if (itemMap == null || itemMap.options == null) {
+            return false;
+        }
+        for (ItemOption option : itemMap.options) {
+            if (option != null && option.optionTemplate != null
+                    && isActivationSetOptionId(option.optionTemplate.id)) {
                 return true;
             }
         }
@@ -299,7 +325,7 @@ public class RewardService {
         int mapid = player.zone.map.mapId;
         List<ItemMap> list = new ArrayList<>();
 
-        // Rơi Set Kích Hoạt (SKH) chính xác 5% độc lập cho quái thường tại 4 map đầu mỗi hành tinh
+        // Rơi Set Kích Hoạt (SKH) chính xác 0,5% độc lập cho quái thường tại 4 map đầu mỗi hành tinh
         int mobMapId = (mob != null && mob.zone != null && mob.zone.map != null) ? mob.zone.map.mapId : mapid;
         if (player != null && mob != null && isAllowedSKHMap(mobMapId)
                 && mob.tempId != ConstMob.MOC_NHAN
@@ -309,7 +335,7 @@ public class RewardService {
                 && !(mob instanceof BigBoss)) {
             Player killer = player.isPet ? ((Pet) player).master : player;
             if (killer != null && !killer.isBoss) {
-                if (ThreadLocalRandom.current().nextInt(100) < SKH_DROP_RATE) {
+                if (ThreadLocalRandom.current().nextInt(SKH_DROP_RATE_BASE) < SKH_DROP_RATE) {
                     int gender = killer.gender;
                     if (gender < 0 || gender > 2) {
                         gender = 0;
@@ -566,6 +592,13 @@ public class RewardService {
                 }
             }
         }
+        // Hàng rào cuối: ngoài đúng 4 map đầu của mỗi hành tinh, tuyệt đối
+        // không cho bất kỳ vật phẩm mang option Set Kích Hoạt đi ra từ luồng drop quái.
+        // Điều này chặn cả dữ liệu reward cũ hoặc event nếu vô tình tạo SKH ở map khác.
+        if (!isAllowedSKHMap(mobMapId)) {
+            list.removeIf(RewardService::isActivationSetItem);
+        }
+
         return list;
     }
 
