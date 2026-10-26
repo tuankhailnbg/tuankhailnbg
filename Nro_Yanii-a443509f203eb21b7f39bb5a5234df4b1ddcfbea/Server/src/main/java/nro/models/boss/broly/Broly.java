@@ -138,7 +138,7 @@ public class Broly extends Boss {
             this.data = nextLevel.get(nextType);
             TimeUnit.MILLISECONDS.sleep(30000);
             init();
-            this.nPoint.setFullHpMp();
+            PlayerService.gI().hoiPhuc(this, this.nPoint.hpMax, 0);
             if (this.bossType == BossFactory.SUPER_BROLY) {
                 PetService.gI().createNewPet(this, false, false, false, false, false, false, (byte) Util.nextInt(0, 2));
             }
