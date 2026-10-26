@@ -911,7 +911,9 @@ public class PlayerDAO {
 
                         for (Skill s : player.pet.playerSkill.skills) {
                             JSONArray pskill = new JSONArray();
-                            if (s.skillId != -1) {
+                            if (s != null && s.template != null && s.template.id >= 0) {
+                                // Giữ tempId/point ngay cả khi skillId tạm thời = -1.
+                                // Tránh ghi đè skill đã học thành [-1,0] khi có lỗi khởi tạo skill.
                                 pskill.add(s.template.id);
                                 pskill.add(s.point);
                             } else {
