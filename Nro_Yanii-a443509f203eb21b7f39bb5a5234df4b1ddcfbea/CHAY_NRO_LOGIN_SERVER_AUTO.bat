@@ -157,11 +157,15 @@ if not "%BUILD_RESULT%"=="0" (
 
 echo.
 echo [BUILD SUCCESS]
-powershell.exe -NoProfile -Command "$f=Get-ChildItem '%SERVER_DIR%\target\*-jar-with-dependencies.jar' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if(!$f){exit 2}; Copy-Item $f.FullName '%SERVER_DIR%\Server.jar' -Force; Write-Host ('Server.jar <= '+$f.Name)"
-if errorlevel 1 (
-    echo [LOI] Khong the copy Server.jar tu target!
+
+set "SERVER_JAR=%SERVER_DIR%\target\TeaMobi-1.0-RELEASE-jar-with-dependencies.jar"
+if not exist "%SERVER_JAR%" (
+    echo [LOI] Build thanh cong nhung khong tim thay:
+    echo %SERVER_JAR%
     goto :FAIL
 )
+
+echo JAR moi: %SERVER_JAR%
 
 REM =========================================================
 REM CHAY FILE RUN CUA LOGIN
