@@ -544,7 +544,7 @@ public class BossData {
                                         { Skill.KAMEJOKO, 5, 1500 }, { Skill.KAMEJOKO, 7, 1700 },
                                         { Skill.GALICK, 1, 100 }
                         },
-                        _0_GIAY);
+                        _15_PHUT);
 
         public static final BossData XEN_BO_HUNG_HOAN_THIEN = new BossData(
                         "Xên hoàn thiện", // name
@@ -562,7 +562,7 @@ public class BossData {
                                         { Skill.KAMEJOKO, 5, 1500 }, { Skill.KAMEJOKO, 7, 1700 },
                                         { Skill.GALICK, 1, 100 }
                         },
-                        _0_GIAY);
+                        _15_PHUT);
 
         // --------------------------------------------------------------------------Boss
         // xên võ đài
