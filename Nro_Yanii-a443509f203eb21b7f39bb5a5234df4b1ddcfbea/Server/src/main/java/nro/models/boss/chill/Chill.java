@@ -64,6 +64,7 @@ public class Chill extends FutureBoss {
     public void leaveMap() {
         Boss chill2 = BossFactory.createBoss(BossFactory.CHILL2);
         chill2.zone = this.zone;
+        chill2.secondTimeRestToNextTimeAppear = 0;
         this.setJustRestToFuture();
         super.leaveMap();
     }

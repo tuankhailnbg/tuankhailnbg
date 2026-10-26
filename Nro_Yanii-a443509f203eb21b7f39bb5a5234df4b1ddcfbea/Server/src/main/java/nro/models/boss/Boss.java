@@ -87,7 +87,7 @@ public abstract class Boss extends Player implements BossInterface {
 
     public long lastTimeRest;
     // thời gian nghỉ chuẩn bị đợt xuất hiện sau
-    protected int secondTimeRestToNextTimeAppear = 1800;
+    public int secondTimeRestToNextTimeAppear = 1800;
 
     protected int maxIdle;
     protected int countIdle;
@@ -189,10 +189,13 @@ public abstract class Boss extends Player implements BossInterface {
         hp = (int) calcHp;
         switch (this.typeHp) {
             case HP_NORMAL:
+            default:
                 this.nPoint.hpg = (int) hp;
                 break;
             case HP_TIME_PLAYER_WITH_HIGHEST_DAME_IN_CLAN:
-
+                if (this.nPoint.hpg <= 0) {
+                    this.nPoint.hpg = (int) hp;
+                }
                 break;
         }
         switch (this.typeDame) {
@@ -201,26 +204,48 @@ public abstract class Boss extends Player implements BossInterface {
                 break;
             case DAME_PERCENT_HP_HUND:
                 this.percentDame = dame;
-                this.nPoint.dameg = (int) (this.nPoint.hpg * dame / 100);
+                this.nPoint.dameg = (int) ((long) this.nPoint.hpg * dame / 100);
                 break;
             case DAME_PERCENT_MP_HUND:
                 this.percentDame = dame;
-                this.nPoint.dameg = (int) (this.nPoint.mpg * dame / 100);
+                this.nPoint.dameg = (int) ((long) this.nPoint.mpg * dame / 100);
                 break;
             case DAME_PERCENT_HP_THOU:
                 this.percentDame = dame;
-                this.nPoint.dameg = (int) (this.nPoint.hp * dame / 1000);
+                this.nPoint.dameg = (int) ((long) this.nPoint.hp * dame / 1000);
                 break;
             case DAME_PERCENT_MP_THOU:
                 this.percentDame = dame;
-                this.nPoint.dameg = (int) (this.nPoint.mpg * dame / 1000);
+                this.nPoint.dameg = (int) ((long) this.nPoint.mpg * dame / 1000);
                 break;
             case DAME_TIME_PLAYER_WITH_HIGHEST_HP_IN_CLAN:
 
                 break;
         }
-        this.nPoint.calPoint();
-        this.nPoint.setFullHpMp();
+        try {
+            this.nPoint.calPoint();
+            this.nPoint.setFullHpMp();
+        } catch (Exception e) {
+            int mapId = (this.zone != null && this.zone.map != null) ? this.zone.map.mapId
+                    : (this.mapJoin != null && this.mapJoin.length > 0 ? this.mapJoin[0] : -1);
+            Log.error(Boss.class, new Exception(String.format(
+                    "LỖI TÍNH TOÁN HP BOSS TRONG INIT: Name=%s, ID=%d, MapID=%d, BaseHP=%d, IncreasedHP=%d, Hpg=%d, HpMax=%d, Hp=%d",
+                    this.name, this.id, mapId, arrHp[0], calcHp, this.nPoint.hpg, this.nPoint.hpMax, this.nPoint.hp
+            ), e));
+            this.nPoint.hpMax = (int) calcHp;
+            this.nPoint.hp = (int) calcHp;
+        }
+
+        if (this.nPoint.hpMax <= 0 || this.nPoint.hp <= 0) {
+            int mapId = (this.zone != null && this.zone.map != null) ? this.zone.map.mapId
+                    : (this.mapJoin != null && this.mapJoin.length > 0 ? this.mapJoin[0] : -1);
+            Log.error(Boss.class, new Exception(String.format(
+                    "LỖI HP BOSS <= 0 SAU KHI INIT: Name=%s, ID=%d, MapID=%d, BaseHP=%d, IncreasedHP=%d, Hpg=%d, HpMax=%d, Hp=%d",
+                    this.name, this.id, mapId, arrHp[0], calcHp, this.nPoint.hpg, this.nPoint.hpMax, this.nPoint.hp
+            )));
+            this.nPoint.hpMax = (int) calcHp;
+            this.nPoint.hp = (int) calcHp;
+        }
         this.outfit = data.outfit;
         this.mapJoin = data.mapJoin;
         if (data.timeDelayLeaveMap != -1) {
@@ -391,8 +416,18 @@ public abstract class Boss extends Player implements BossInterface {
             this.chat("Hừ, được lắm");
             TimeUnit.MILLISECONDS.sleep(2000);
             init();
-            PlayerService.gI().hoiPhuc(this, this.nPoint.hpMax, 0);
+            if (this.nPoint.hpMax <= 0 || this.nPoint.hp <= 0) {
+                int mapId = (this.zone != null && this.zone.map != null) ? this.zone.map.mapId : -1;
+                Log.error(Boss.class, new Exception(String.format(
+                        "LỖI HP BOSS TRONG CHANGE_BOSS_APPEAR: Name=%s, ID=%d, MapID=%d, HpMax=%d, Hp=%d",
+                        this.name, this.id, mapId, this.nPoint.hpMax, this.nPoint.hp
+                )));
+                this.changeStatus(REST);
+                return;
+            }
+            this.nPoint.setFullHpMp();
             Service.getInstance().sendPlayerInfo(this);
+            PlayerService.gI().sendInfoHpMp(this);
             EffectSkillService.gI().sendEffectStopCharge(this);
             this.changeToAttack();
         } catch (InterruptedException e) {
@@ -485,14 +520,28 @@ public abstract class Boss extends Player implements BossInterface {
     @Override
     public void joinMap() {
         if (this.zone == null) {
-            if (this.name == "Karin") {
+            if ("Karin".equals(this.name)) {
             } else {
                 this.zone = getMapCanJoin(mapJoin[Util.nextInt(0, mapJoin.length - 1)]);
             }
         }
         if (this.zone != null) {
+            if (this.nPoint.hpMax <= 0 || this.nPoint.hp <= 0) {
+                this.nPoint.calPoint();
+                this.nPoint.setFullHpMp();
+            }
+            if (this.nPoint.hpMax <= 0 || this.nPoint.hp <= 0) {
+                int mapId = this.zone.map != null ? this.zone.map.mapId : -1;
+                Log.error(Boss.class, new Exception(String.format(
+                        "LỖI HP BOSS KHI JOIN MAP: Name=%s, ID=%d, MapID=%d, HpMax=%d, Hp=%d",
+                        this.name, this.id, mapId, this.nPoint.hpMax, this.nPoint.hp
+                )));
+                this.leaveMap();
+                this.changeStatus(REST);
+                return;
+            }
             this.nPoint.setFullHpMp();
-            if (this.name == "Karin") {
+            if ("Karin".equals(this.name)) {
                 ChangeMapService.gI().changeMap(this, 46, this.zone.zoneId, 420, 408);
                 System.out.println("BOSS " + this.name + " (" + this.id + ")" + ": " + this.zone.map.mapName
                         + " khu vực " + this.zone.zoneId + "(" + this.zone.map.mapId + ")");

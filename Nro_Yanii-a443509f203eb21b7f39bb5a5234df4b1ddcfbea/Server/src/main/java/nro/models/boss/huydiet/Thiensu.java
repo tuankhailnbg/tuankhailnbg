@@ -22,7 +22,9 @@ public class Thiensu extends FutureBoss {
     @Override
     public void joinMap() {
         super.joinMap();
-        BossFactory.createBoss(BossFactory.HUYDIET).zone = this.zone;
+        Boss huydiet = BossFactory.createBoss(BossFactory.HUYDIET);
+        huydiet.zone = this.zone;
+        huydiet.secondTimeRestToNextTimeAppear = 0;
     }
 
    @Override
