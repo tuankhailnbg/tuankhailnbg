@@ -220,50 +220,36 @@ public class RewardService {
 
         boolean isFuture = isFutureBoss(boss);
         if (isFuture) {
-            // 100% 1 vien Ngoc Rong 3 Sao (Item ID 16)
+            // Boss tương lai vẫn luôn rơi Ngọc Rồng 3 Sao và 1.000.000 vàng.
             ItemMap nr3s = new ItemMap(boss.zone, 16, 1, x, y, killer.id);
             Service.getInstance().dropItemMap(boss.zone, nr3s);
 
-            // 100% 1.000.000 vang (Item ID 190)
             ItemMap gold = new ItemMap(boss.zone, 190, 1000000, x + Util.nextInt(-20, 20), y, killer.id);
             gold.quantity = 1000000;
             Service.getInstance().dropItemMap(boss.zone, gold);
-
-            // Boss tương lai: cố định 15% rơi 1 món Thần Linh.
-            // Ngọc Rồng 3 sao và 1.000.000 vàng vẫn luôn rơi ở phía trên.
-            int thanLinhRate = 15;
-
-            if (Util.isTrue(thanLinhRate, 100)) {
-                ItemMap thanLinh = dropOneItemThanLinh(boss.zone, x + Util.nextInt(-30, 30), y, killer);
-                if (thanLinh != null) {
-                    Service.getInstance().dropItemMap(boss.zone, thanLinh);
-                }
+        } else if (maxHp < 500_000_000L) {
+            // Boss thường dưới 500M HP: 30% Ngọc Rồng 3 Sao.
+            if (Util.isTrue(30, 100)) {
+                ItemMap nr3s = new ItemMap(boss.zone, 16, 1, x, y, killer.id);
+                Service.getInstance().dropItemMap(boss.zone, nr3s);
             }
-        } else {
-            // Regular Boss
-            if (maxHp < 500_000_000L) {
-                // 30% Ngoc Rong 3 Sao (Item ID 16)
-                if (Util.isTrue(30, 100)) {
-                    ItemMap nr3s = new ItemMap(boss.zone, 16, 1, x, y, killer.id);
-                    Service.getInstance().dropItemMap(boss.zone, nr3s);
-                }
-            } else {
-                // Do Than Linh: 500M - <1B: 15% | 1B - <2B: 20% | >= 2B: 50%
-                int thanLinhRate = 0;
-                if (maxHp >= 2_000_000_000L) {
-                    thanLinhRate = 50;
-                } else if (maxHp >= 1_000_000_000L) {
-                    thanLinhRate = 20;
-                } else { // 500_000_000L <= maxHp < 1_000_000_000L
-                    thanLinhRate = 15;
-                }
+        }
 
-                if (Util.isTrue(thanLinhRate, 100)) {
-                    ItemMap thanLinh = dropOneItemThanLinh(boss.zone, x, y, killer);
-                    if (thanLinh != null) {
-                        Service.getInstance().dropItemMap(boss.zone, thanLinh);
-                    }
-                }
+        // Tất cả boss dùng chung tỷ lệ rơi đồ Thần theo HP.
+        // < 500M: 10% | 500M - <1B: 15% | >= 1B: 20%
+        int thanLinhRate;
+        if (maxHp >= 1_000_000_000L) {
+            thanLinhRate = 20;
+        } else if (maxHp >= 500_000_000L) {
+            thanLinhRate = 15;
+        } else {
+            thanLinhRate = 10;
+        }
+
+        if (Util.isTrue(thanLinhRate, 100)) {
+            ItemMap thanLinh = dropOneItemThanLinh(boss.zone, x + Util.nextInt(-30, 30), y, killer);
+            if (thanLinh != null) {
+                Service.getInstance().dropItemMap(boss.zone, thanLinh);
             }
         }
     }
