@@ -2319,10 +2319,6 @@ public class CombineServiceNew {
                 return;
             }
 
-            if (InventoryService.gI().getCountEmptyBag(player) <= 0) {
-                Service.getInstance().sendThongBao(player, "Hành trang đã đầy");
-                return;
-            }
             if (!player.inventory.hasGold(COST_DAP_DO_KICH_HOAT)) {
                 long missing = COST_DAP_DO_KICH_HOAT - player.inventory.gold;
                 Service.getInstance().sendThongBao(player, "Không đủ vàng để thực hiện, còn thiếu "
