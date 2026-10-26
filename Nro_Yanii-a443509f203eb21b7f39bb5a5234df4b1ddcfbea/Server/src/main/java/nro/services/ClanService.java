@@ -495,45 +495,92 @@ public class ClanService {
      * Tạo clan mới
      */
     private void createClan(Player player, byte imgId, String name) {
-        if (player.clan == null) {
-            if (name.length() > 30) {
-                Service.getInstance().sendThongBao(player, "Tên bang hội không được quá 30 ký tự");
-                return;
-            }
-            FlagBag flagBag = FlagBagService.gI().getFlagBag(imgId);
-            if (flagBag != null) {
-                if (flagBag.gold > 0 && !player.inventory.hasGold(flagBag.gold)) {
-                    long missing = flagBag.gold - player.inventory.gold;
-                    Service.getInstance().sendThongBao(player, "Bạn không đủ vàng, còn thiếu "
-                            + Util.numberToMoney(missing > 0 ? missing : 0) + " vàng");
+        if (player.clan != null) {
+            Service.getInstance().sendThongBao(player, "Bạn đã có bang hội rồi");
+            return;
+        }
+        if (name == null || name.trim().isEmpty()) {
+            Service.getInstance().sendThongBao(player, "Tên bang hội không hợp lệ");
+            return;
+        }
+        name = name.trim();
+        if (name.length() > 30) {
+            Service.getInstance().sendThongBao(player, "Tên bang hội không được quá 30 ký tự");
+            return;
+        }
+        synchronized (Manager.CLANS) {
+            for (Clan c : Manager.CLANS) {
+                if (c != null && c.name != null && c.name.equalsIgnoreCase(name)) {
+                    Service.getInstance().sendThongBao(player, "Tên bang hội đã tồn tại");
                     return;
                 }
-                if (flagBag.gem > 0 && !player.inventory.hasGem(flagBag.gem)) {
-                    int missing = flagBag.gem - player.inventory.getGem();
-                    Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc, còn thiếu "
-                            + (missing > 0 ? missing : 0) + " ngọc");
-                    return;
-                }
-                if (!player.inventory.trySpendGoldAndGem(flagBag.gold, flagBag.gem)) {
-                    Service.getInstance().sendThongBao(player, "Không đủ vàng hoặc ngọc");
-                    return;
-                }
-                PlayerService.gI().sendInfoHpMpMoney(player);
-
-                Clan clan = new Clan();
-                clan.imgId = imgId;
-                clan.name = name;
-                Manager.addClan(clan);
-
-                player.clan = clan;
-                clan.addClanMember(player, Clan.LEADER);
-                clan.addMemberOnline(player);
-                clan.insert();
-
-                Service.getInstance().sendFlagBag(player);
-                sendMyClan(player);
             }
         }
+        FlagBag flagBag = FlagBagService.gI().getFlagBag(imgId);
+        if (flagBag == null) {
+            Service.getInstance().sendThongBao(player, "Biểu tượng bang không hợp lệ");
+            return;
+        }
+        long goldCost = Math.max(0L, (long) flagBag.gold);
+        int gemCost = Math.max(0, flagBag.gem);
+
+        if (goldCost > 0 && player.inventory.gold < goldCost) {
+            long missing = goldCost - player.inventory.gold;
+            Service.getInstance().sendThongBao(player, "Bạn không đủ vàng, còn thiếu "
+                    + Util.numberToMoney(missing > 0 ? missing : 0) + " vàng");
+            return;
+        }
+        int totalGem = player.inventory.gem + player.inventory.ruby;
+        if (gemCost > 0 && totalGem < gemCost) {
+            int missing = gemCost - totalGem;
+            Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc, còn thiếu "
+                    + (missing > 0 ? missing : 0) + " ngọc");
+            return;
+        }
+
+        synchronized (player.inventory) {
+            if (goldCost > 0 && player.inventory.gold < goldCost) {
+                long missing = goldCost - player.inventory.gold;
+                Service.getInstance().sendThongBao(player, "Bạn không đủ vàng, còn thiếu "
+                        + Util.numberToMoney(missing > 0 ? missing : 0) + " vàng");
+                return;
+            }
+            int curTotalGem = player.inventory.gem + player.inventory.ruby;
+            if (gemCost > 0 && curTotalGem < gemCost) {
+                int missing = gemCost - curTotalGem;
+                Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc, còn thiếu "
+                        + (missing > 0 ? missing : 0) + " ngọc");
+                return;
+            }
+            if (goldCost > 0) {
+                player.inventory.gold -= goldCost;
+            }
+            if (gemCost > 0) {
+                if (player.inventory.gem >= gemCost) {
+                    player.inventory.gem -= gemCost;
+                } else {
+                    int remain = gemCost - player.inventory.gem;
+                    player.inventory.gem = 0;
+                    player.inventory.ruby -= remain;
+                }
+            }
+        }
+        PlayerService.gI().sendInfoHpMpMoney(player);
+
+        Clan clan = new Clan();
+        clan.imgId = imgId;
+        clan.name = name;
+        synchronized (Manager.CLANS) {
+            Manager.addClan(clan);
+        }
+
+        player.clan = clan;
+        clan.addClanMember(player, Clan.LEADER);
+        clan.addMemberOnline(player);
+        clan.insert();
+
+        Service.getInstance().sendFlagBag(player);
+        sendMyClan(player);
     }
 
     // danh sách clan
@@ -730,31 +777,49 @@ public class ClanService {
     public void changeFlag(Player player, int imgId) {
         Clan clan = player.clan;
         if (clan != null && clan.isLeader(player) && imgId != clan.imgId) {
-            // sub money
             FlagBag flagBag = FlagBagService.gI().getFlagBag(imgId);
-
             if (flagBag != null) {
-                if (flagBag.gold > 0 && !player.inventory.hasGold(flagBag.gold)) {
-                    long missing = flagBag.gold - player.inventory.gold;
+                long goldCost = Math.max(0L, (long) flagBag.gold);
+                int gemCost = Math.max(0, flagBag.gem);
+
+                if (goldCost > 0 && player.inventory.gold < goldCost) {
+                    long missing = goldCost - player.inventory.gold;
                     Service.getInstance().sendThongBao(player, "Bạn không đủ vàng, còn thiếu "
                             + Util.numberToMoney(missing > 0 ? missing : 0) + " vàng");
                     return;
                 }
-                if (flagBag.gem > 0 && !player.inventory.hasGem(flagBag.gem)) {
-                    int missing = flagBag.gem - player.inventory.getGem();
+                int totalGem = player.inventory.gem + player.inventory.ruby;
+                if (gemCost > 0 && totalGem < gemCost) {
+                    int missing = gemCost - totalGem;
                     Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc, còn thiếu "
                             + (missing > 0 ? missing : 0) + " ngọc");
                     return;
                 }
-                if (!player.inventory.trySpendGoldAndGem(flagBag.gold, flagBag.gem)) {
-                    Service.getInstance().sendThongBao(player, "Không đủ vàng hoặc ngọc");
-                    return;
+                synchronized (player.inventory) {
+                    if (goldCost > 0 && player.inventory.gold < goldCost) {
+                        return;
+                    }
+                    int curTotalGem = player.inventory.gem + player.inventory.ruby;
+                    if (gemCost > 0 && curTotalGem < gemCost) {
+                        return;
+                    }
+                    if (goldCost > 0) {
+                        player.inventory.gold -= goldCost;
+                    }
+                    if (gemCost > 0) {
+                        if (player.inventory.gem >= gemCost) {
+                            player.inventory.gem -= gemCost;
+                        } else {
+                            int remain = gemCost - player.inventory.gem;
+                            player.inventory.gem = 0;
+                            player.inventory.ruby -= remain;
+                        }
+                    }
                 }
                 PlayerService.gI().sendInfoHpMpMoney(player);
-                player.clan.imgId = imgId;
-                // ClanDAO.saveClan(player.clan);
+                player.clan.imgId = (byte) imgId;
+                player.clan.update();
                 clan.sendFlagBagForAllMember();
-
             }
         }
     }

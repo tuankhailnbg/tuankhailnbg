@@ -155,8 +155,6 @@ public class Broly extends Boss {
         if (damage >= this.nPoint.hp && isNotLastTypeBoss() && this.nPoint.hpMax >= 1500000) {
             canUpLevel = true;
             playersAttack.clear();
-            rewards(plAtt);
-            notifyPlayeKill(plAtt);
             this.changeToIdle();
             return this.nPoint.hp - 1;
         }

@@ -12,6 +12,13 @@ import nro.models.item.ItemLuckyRound;
 import nro.models.item.ItemOptionLuckyRound;
 import nro.models.item.Item;
 import nro.models.item.ItemOption;
+import nro.models.boss.Boss;
+import nro.models.boss.bosstuonglai.Blackgoku;
+import nro.models.boss.bosstuonglai.Superblackgoku;
+import nro.models.boss.robotsatthu.Android13;
+import nro.models.boss.robotsatthu.Android14;
+import nro.models.boss.robotsatthu.Android15;
+import nro.models.map.Zone;
 import nro.models.item.ItemReward;
 import nro.models.map.ItemMap;
 import nro.models.mob.BigBoss;
@@ -86,6 +93,154 @@ public class RewardService {
                                                                                      // picolo
             { { 135, 138, 1, 1000 }, { 133, 136, 1, 1000 }, { 134, 137, 1, 1000 } } // nappa - kakarot - cadic
     };
+
+    public static final int[] THAN_LINH_IDS = {555, 556, 557, 558, 559, 560, 561, 562, 563, 564, 565, 566, 567};
+
+    public static boolean isColdMap(int mapId) {
+        return mapId >= 105 && mapId <= 110;
+    }
+
+    public static boolean isMonkeyMap(int mapId) {
+        return mapId == ConstMap.NUI_KHI_DO
+                || mapId == ConstMap.NUI_KHI_VANG
+                || mapId == ConstMap.NUI_KHI_DEN
+                || mapId == ConstMap.HANG_KHI_DEN;
+    }
+
+    public static boolean isMonkeyMob(int mobTempId) {
+        return mobTempId == ConstMob.KHI_LONG_DEN
+                || mobTempId == ConstMob.KHI_GIAP_SAT
+                || mobTempId == ConstMob.KHI_LONG_DO
+                || mobTempId == ConstMob.KHI_LONG_VANG
+                || mobTempId == ConstMob.KHI_LONG_XANH;
+    }
+
+    public boolean isFutureBoss(Boss boss) {
+        if (boss == null) {
+            return false;
+        }
+        String className = boss.getClass().getName();
+        if (className.contains("bosstuonglai")
+                || boss instanceof Blackgoku
+                || boss instanceof Superblackgoku) {
+            return true;
+        }
+        if (boss instanceof Android13
+                || boss instanceof Android14
+                || boss instanceof Android15) {
+            return true;
+        }
+        if (boss.zone != null && boss.zone.map != null) {
+            int mapId = boss.zone.map.mapId;
+            if (MapService.gI().isMapFuture(mapId) || MapService.gI().isMapTuongLai(mapId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public ItemMap dropOneItemThanLinh(Zone zone, int x, int y, Player killer) {
+        if (zone == null || killer == null) {
+            return null;
+        }
+        int tempId = THAN_LINH_IDS[Util.nextInt(0, THAN_LINH_IDS.length - 1)];
+        ItemMap itemMap = new ItemMap(zone, tempId, 1, x, y, killer.id);
+        initBaseOptionClothes(itemMap.itemTemplate.id, itemMap.itemTemplate.type, itemMap.options);
+        initStarOption(itemMap, new RatioStar[] {
+                new RatioStar((byte) 1, 20, 100),
+                new RatioStar((byte) 2, 10, 100),
+                new RatioStar((byte) 3, 5, 100),
+                new RatioStar((byte) 4, 3, 200),
+                new RatioStar((byte) 5, 2, 200),
+                new RatioStar((byte) 6, 1, 200),
+                new RatioStar((byte) 7, 1, 300)
+        });
+        initDepositOption(itemMap);
+        initNotTradeOption(itemMap);
+        initExpiryDateOption(itemMap);
+        initEventOption(itemMap);
+
+        ServerNotify.gI().notify(killer.name + " vừa nhặt được " + itemMap.itemTemplate.name
+                + " tại " + zone.map.mapName + " khu vực " + zone.zoneId);
+        ServerLog.logItemDrop(killer.name, itemMap.itemTemplate.name);
+        return itemMap;
+    }
+
+    public void rewardBossDrop(Boss boss, Player killer) {
+        if (boss == null || boss.zone == null || boss.zone.map == null) {
+            return;
+        }
+        if (killer == null) {
+            if (!boss.zone.getPlayers().isEmpty()) {
+                killer = boss.zone.getPlayers().get(0);
+            }
+        }
+        if (killer != null && killer.isPet) {
+            killer = ((Pet) killer).master;
+        }
+        if (killer == null || killer.isBoss) {
+            return;
+        }
+        int x = boss.location.x;
+        int y = boss.zone.map.yPhysicInTop(x, boss.location.y - 24);
+        long maxHp = Math.max(1L, (long) boss.nPoint.hpMax);
+
+        boolean isFuture = isFutureBoss(boss);
+        if (isFuture) {
+            // 100% 1 vien Ngoc Rong 3 Sao (Item ID 16)
+            ItemMap nr3s = new ItemMap(boss.zone, 16, 1, x, y, killer.id);
+            Service.getInstance().dropItemMap(boss.zone, nr3s);
+
+            // 100% 1.000.000 vang (Item ID 190)
+            ItemMap gold = new ItemMap(boss.zone, 190, 1000000, x + Util.nextInt(-20, 20), y, killer.id);
+            gold.quantity = 1000000;
+            Service.getInstance().dropItemMap(boss.zone, gold);
+
+            // Xet them do Than Linh theo bang ty le HP:
+            // < 500M: 0% | 500M - <1B: 15% | 1B - <2B: 20% | >= 2B: 50%
+            int thanLinhRate = 0;
+            if (maxHp >= 2_000_000_000L) {
+                thanLinhRate = 50;
+            } else if (maxHp >= 1_000_000_000L) {
+                thanLinhRate = 20;
+            } else if (maxHp >= 500_000_000L) {
+                thanLinhRate = 15;
+            }
+
+            if (thanLinhRate > 0 && Util.isTrue(thanLinhRate, 100)) {
+                ItemMap thanLinh = dropOneItemThanLinh(boss.zone, x + Util.nextInt(-30, 30), y, killer);
+                if (thanLinh != null) {
+                    Service.getInstance().dropItemMap(boss.zone, thanLinh);
+                }
+            }
+        } else {
+            // Regular Boss
+            if (maxHp < 500_000_000L) {
+                // 30% Ngoc Rong 3 Sao (Item ID 16)
+                if (Util.isTrue(30, 100)) {
+                    ItemMap nr3s = new ItemMap(boss.zone, 16, 1, x, y, killer.id);
+                    Service.getInstance().dropItemMap(boss.zone, nr3s);
+                }
+            } else {
+                // Do Than Linh: 500M - <1B: 15% | 1B - <2B: 20% | >= 2B: 50%
+                int thanLinhRate = 0;
+                if (maxHp >= 2_000_000_000L) {
+                    thanLinhRate = 50;
+                } else if (maxHp >= 1_000_000_000L) {
+                    thanLinhRate = 20;
+                } else { // 500_000_000L <= maxHp < 1_000_000_000L
+                    thanLinhRate = 15;
+                }
+
+                if (Util.isTrue(thanLinhRate, 100)) {
+                    ItemMap thanLinh = dropOneItemThanLinh(boss.zone, x, y, killer);
+                    if (thanLinh != null) {
+                        Service.getInstance().dropItemMap(boss.zone, thanLinh);
+                    }
+                }
+            }
+        }
+    }
 
     // public static void main(String[] args) {
     // int set1 = 0;
@@ -187,6 +342,24 @@ public class RewardService {
             }
         }
 
+        // Roi Do Than Linh chinh xac 0.001% (1/100.000) tai map Cold cho quai thuong
+        if (player != null && mob != null && isColdMap(mobMapId)
+                && mob.tempId != ConstMob.MOC_NHAN
+                && mob.tempId != ConstMob.HIRUDEGARN
+                && mob.tempId != ConstMob.VUA_BACH_TUOC
+                && mob.tempId != ConstMob.ROBOT_BAO_VE
+                && !(mob instanceof BigBoss)) {
+            Player killer = player.isPet ? ((Pet) player).master : player;
+            if (killer != null && !killer.isBoss) {
+                if (ThreadLocalRandom.current().nextInt(100_000) == 0) {
+                    ItemMap thanLinh = dropOneItemThanLinh(mob.zone, x, yEnd, killer);
+                    if (thanLinh != null) {
+                        list.add(thanLinh);
+                    }
+                }
+            }
+        }
+
         MobReward mobReward = getMobReward(mob);
         if (mobReward != null) {
             int itemSize = mobReward.itemRewards.size();
@@ -208,7 +381,9 @@ public class RewardService {
                     }
                 }
                 if (inMap) {
-                    if (ir.forAllGender || ItemService.gI().getTemplate(ir.tempId).gender == player.gender
+                    if (isColdMap(mob.zone.map.mapId) && ir.tempId >= 555 && ir.tempId <= 567) {
+                        // Bo qua do than linh tu file cau hinh cu tai map Cold vi da ap dung ty le 0.001% doc lap o tren
+                    } else if (ir.forAllGender || ItemService.gI().getTemplate(ir.tempId).gender == player.gender
                             || ItemService.gI().getTemplate(ir.tempId).gender > 2) {
 
                         if (Util.isTrue(ir.ratio, ir.typeRatio)) {
@@ -277,7 +452,17 @@ public class RewardService {
                 }
                 if (goldSize > 0 && biKiepSize <= 0 && foodSize <= 0 && cskbSize <= 0) {
                     ItemReward gr = mobReward.goldRewards.get(Util.nextInt(0, goldSize - 1));
-                    if (Util.isTrue(gr.ratio, gr.typeRatio)) {
+                    int ratio = gr.ratio;
+                    int typeRatio = gr.typeRatio;
+                    if (isMonkeyMap(mob.zone.map.mapId) || isMonkeyMob(mob.tempId)) {
+                        // Tang ty le roi vang len 1.5 lan, toi da 100%
+                        ratio = ratio * 3;
+                        typeRatio = typeRatio * 2;
+                        if (ratio > typeRatio) {
+                            ratio = typeRatio;
+                        }
+                    }
+                    if (Util.isTrue(ratio, typeRatio)) {
                         ItemMap itemMap = new ItemMap(mob.zone, gr.tempId, 1, x, yEnd, player.id);
                         initQuantityGold(itemMap);
                         list.add(itemMap);

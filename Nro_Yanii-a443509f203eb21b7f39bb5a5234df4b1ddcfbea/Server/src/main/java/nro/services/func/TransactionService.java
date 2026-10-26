@@ -46,10 +46,6 @@ public class TransactionService implements Runnable {
             Service.getInstance().sendThongBao(pl, "Chức năng bảo vệ đã được bật. Bạn vui lòng kiểm tra lại");
             return;
         }
-        if (!pl.getSession().actived) {
-            Service.getInstance().sendThongBao(pl, "Yêu cầu kích hoạt tài khoản để có thể mở khoá giao dịch");
-            return;
-        }
         try {
             byte action = msg.reader().readByte();
             int playerId = -1;
@@ -59,8 +55,19 @@ public class TransactionService implements Runnable {
                 case SEND_INVITE_TRADE:
                 case ACCEPT_TRADE:
                     playerId = msg.reader().readInt();
+                    if (playerId == pl.id) {
+                        Service.getInstance().sendThongBao(pl, "Không thể giao dịch với bản thân");
+                        return;
+                    }
+                    if (pl.zone == null) {
+                        return;
+                    }
                     plMap = pl.zone.getPlayerInMap(playerId);
-                    if (plMap != null) {
+                    if (plMap != null && plMap != pl && plMap.id != pl.id) {
+                        if (pl.isDie() || plMap.isDie()) {
+                            Service.getInstance().sendThongBao(pl, "Không thể giao dịch lúc này");
+                            return;
+                        }
                         trade = PLAYER_TRADE.get(pl);
                         if (trade == null) {
                             trade = PLAYER_TRADE.get(plMap);
@@ -113,10 +120,7 @@ public class TransactionService implements Runnable {
                     break;
                 case ACCEPT:
                     if (trade != null) {
-                        trade.acceptTrade();
-                        if (trade.accept == 2) {
-                            trade.dispose();
-                        }
+                        trade.acceptTrade(pl);
                     }
                     break;
             }

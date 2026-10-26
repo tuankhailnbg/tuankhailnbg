@@ -142,6 +142,10 @@ public class ItemService {
         item.quantity = quantity;
         item.createTime = System.currentTimeMillis();
 
+        if (item.template != null && tempId >= 555 && tempId <= 567) {
+            RewardService.gI().initBaseOptionClothes(item.template.id, item.template.type, item.itemOptions);
+        }
+
         item.content = item.getContent();
         item.info = item.getInfo();
         return item;

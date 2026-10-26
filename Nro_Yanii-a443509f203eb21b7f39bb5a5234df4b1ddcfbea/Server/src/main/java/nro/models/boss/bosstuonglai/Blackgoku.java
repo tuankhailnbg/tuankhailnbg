@@ -232,16 +232,9 @@ public class Blackgoku extends Boss {
 
     @Override
     public void rewards(Player pl) {
-        // do than 1/35
-        int[] tempIds1 = new int[] { 563, 565, 567 };
-        if (pl.nPoint.wearingNoelHat && Manager.EVENT_SEVER == 3) {
-            tempIds1 = new int[] { 555, 556, 557, 558, 559, 563, 567 };
-        }
         int tempId = -1;
         if (Util.isTrue(1, 35)) {
             tempId = 992;
-        } else if (Util.isTrue(10, 100)) {
-            tempId = tempIds1[Util.nextInt(0, tempIds1.length - 1)];
         }
         if (Manager.EVENT_SEVER == 4 && tempId == -1) {
             tempId = ConstItem.LIST_ITEM_NLSK_TET_2023[Util.nextInt(0, ConstItem.LIST_ITEM_NLSK_TET_2023.length - 1)];

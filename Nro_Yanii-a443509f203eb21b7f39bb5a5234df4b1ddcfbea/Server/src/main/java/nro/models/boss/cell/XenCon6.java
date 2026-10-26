@@ -27,30 +27,7 @@ public class XenCon6 extends FutureBoss {
 
     @Override
     public void rewards(Player pl) {
-        ItemMap itemMap = null;
-        int x = this.location.x;
-        int y = this.zone.map.yPhysicInTop(x, this.location.y - 24);
-        if (Util.isTrue(1, 100)) {
-            int[] set1 = {565, 560, 562, 564, 566, 561};
-            itemMap = new ItemMap(this.zone, set1[Util.nextInt(0, set1.length - 1)], 1, x, y, pl.id);
-            RewardService.gI().initBaseOptionClothes(itemMap.itemTemplate.id, itemMap.itemTemplate.type,
-                    itemMap.options);
-        } else if (Util.isTrue(1, 100)) {
-            int[] set2 = {555, 556, 563, 557, 558, 559, 567};
-            itemMap = new ItemMap(this.zone, set2[Util.nextInt(0, set2.length - 1)], 1, x, y, pl.id);
-            RewardService.gI().initBaseOptionClothes(itemMap.itemTemplate.id, itemMap.itemTemplate.type,
-                    itemMap.options);
-        } else if (Util.isTrue(1, 35)) {
-            itemMap = new ItemMap(this.zone, 15, 1, x, y, pl.id);
-        } else if (Util.isTrue(1, 35)) {
-            itemMap = new ItemMap(this.zone, 16, 1, x, y, pl.id);
-        }
-        if (itemMap != null) {
-            Service.getInstance().dropItemMap(zone, itemMap);
-        }
-
         TaskService.gI().checkDoneTaskKillBoss(pl, this);
-
         generalRewards(pl);
     }
 
