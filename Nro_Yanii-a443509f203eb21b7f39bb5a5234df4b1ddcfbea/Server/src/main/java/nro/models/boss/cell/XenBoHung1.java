@@ -80,7 +80,6 @@ public class XenBoHung1 extends FutureBoss {
     public void leaveMap() {
         Boss xbh2 = BossFactory.createBoss(BossFactory.XEN_BO_HUNG_2);
         xbh2.zone = this.zone;
-        xbh2.secondTimeRestToNextTimeAppear = 0;
         this.setJustRestToFuture();
         super.leaveMap();
     }
