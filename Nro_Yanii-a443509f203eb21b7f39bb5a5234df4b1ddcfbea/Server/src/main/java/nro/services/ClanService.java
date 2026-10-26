@@ -530,9 +530,9 @@ public class ClanService {
                     + Util.numberToMoney(missing > 0 ? missing : 0) + " vàng");
             return;
         }
-        int totalGem = player.inventory.gem + player.inventory.ruby;
+        long totalGem = (long) player.inventory.gem + player.inventory.ruby;
         if (gemCost > 0 && totalGem < gemCost) {
-            int missing = gemCost - totalGem;
+            long missing = (long) gemCost - totalGem;
             Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc, còn thiếu "
                     + (missing > 0 ? missing : 0) + " ngọc");
             return;
@@ -545,9 +545,9 @@ public class ClanService {
                         + Util.numberToMoney(missing > 0 ? missing : 0) + " vàng");
                 return;
             }
-            int curTotalGem = player.inventory.gem + player.inventory.ruby;
+            long curTotalGem = (long) player.inventory.gem + player.inventory.ruby;
             if (gemCost > 0 && curTotalGem < gemCost) {
-                int missing = gemCost - curTotalGem;
+                long missing = (long) gemCost - curTotalGem;
                 Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc, còn thiếu "
                         + (missing > 0 ? missing : 0) + " ngọc");
                 return;
@@ -788,9 +788,9 @@ public class ClanService {
                             + Util.numberToMoney(missing > 0 ? missing : 0) + " vàng");
                     return;
                 }
-                int totalGem = player.inventory.gem + player.inventory.ruby;
+                long totalGem = (long) player.inventory.gem + player.inventory.ruby;
                 if (gemCost > 0 && totalGem < gemCost) {
-                    int missing = gemCost - totalGem;
+                    long missing = (long) gemCost - totalGem;
                     Service.getInstance().sendThongBao(player, "Bạn không đủ ngọc, còn thiếu "
                             + (missing > 0 ? missing : 0) + " ngọc");
                     return;
@@ -799,7 +799,7 @@ public class ClanService {
                     if (goldCost > 0 && player.inventory.gold < goldCost) {
                         return;
                     }
-                    int curTotalGem = player.inventory.gem + player.inventory.ruby;
+                    long curTotalGem = (long) player.inventory.gem + player.inventory.ruby;
                     if (gemCost > 0 && curTotalGem < gemCost) {
                         return;
                     }

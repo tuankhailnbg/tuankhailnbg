@@ -794,24 +794,74 @@ public class GodGK {
 
                         // data skills
                         dataArray = (JSONArray) jv.parse(rs.getString("pet_skill"));
-                        for (int i = 0; i < dataArray.size(); i++) {
-                            JSONArray skillTemp = (JSONArray) dataArray.get(i);
-                            int tempId = Integer.parseInt(String.valueOf(skillTemp.get(0)));
-                            byte point = Byte.parseByte(String.valueOf(skillTemp.get(1)));
-                            Skill skill = null;
-                            if (point != 0) {
-                                skill = SkillUtil.createSkill(tempId, point);
-                            } else {
-                                skill = SkillUtil.createSkillLevel0(tempId);
+                        if (dataArray != null) {
+                            for (int i = 0; i < dataArray.size() && i < 4; i++) {
+                                JSONArray skillTemp = (JSONArray) dataArray.get(i);
+                                int tempId = Integer.parseInt(String.valueOf(skillTemp.get(0)));
+                                byte point = Byte.parseByte(String.valueOf(skillTemp.get(1)));
+                                Skill skill;
+                                try {
+                                    if (tempId >= 0 && point > 0) {
+                                        skill = SkillUtil.createSkill(tempId, point);
+                                    } else if (tempId >= 0) {
+                                        skill = SkillUtil.createSkillLevel0(tempId);
+                                    } else {
+                                        skill = SkillUtil.createEmptySkill();
+                                    }
+                                } catch (Exception ex) {
+                                    Log.error(GodGK.class, ex, "Lỗi load skill đệ tử slot " + i);
+                                    skill = SkillUtil.createEmptySkill();
+                                }
+
+                                if (skill.template != null) {
+                                    switch (skill.template.id) {
+                                        case Skill.KAMEJOKO:
+                                        case Skill.MASENKO:
+                                        case Skill.ANTOMIC:
+                                            skill.coolDown = 1000;
+                                            break;
+                                    }
+                                }
+                                pet.playerSkill.skills.add(skill);
                             }
-                            switch (skill.template.id) {
-                                case Skill.KAMEJOKO:
-                                case Skill.MASENKO:
-                                case Skill.ANTOMIC:
-                                    skill.coolDown = 1000;
-                                    break;
-                            }
-                            pet.playerSkill.skills.add(skill);
+                        }
+
+                        // Client đọc cố định 4 slot skill đệ tử.
+                        while (pet.playerSkill.skills.size() < 4) {
+                            pet.playerSkill.skills.add(SkillUtil.createEmptySkill());
+                        }
+                        while (pet.playerSkill.skills.size() > 4) {
+                            pet.playerSkill.skills.remove(pet.playerSkill.skills.size() - 1);
+                        }
+
+                        // Phục hồi slot đã bị lần lỗi cũ ghi thành [-1,0].
+                        // Chỉ mở lại khi đệ đã đạt đúng mốc sức mạnh của slot đó.
+                        Skill petSkill1 = pet.playerSkill.skills.get(0);
+                        if (petSkill1 == null || petSkill1.skillId == -1
+                                || petSkill1.template == null || petSkill1.template.id < 0) {
+                            pet.playerSkill.skills.set(0,
+                                    SkillUtil.createSkill(nro.utils.Util.nextInt(0, 2) * 2, 1));
+                        }
+
+                        Skill petSkill2 = pet.playerSkill.skills.get(1);
+                        if (pet.nPoint.power >= 150_000_000L
+                                && (petSkill2 == null || petSkill2.skillId == -1
+                                || petSkill2.template == null || petSkill2.template.id < 0)) {
+                            pet.openSkill2();
+                        }
+
+                        Skill petSkill3 = pet.playerSkill.skills.get(2);
+                        if (pet.nPoint.power >= 1_500_000_000L
+                                && (petSkill3 == null || petSkill3.skillId == -1
+                                || petSkill3.template == null || petSkill3.template.id < 0)) {
+                            pet.openSkill3();
+                        }
+
+                        Skill petSkill4 = pet.playerSkill.skills.get(3);
+                        if (pet.nPoint.power >= 20_000_000_000L
+                                && (petSkill4 == null || petSkill4.skillId == -1
+                                || petSkill4.template == null || petSkill4.template.id < 0)) {
+                            pet.openSkill4();
                         }
                         pet.nPoint.hp = hp;
                         pet.nPoint.mp = mp;

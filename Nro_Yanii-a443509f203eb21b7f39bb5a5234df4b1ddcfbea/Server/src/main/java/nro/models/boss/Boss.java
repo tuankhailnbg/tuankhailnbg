@@ -180,12 +180,8 @@ public abstract class Boss extends Player implements BossInterface {
         } else {
             hp = Util.nextInt(arrHp[0], arrHp[1]);
         }
-        long calcHp = Math.round((long) hp * 1.15);
-        if (calcHp > Integer.MAX_VALUE) {
-            calcHp = Integer.MAX_VALUE;
-        } else if (calcHp < 1) {
-            calcHp = 1;
-        }
+        // Giữ HP gốc từ BossData. Không nhân thêm 15% để tránh tràn/HP hiển thị 0.
+        long calcHp = Math.max(1L, (long) hp);
         hp = (int) calcHp;
         switch (this.typeHp) {
             case HP_NORMAL:
