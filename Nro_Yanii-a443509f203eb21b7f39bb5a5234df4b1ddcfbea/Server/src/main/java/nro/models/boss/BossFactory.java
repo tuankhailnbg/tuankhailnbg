@@ -237,45 +237,43 @@ public class BossFactory {
 
     public static void initBoss() {
         new Thread(() -> {
-            try {
-                // createBoss(TUAN_LOC_EVENT);
-                // createBoss(ONG_GIA_NOEL);
-                // createBoss(BROLYKHOINGUYEN);
-                // createBoss(FU);
-                createBoss(SIEU_BO_HUNG);
-                // createBoss(BERUSHALLOWEEN);
-                createBoss(THIENSU);
-                // createBoss(SUPERBOJACK);
-                // createBoss(THODAICA);
-                createBoss(XEN_BO_HUNG_1);
-                createBoss(XEN_BO_HUNG);
-                createBoss(XEN_CON_1);
-                createBoss(XEN_CON_2);
-                createBoss(XEN_CON_3);
-                createBoss(XEN_CON_4);
-                createBoss(XEN_CON_5);
-                createBoss(BLACKGOKU);
-                createBoss(CHILL);
-                createBoss(COOLER);
-                createBoss(KUKU);
-                createBoss(MAP_DAU_DINH);
-                createBoss(RAMBO);
-                createBoss(TIEU_DOI_TRUONG);
-                createBoss(TIEU_DOI_TRUONGNAMEK);
-                createBoss(FIDE_DAI_CA_1);
-                createBoss(ANDROID_20);
-                createBoss(ANDROID_13);
-                createBoss(KINGKONG);
-                createBoss(CUMBER);
-                createBoss(SUPER_BROLY_RED);
+            int[] bossIds = {
+                    SIEU_BO_HUNG,
+                    THIENSU,
+                    XEN_BO_HUNG_1,
+                    XEN_BO_HUNG,
+                    XEN_CON_1,
+                    XEN_CON_2,
+                    XEN_CON_3,
+                    XEN_CON_4,
+                    XEN_CON_5,
+                    BLACKGOKU,
+                    CHILL,
+                    COOLER,
+                    KUKU,
+                    MAP_DAU_DINH,
+                    RAMBO,
+                    TIEU_DOI_TRUONG,
+                    TIEU_DOI_TRUONGNAMEK,
+                    FIDE_DAI_CA_1,
+                    ANDROID_20,
+                    ANDROID_13,
+                    KINGKONG,
+                    CUMBER,
+                    SUPER_BROLY_RED
+            };
 
-                // for (int i = 0; i < 15; i++) {
-                // createBoss(BROLY);
-                // }
-            } catch (Exception e) {
-                logger.error("Err initboss", e);
+            for (int bossId : bossIds) {
+                try {
+                    Boss boss = createBoss(bossId);
+                    if (boss == null) {
+                        logger.error("Khong the khoi tao boss, bossId = " + bossId);
+                    }
+                } catch (Exception e) {
+                    logger.error("Err init boss, bossId = " + bossId, e);
+                }
             }
-        }).start();
+        }, "Init boss").start();
     }
 
     public static void initBossMabuWar() {
@@ -503,12 +501,12 @@ public class BossFactory {
             // case FIDEGOLD:
             // boss = new FideGold();
             // break;
-            // case CUMBER:
-            // boss = new Cumber();
-            // break;
-            // case CUMBER2:
-            // boss = new SuperCumber();
-            // break;
+            case CUMBER:
+                boss = new Cumber();
+                break;
+            case CUMBER2:
+                boss = new SuperCumber();
+                break;
         }
         return boss;
     }
