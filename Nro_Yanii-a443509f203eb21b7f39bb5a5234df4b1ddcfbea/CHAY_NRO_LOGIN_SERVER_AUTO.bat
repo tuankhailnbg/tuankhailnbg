@@ -16,7 +16,8 @@ set "SERVER_DIR=%ROOT%\Server"
 REM ===== CAU HINH MAY CUA BAN =====
 set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
 set "PATH=%JAVA_HOME%\bin;%PATH%"
-set "MAVEN=D:\Tools\maven\bin\mvn.cmd"
+set "MAVEN=C:\Tools\maven\bin\mvn.cmd"
+if not exist "%MAVEN%" set "MAVEN=D:\Tools\maven\bin\mvn.cmd"
 
 REM ===== CONG NRO =====
 set "LOGIN_PORT=14445"
