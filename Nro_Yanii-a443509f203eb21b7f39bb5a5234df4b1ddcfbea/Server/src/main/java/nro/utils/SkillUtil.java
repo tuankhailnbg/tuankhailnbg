@@ -20,9 +20,20 @@ public class SkillUtil {
     private final static NClass nClassXD;
 
     static {
-        nClassTD = Manager.NCLASS.get(0);
-        nClassNM = Manager.NCLASS.get(1);
-        nClassXD = Manager.NCLASS.get(2);
+        NClass td = null;
+        NClass nm = null;
+        NClass xd = null;
+        try {
+            if (Manager.NCLASS != null && Manager.NCLASS.size() >= 3) {
+                td = Manager.NCLASS.get(0);
+                nm = Manager.NCLASS.get(1);
+                xd = Manager.NCLASS.get(2);
+            }
+        } catch (Exception ignored) {
+        }
+        nClassTD = td != null ? td : new NClass();
+        nClassNM = nm != null ? nm : new NClass();
+        nClassXD = xd != null ? xd : new NClass();
     }
 
     public static int getTimeBienHinh(boolean lastLevel, int coolDown) { // thời gian biến hình
@@ -33,15 +44,29 @@ public class SkillUtil {
     public static Skill createSkill(int tempId, int level) {
         Skill skill = null;
         try {
-            skill = nClassTD.getSkillTemplate(tempId).skillss.get(level - 1);
+            if (nClassTD != null && nClassTD.getSkillTemplate(tempId) != null && nClassTD.getSkillTemplate(tempId).skillss != null) {
+                skill = nClassTD.getSkillTemplate(tempId).skillss.get(level - 1);
+            }
         } catch (Exception e) {
             try {
-                skill = nClassNM.getSkillTemplate(tempId).skillss.get(level - 1);
+                if (nClassNM != null && nClassNM.getSkillTemplate(tempId) != null && nClassNM.getSkillTemplate(tempId).skillss != null) {
+                    skill = nClassNM.getSkillTemplate(tempId).skillss.get(level - 1);
+                }
             } catch (Exception ex) {
-                skill = nClassXD.getSkillTemplate(tempId).skillss.get(level - 1);
+                try {
+                    if (nClassXD != null && nClassXD.getSkillTemplate(tempId) != null && nClassXD.getSkillTemplate(tempId).skillss != null) {
+                        skill = nClassXD.getSkillTemplate(tempId).skillss.get(level - 1);
+                    }
+                } catch (Exception ex2) {
+                }
             }
         }
-        if (skill.template.id >= 24) {
+        if (skill == null) {
+            skill = createSkillLevel0(tempId);
+            skill.point = level;
+            return skill;
+        }
+        if (skill.template != null && skill.template.id >= 24) {
             return new SkillNotFocus(skill);
         }
         return new Skill(skill);

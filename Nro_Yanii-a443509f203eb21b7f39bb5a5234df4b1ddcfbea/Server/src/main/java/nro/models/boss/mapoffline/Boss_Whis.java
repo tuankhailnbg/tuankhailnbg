@@ -64,6 +64,7 @@ public class Boss_Whis extends FutureBoss {
         this.nPoint.mpMax += player.levelKillWhis * 100000;
         this.nPoint.dame += player.levelKillWhis * 1000;
         this.name = this.name + " [LV:" + player.levelKillWhis + "]";
+        this.nPoint.setFullHpMp();
         Service.getInstance().hsChar(this, this.nPoint.hpMax, this.nPoint.mpMax);
         this.idPlayerForNPC = player.idPlayerForNPC;
     }
@@ -101,6 +102,7 @@ public class Boss_Whis extends FutureBoss {
     @Override
     public void joinMap() {
         if (this.zone != null) {
+            this.nPoint.setFullHpMp();
             ChangeMapService.gI().changeMap(this, 154, this.zone.zoneId, 357, 360);
             System.out.println("BOSS " + this.name + " (" + this.id + ")" + ": " + this.zone.map.mapName + " khu vực "
                     + this.zone.zoneId + "(" + this.zone.map.mapId + ")");

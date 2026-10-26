@@ -78,6 +78,7 @@ public class Cumber extends FutureBoss {
     public void leaveMap() {
         Boss cumber2 = BossFactory.createBoss(BossFactory.CUMBER2);
         cumber2.zone = this.zone;
+        cumber2.secondTimeRestToNextTimeAppear = 0;
         this.setJustRestToFuture();
         super.leaveMap();
     }
