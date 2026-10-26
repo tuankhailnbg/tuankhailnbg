@@ -44,7 +44,6 @@ public class Cooler extends FutureBoss {
     public void leaveMap() {
         Boss cooler2 = BossFactory.createBoss(BossFactory.COOLER2);
         cooler2.zone = this.zone;
-        cooler2.secondTimeRestToNextTimeAppear = 0;
         this.setJustRestToFuture();
         super.leaveMap();
     }
