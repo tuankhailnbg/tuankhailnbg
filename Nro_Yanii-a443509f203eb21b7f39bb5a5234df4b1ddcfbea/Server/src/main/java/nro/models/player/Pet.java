@@ -721,26 +721,62 @@ public class Pet extends Player {
         return mobAtt;
     }
 
-    private void updatePower() {
-        if (this.playerSkill != null) {
-            switch (this.playerSkill.getSizeSkill()) {
-                case 1:
-                    if (this.nPoint.power >= 150000000) {
-                        openSkill2();
-                    }
-                    break;
-                case 2:
-                    if (this.nPoint.power >= 1500000000) {
-                        openSkill3();
-                    }
-                    break;
-                case 3:
-                    if (this.nPoint.power >= 20000000000L) {
-                        openSkill4();
-                    }
-                    break;
+    private boolean isInvalidPetSkill(Skill skill) {
+        return skill == null || skill.skillId < 0 || skill.template == null || skill.template.id < 0;
+    }
+
+    private Skill createFirstPetSkill() {
+        int firstSkillTemplateId;
+        if (this.gender == ConstPlayer.NAMEC) {
+            firstSkillTemplateId = Skill.DEMON;
+        } else if (this.gender == ConstPlayer.XAYDA) {
+            firstSkillTemplateId = Skill.GALICK;
+        } else {
+            firstSkillTemplateId = Skill.DRAGON;
+        }
+        return SkillUtil.createSkill(firstSkillTemplateId, 1);
+    }
+
+    /**
+     * Chuẩn hóa và tự phục hồi 4 slot skill đệ tử.
+     * Slot 1 luôn có skill theo đúng hành tinh của đệ.
+     * Slot 2/3/4 chỉ mở khi đạt đúng mốc sức mạnh.
+     */
+    public void repairSkillSlots() {
+        if (this.playerSkill == null || this.playerSkill.skills == null) {
+            return;
+        }
+
+        while (this.playerSkill.skills.size() < 4) {
+            this.playerSkill.skills.add(SkillUtil.createEmptySkill());
+        }
+        while (this.playerSkill.skills.size() > 4) {
+            this.playerSkill.skills.remove(this.playerSkill.skills.size() - 1);
+        }
+
+        if (isInvalidPetSkill(this.playerSkill.skills.get(0))) {
+            Skill firstSkill = createFirstPetSkill();
+            if (!isInvalidPetSkill(firstSkill)) {
+                this.playerSkill.skills.set(0, firstSkill);
             }
         }
+
+        if (this.nPoint.power >= 150_000_000L
+                && isInvalidPetSkill(this.playerSkill.skills.get(1))) {
+            openSkill2();
+        }
+        if (this.nPoint.power >= 1_500_000_000L
+                && isInvalidPetSkill(this.playerSkill.skills.get(2))) {
+            openSkill3();
+        }
+        if (this.nPoint.power >= 20_000_000_000L
+                && isInvalidPetSkill(this.playerSkill.skills.get(3))) {
+            openSkill4();
+        }
+    }
+
+    private void updatePower() {
+        repairSkillSlots();
     }
 
     public void openSkill2() {

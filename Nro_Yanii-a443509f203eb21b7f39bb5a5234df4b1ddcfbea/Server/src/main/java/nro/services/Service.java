@@ -2016,42 +2016,8 @@ public class Service {
                 msg.writer().writeShort(pl.pet.nPoint.maxStamina); // stamina full
                 msg.writer().writeByte(pl.pet.nPoint.crit); // crit
                 msg.writer().writeShort(pl.pet.nPoint.def); // def
-                // Bảo đảm đúng 4 slot skill đệ trước khi gửi client.
-                // Slot đầu luôn phải là skill hợp lệ; các slot sau mở theo mốc sức mạnh.
-                while (pl.pet.playerSkill.skills.size() < 4) {
-                    pl.pet.playerSkill.skills.add(SkillUtil.createEmptySkill());
-                }
-                while (pl.pet.playerSkill.skills.size() > 4) {
-                    pl.pet.playerSkill.skills.remove(pl.pet.playerSkill.skills.size() - 1);
-                }
-
-                Skill firstPetSkill = pl.pet.playerSkill.skills.get(0);
-                if (firstPetSkill == null || firstPetSkill.skillId == -1
-                        || firstPetSkill.template == null || firstPetSkill.template.id < 0) {
-                    pl.pet.playerSkill.skills.set(0,
-                            SkillUtil.createSkill(Util.nextInt(0, 2) * 2, 1));
-                }
-
-                Skill secondPetSkill = pl.pet.playerSkill.skills.get(1);
-                if (pl.pet.nPoint.power >= 150_000_000L
-                        && (secondPetSkill == null || secondPetSkill.skillId == -1
-                        || secondPetSkill.template == null || secondPetSkill.template.id < 0)) {
-                    pl.pet.openSkill2();
-                }
-
-                Skill thirdPetSkill = pl.pet.playerSkill.skills.get(2);
-                if (pl.pet.nPoint.power >= 1_500_000_000L
-                        && (thirdPetSkill == null || thirdPetSkill.skillId == -1
-                        || thirdPetSkill.template == null || thirdPetSkill.template.id < 0)) {
-                    pl.pet.openSkill3();
-                }
-
-                Skill fourthPetSkill = pl.pet.playerSkill.skills.get(3);
-                if (pl.pet.nPoint.power >= 20_000_000_000L
-                        && (fourthPetSkill == null || fourthPetSkill.skillId == -1
-                        || fourthPetSkill.template == null || fourthPetSkill.template.id < 0)) {
-                    pl.pet.openSkill4();
-                }
+                // Tự phục hồi skill đệ trước khi gửi thông tin cho client.
+                pl.pet.repairSkillSlots();
 
                 msg.writer().writeByte(4); // count pet skill
                 for (int i = 0; i < 4; i++) {
