@@ -15,24 +15,14 @@ import java.util.List;
  */
 public class SkillUtil {
 
-    public static SkillTemplate findSkillTemplate(int tempId) {
-        try {
-            if (Manager.NCLASS == null || Manager.NCLASS.isEmpty()) {
-                return null;
-            }
-            for (int i = 0; i < Manager.NCLASS.size(); i++) {
-                NClass nClass = Manager.NCLASS.get(i);
-                if (nClass == null) {
-                    continue;
-                }
-                SkillTemplate template = nClass.getSkillTemplate(tempId);
-                if (template != null) {
-                    return template;
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        return null;
+    private final static NClass nClassTD;
+    private final static NClass nClassNM;
+    private final static NClass nClassXD;
+
+    static {
+        nClassTD = Manager.NCLASS.get(0);
+        nClassNM = Manager.NCLASS.get(1);
+        nClassXD = Manager.NCLASS.get(2);
     }
 
     public static int getTimeBienHinh(boolean lastLevel, int coolDown) { // thời gian biến hình
@@ -41,33 +31,20 @@ public class SkillUtil {
     }
 
     public static Skill createSkill(int tempId, int level) {
-        SkillTemplate template = findSkillTemplate(tempId);
-        if (template == null) {
-            Skill skill = createSkillLevel0(tempId);
-            skill.point = level;
-            return skill;
+        Skill skill = null;
+        try {
+            skill = nClassTD.getSkillTemplate(tempId).skillss.get(level - 1);
+        } catch (Exception e) {
+            try {
+                skill = nClassNM.getSkillTemplate(tempId).skillss.get(level - 1);
+            } catch (Exception ex) {
+                skill = nClassXD.getSkillTemplate(tempId).skillss.get(level - 1);
+            }
         }
-        if (level <= 0 || template.skillss == null || level > template.skillss.size()) {
-            Skill skill = createSkillLevel0(tempId);
-            skill.point = level;
-            return skill;
+        if (skill.template.id >= 24) {
+            return new SkillNotFocus(skill);
         }
-        Skill source = template.skillss.get(level - 1);
-        if (source == null) {
-            Skill skill = createSkillLevel0(tempId);
-            skill.point = level;
-            return skill;
-        }
-        Skill skill;
-        if ((source.template != null && source.template.id >= 24) || template.id >= 24) {
-            skill = new SkillNotFocus(source);
-        } else {
-            skill = new Skill(source);
-        }
-        if (skill.template == null) {
-            skill.template = template;
-        }
-        return skill;
+        return new Skill(skill);
     }
 
     public static Skill createEmptySkill() {
@@ -211,30 +188,22 @@ public class SkillUtil {
     }
 
     public static boolean upSkillPet(List<Skill> skills, int index) {
-        if (skills == null || index < 0 || index >= skills.size()) {
-            return false;
-        }
-        Skill currentSkill = skills.get(index);
-        if (currentSkill == null || currentSkill.template == null) {
-            return false;
-        }
-        int tempId = currentSkill.template.id;
-        int level = currentSkill.point + 1;
+        int tempId = skills.get(index).template.id;
+        int level = skills.get(index).point + 1;
         if (level > 7) {
             return false;
         }
-        SkillTemplate template = findSkillTemplate(tempId);
-        if (template == null || template.skillss == null || level <= 0 || level > template.skillss.size()) {
-            return false;
+        Skill skill = null;
+        try {
+            skill = nClassTD.getSkillTemplate(tempId).skillss.get(level - 1);
+        } catch (Exception e) {
+            try {
+                skill = nClassNM.getSkillTemplate(tempId).skillss.get(level - 1);
+            } catch (Exception ex) {
+                skill = nClassXD.getSkillTemplate(tempId).skillss.get(level - 1);
+            }
         }
-        Skill source = template.skillss.get(level - 1);
-        if (source == null) {
-            return false;
-        }
-        Skill skill = new Skill(source);
-        if (skill.template == null) {
-            skill.template = template;
-        }
+        skill = new Skill(skill);
         if (index == 1) {
             skill.coolDown = 1000;
         }
