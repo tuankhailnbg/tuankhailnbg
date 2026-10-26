@@ -437,10 +437,10 @@ public class PetService {
         for (int i = 0; i < 6; i++) {
             pet.inventory.itemsBody.add(ItemService.gI().createItemNull());
         }
-        pet.playerSkill.skills.add(SkillUtil.createSkill(Util.nextInt(0, 2) * 2, 1));
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 4; i++) {
             pet.playerSkill.skills.add(SkillUtil.createEmptySkill());
         }
+        pet.repairSkillSlots();
         pet.nPoint.initPowerLimit();
         pet.nPoint.calPoint();
         pet.nPoint.setFullHpMp();
