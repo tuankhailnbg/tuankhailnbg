@@ -205,15 +205,10 @@ public class Blackgoku extends Boss {
 
     @Override
     public void joinMap() {
-        if (this.zone == null) {
-            this.zone = getMapCanJoin(mapJoin[Util.nextInt(0, mapJoin.length - 1)]);
-        }
-        if (this.zone != null) {
-            this.nPoint.setFullHpMp();
-            int x = Util.nextInt(50, this.zone.map.mapWidth - 50);
-            ChangeMapService.gI().changeMap(this, this.zone, x, this.zone.map.yPhysicInTop(x, 0));
-            ServerNotify.gI().notify("Boss " + this.name + " vừa xuất hiện tại " + this.zone.map.mapName + "");
-        }
+        this.zone = getMapCanJoin(mapJoin[Util.nextInt(0, mapJoin.length - 1)]);
+        int x = Util.nextInt(50, this.zone.map.mapWidth - 50);
+        ChangeMapService.gI().changeMap(this, this.zone, x, this.zone.map.yPhysicInTop(x, 0));
+        ServerNotify.gI().notify("Boss " + this.name + " vừa xuất hiện tại " + this.zone.map.mapName + "");
     }
 
     @Override
@@ -225,7 +220,6 @@ public class Blackgoku extends Boss {
     public void leaveMap() {
         Boss Superblackgoku = BossFactory.createBoss(BossFactory.SUPERBLACKGOKU);
         Superblackgoku.zone = this.zone;
-        Superblackgoku.secondTimeRestToNextTimeAppear = 0;
         this.setJustRestToFuture();
         super.leaveMap();
     }
