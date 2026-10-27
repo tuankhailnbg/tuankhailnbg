@@ -414,7 +414,7 @@ public class PetService {
                 : isBulo ? "Black Super Saiyan 5"
                         : isCellBao ? "Gogeta Ssj4"
                                 : isBillNhi ? "Bill Nhí"
-                                        : isFideTrau ? "Fide Trẩu" : isSuperPicolo ? "Super Picolo" : "Đệ tử");
+                                        : isFideTrau ? "Fide Trẩu" : isSuperPicolo ? "Black Goku Rose" : "Đệ tử");
         pet.gender = (gender != null && gender.length != 0) ? gender[0] : (byte) Util.nextInt(0, 2);
         pet.id = -player.id;
         pet.nPoint.power = isMabu ? 1500000
