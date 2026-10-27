@@ -366,7 +366,7 @@ public class GodGK {
                                             Integer.parseInt(String.valueOf(opt.get(1)))));
                                 }
                                 ItemService.gI().normalizeDivineBaseOptions(item);
-                            item.createTime = Long.parseLong(String.valueOf(dataObject.get("create_time")));
+                                item.createTime = Long.parseLong(String.valueOf(dataObject.get("create_time")));
                                 if (ItemService.gI().isOutOfDateTime(item)) {
                                     item = ItemService.gI().createItemNull();
                                 }
