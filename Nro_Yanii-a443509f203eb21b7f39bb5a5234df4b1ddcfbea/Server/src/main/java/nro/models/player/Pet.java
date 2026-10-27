@@ -623,6 +623,8 @@ public class Pet extends Player {
             return 1378;
         } else if (this.isFideTrau) {
             return 1381;
+        } else if (this.isSuperPicolo) {
+            return 1440;
         } else if (inventory.itemsBody.get(5).isNotNullItem()) {
             CaiTrang ct = Manager.gI().getCaiTrangByItemId(inventory.itemsBody.get(5).template.id);
             if (ct != null) {
@@ -654,6 +656,8 @@ public class Pet extends Player {
             return 1379;
         } else if (this.isFideTrau) {
             return 1382;
+        } else if (this.isSuperPicolo) {
+            return 1438;
         } else if (inventory.itemsBody.get(5).isNotNullItem()) {
             CaiTrang ct = Manager.gI().getCaiTrangByItemId(inventory.itemsBody.get(5).template.id);
             if (ct != null && ct.getID()[1] != -1) {
@@ -688,6 +692,8 @@ public class Pet extends Player {
             return 1380;
         } else if (this.isFideTrau) {
             return 1383;
+        } else if (this.isSuperPicolo) {
+            return 1439;
         } else if (inventory.itemsBody.get(5).isNotNullItem()) {
             CaiTrang ct = Manager.gI().getCaiTrangByItemId(inventory.itemsBody.get(5).template.id);
             if (ct != null && ct.getID()[2] != -1) {
