@@ -34,8 +34,10 @@ public class DoiVND {
         PlayerDAO.subVndBar(player, vND);
 
         InventoryService.gI().sendItemBags(player);
-        Service.gI().sendThongBao(player, "Bạn nhận được " + phanQua.template.name);
         Service.getInstance().sendMoney(player);
+        Service.gI().sendThongBao(player,
+                "Bạn nhận được " + phanQua.template.name
+                        + "\nSố dư còn lại: " + nro.utils.Util.numberToMoney(player.soDuVND) + " VNĐ");
     }
 
     /**

@@ -991,8 +991,8 @@ public class NpcFactory {
                                     this.createOtherMenu(player, ConstNpc.BASE_MENU,
                                             "|7|Thành công là một hành trình, không phải là đích đến.\n"
                                                     + "|7|-----Nro Yanii-----\n"
-                                                    + "|5|Số dư: " + player.soDuVND + " VNĐ\n"
-                                                    + "|5|Hồng Ngọc: " + player.inventory.ruby,
+                                                    + "|5|Số dư: " + Util.numberToMoney(player.soDuVND) + " VNĐ\n"
+                                                    + "|5|Hồng Ngọc: " + Util.numberToMoney(player.inventory.ruby),
                                             "Đổi\n Thỏi Vàng", "Đổi \n Hồng Ngọc",
                                             "Mua Đệ\nTử VIP", "Từ chối");
                                 }
