@@ -991,9 +991,10 @@ public class NpcFactory {
                                     this.createOtherMenu(player, ConstNpc.BASE_MENU,
                                             "|7|Thành công là một hành trình, không phải là đích đến.\n"
                                                     + "|7|-----Nro Yanii-----\n"
-                                                    + "|5|Số Dư Hiện Tại Của Bạn là: " + player.soDuVND + " VNĐ",
+                                                    + "|5|Số dư: " + player.soDuVND + " VNĐ\n"
+                                                    + "|5|Hồng Ngọc: " + player.inventory.ruby,
                                             "Đổi\n Thỏi Vàng", "Đổi \n Hồng Ngọc",
-                                            "Mua Đệ Tử", "Từ chối");
+                                            "Mua Đệ\nTử VIP", "Từ chối");
                                 }
                             }
                         }
@@ -1007,21 +1008,57 @@ public class NpcFactory {
                                             Input.gI().createFormDoiThoiVang(player);
                                         case 1 ->
                                             Input.gI().createFormDoiHongNgoc(player);
-                                        case 2 -> {
-                                            this.createOtherMenu(player, 2,
-                                                    "|7|Đừng sợ bắt đầu lại. Đôi khi, đó là cơ hội để xây lại tốt hơn.\n"
-                                                            + "|7|-----Nro Yanii-----\n"
-                                                            + "|5|Số Dư Hiện Tại Của Bạn là: " + player.soDuVND
-                                                            + " VNĐ",
-                                                    "Đổi Đệ\n100K", "Đổi Đệ\n200k");
-                                        }
+                                        case 2 ->
+                                            this.createOtherMenu(player, ConstNpc.MENU_DE_TU_VIP,
+                                                    "|7|SHOP ĐỆ TỬ VIP\n"
+                                                            + "|5|1.000 Hồng Ngọc = 1K số dư\n"
+                                                            + "|1|VIP 50K: +10% chỉ số đệ khi hợp thể\n"
+                                                            + "|1|VIP 100K: +15% chỉ số đệ khi hợp thể\n"
+                                                            + "|1|VIP 150K: +20% chỉ số đệ khi hợp thể\n"
+                                                            + "|3|Mabư: +5% chỉ số đệ khi hợp thể",
+                                                    "VIP 50K\nKid Bill",
+                                                    "VIP 100K\nKid Fide",
+                                                    "VIP 150K\nBlack Rose",
+                                                    "Đóng");
                                     }
-                                } else if (player.iDMark.getIndexMenu() == 2) {
+                                } else if (player.iDMark.getIndexMenu() == ConstNpc.MENU_DE_TU_VIP) {
                                     switch (select) {
                                         case 0 ->
-                                            DoiVND.MuaDeTu(player, 100000, 1400);
+                                            this.createOtherMenu(player, ConstNpc.MENU_DE_TU_VIP_50K,
+                                                    "|7|Đệ VIP Kid Bill\n"
+                                                            + "|1|Giá: 50K số dư hoặc 50.000 Hồng Ngọc\n"
+                                                            + "|1|Hợp thể: +10% HP, KI và Sức Đánh của đệ",
+                                                    "Số dư\n50K", "Hồng Ngọc\n50.000", "Quay lại");
                                         case 1 ->
-                                            DoiVND.MuaDeTu(player, 200000, 1401);
+                                            this.createOtherMenu(player, ConstNpc.MENU_DE_TU_VIP_100K,
+                                                    "|7|Đệ VIP Kid Fide\n"
+                                                            + "|1|Giá: 100K số dư hoặc 100.000 Hồng Ngọc\n"
+                                                            + "|1|Hợp thể: +15% HP, KI và Sức Đánh của đệ",
+                                                    "Số dư\n100K", "Hồng Ngọc\n100.000", "Quay lại");
+                                        case 2 ->
+                                            this.createOtherMenu(player, ConstNpc.MENU_DE_TU_VIP_150K,
+                                                    "|7|Đệ VIP Black Goku Rose\n"
+                                                            + "|1|Giá: 150K số dư hoặc 150.000 Hồng Ngọc\n"
+                                                            + "|1|Hợp thể: +20% HP, KI và Sức Đánh của đệ",
+                                                    "Số dư\n150K", "Hồng Ngọc\n150.000", "Quay lại");
+                                    }
+                                } else if (player.iDMark.getIndexMenu() == ConstNpc.MENU_DE_TU_VIP_50K) {
+                                    switch (select) {
+                                        case 0 -> DoiVND.MuaDeTuVip(player, 50_000, 2, DoiVND.PAY_BALANCE);
+                                        case 1 -> DoiVND.MuaDeTuVip(player, 50_000, 2, DoiVND.PAY_RUBY);
+                                        case 2 -> this.openBaseMenu(player);
+                                    }
+                                } else if (player.iDMark.getIndexMenu() == ConstNpc.MENU_DE_TU_VIP_100K) {
+                                    switch (select) {
+                                        case 0 -> DoiVND.MuaDeTuVip(player, 100_000, 3, DoiVND.PAY_BALANCE);
+                                        case 1 -> DoiVND.MuaDeTuVip(player, 100_000, 3, DoiVND.PAY_RUBY);
+                                        case 2 -> this.openBaseMenu(player);
+                                    }
+                                } else if (player.iDMark.getIndexMenu() == ConstNpc.MENU_DE_TU_VIP_150K) {
+                                    switch (select) {
+                                        case 0 -> DoiVND.MuaDeTuVip(player, 150_000, 4, DoiVND.PAY_BALANCE);
+                                        case 1 -> DoiVND.MuaDeTuVip(player, 150_000, 4, DoiVND.PAY_RUBY);
+                                        case 2 -> this.openBaseMenu(player);
                                     }
                                 }
                             }
