@@ -142,10 +142,6 @@ public class ItemService {
         item.quantity = quantity;
         item.createTime = System.currentTimeMillis();
 
-        if (item.template != null && tempId >= 555 && tempId <= 567) {
-            RewardService.gI().initBaseOptionClothes(item.template.id, item.template.type, item.itemOptions);
-        }
-
         item.content = item.getContent();
         item.info = item.getInfo();
         return item;
@@ -165,6 +161,104 @@ public class ItemService {
         Item item = createNewItem(itemMap.itemTemplate.id, itemMap.quantity);
         item.itemOptions = itemMap.options;
         return item;
+    }
+
+    /**
+     * Sửa dữ liệu đồ Thần 555-567 từng bị cộng lặp option cơ bản khi load DB.
+     * Giữ lại lần xuất hiện cuối cùng của mỗi option cơ bản để bảo toàn bộ chỉ số
+     * gốc đã lưu trước đó; chỉ bổ sung option còn thiếu nếu item thật sự bị trắng.
+     */
+    public void normalizeDivineBaseOptions(Item item) {
+        if (item == null || item.template == null
+                || item.template.id < 555 || item.template.id > 567
+                || item.itemOptions == null) {
+            return;
+        }
+
+        int[] requiredOptionIds;
+        switch (item.template.id) {
+            case 555:
+            case 557:
+            case 559:
+                requiredOptionIds = new int[] {47, 21}; // giáp, yêu cầu sức mạnh
+                break;
+            case 556:
+            case 558:
+            case 560:
+                requiredOptionIds = new int[] {22, 27, 21}; // HP, hồi HP, yêu cầu sức mạnh
+                break;
+            case 562:
+            case 564:
+            case 566:
+                requiredOptionIds = new int[] {0, 21}; // sức đánh, yêu cầu sức mạnh
+                break;
+            case 563:
+            case 565:
+            case 567:
+                requiredOptionIds = new int[] {23, 28, 21}; // KI, hồi KI, yêu cầu sức mạnh
+                break;
+            case 561:
+                requiredOptionIds = new int[] {14, 21}; // chí mạng, yêu cầu sức mạnh
+                break;
+            default:
+                return;
+        }
+
+        // Xóa các bản sao cũ, giữ lần xuất hiện cuối cùng của mỗi option cơ bản.
+        for (int optionId : requiredOptionIds) {
+            int lastIndex = -1;
+            for (int i = 0; i < item.itemOptions.size(); i++) {
+                ItemOption option = item.itemOptions.get(i);
+                if (option != null && option.optionTemplate != null
+                        && option.optionTemplate.id == optionId) {
+                    lastIndex = i;
+                }
+            }
+            if (lastIndex >= 0) {
+                for (int i = lastIndex - 1; i >= 0; i--) {
+                    ItemOption option = item.itemOptions.get(i);
+                    if (option != null && option.optionTemplate != null
+                            && option.optionTemplate.id == optionId) {
+                        item.itemOptions.remove(i);
+                        lastIndex--;
+                    }
+                }
+            }
+        }
+
+        // Nếu item cũ thật sự thiếu option cơ bản, chỉ bổ sung phần còn thiếu.
+        List<ItemOption> defaults = new ArrayList<>();
+        RewardService.gI().initBaseOptionClothes(
+                item.template.id, item.template.type, defaults);
+
+        for (ItemOption defaultOption : defaults) {
+            if (defaultOption == null || defaultOption.optionTemplate == null) {
+                continue;
+            }
+
+            boolean required = false;
+            for (int optionId : requiredOptionIds) {
+                if (defaultOption.optionTemplate.id == optionId) {
+                    required = true;
+                    break;
+                }
+            }
+            if (!required) {
+                continue;
+            }
+
+            boolean exists = false;
+            for (ItemOption current : item.itemOptions) {
+                if (current != null && current.optionTemplate != null
+                        && current.optionTemplate.id == defaultOption.optionTemplate.id) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                item.itemOptions.add(new ItemOption(defaultOption));
+            }
+        }
     }
 
     public ItemOptionTemplate getItemOptionTemplate(int id) {
