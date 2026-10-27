@@ -354,24 +354,6 @@ public class RewardService {
             }
         }
 
-        // Roi Do Than Linh chinh xac 0.001% (1/100.000) tai map Cold cho quai thuong
-        if (player != null && mob != null && isColdMap(mobMapId)
-                && mob.tempId != ConstMob.MOC_NHAN
-                && mob.tempId != ConstMob.HIRUDEGARN
-                && mob.tempId != ConstMob.VUA_BACH_TUOC
-                && mob.tempId != ConstMob.ROBOT_BAO_VE
-                && !(mob instanceof BigBoss)) {
-            Player killer = player.isPet ? ((Pet) player).master : player;
-            if (killer != null && !killer.isBoss) {
-                if (ThreadLocalRandom.current().nextInt(100_000) == 0) {
-                    ItemMap thanLinh = dropOneItemThanLinh(mob.zone, x, yEnd, killer);
-                    if (thanLinh != null) {
-                        list.add(thanLinh);
-                    }
-                }
-            }
-        }
-
         MobReward mobReward = getMobReward(mob);
         if (mobReward != null) {
             int itemSize = mobReward.itemRewards.size();
@@ -393,9 +375,7 @@ public class RewardService {
                     }
                 }
                 if (inMap) {
-                    if (isColdMap(mob.zone.map.mapId) && ir.tempId >= 555 && ir.tempId <= 567) {
-                        // Bo qua do than linh tu file cau hinh cu tai map Cold vi da ap dung ty le 0.001% doc lap o tren
-                    } else if (ir.forAllGender || ItemService.gI().getTemplate(ir.tempId).gender == player.gender
+                    if (ir.forAllGender || ItemService.gI().getTemplate(ir.tempId).gender == player.gender
                             || ItemService.gI().getTemplate(ir.tempId).gender > 2) {
 
                         if (Util.isTrue(ir.ratio, ir.typeRatio)) {
