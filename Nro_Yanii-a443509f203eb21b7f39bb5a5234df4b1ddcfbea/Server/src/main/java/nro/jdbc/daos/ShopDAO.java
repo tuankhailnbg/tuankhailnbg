@@ -101,6 +101,7 @@ public class ShopDAO {
                 }
                 // thay đổi vật phẩm trong shop
                 loadItemShopOption(con, itemShop);
+                applySantaSpecialCostumeConfig(itemShop);
                 tabShop.itemShops.add(itemShop);
             }
             try {
@@ -115,6 +116,92 @@ public class ShopDAO {
             }
         } catch (Exception e) {
             Log.error(ShopDAO.class, e);
+        }
+    }
+
+    /**
+     * Cấu hình cố định các cải trang ở cửa hàng đặc biệt của Santa.
+     * Override lúc load để VPS chỉ cần pull/build, không phải sửa DB thủ công.
+     */
+    private static void applySantaSpecialCostumeConfig(ItemShop itemShop) {
+        if (itemShop == null || itemShop.temp == null) {
+            return;
+        }
+
+        int exchangeItem = -1;
+        int exchangeCost = 0;
+        int[][] options = null;
+
+        switch (itemShop.temp.id) {
+            case 2147: // Black Super Saiyan 5
+                exchangeItem = 861; // Hồng ngọc
+                exchangeCost = 100_000;
+                options = new int[][] {
+                        {77, 30}, {103, 30}, {50, 30},
+                        {101, 40}, {5, 25}, {14, 10}, {106, 0}
+                };
+                break;
+            case 2145: // Black Goku
+                exchangeItem = 861;
+                exchangeCost = 75_000;
+                options = new int[][] {
+                        {77, 28}, {103, 28}, {50, 28},
+                        {101, 30}, {5, 25}, {14, 8}, {106, 0}
+                };
+                break;
+            case 2125: // Android 21
+                exchangeItem = 861;
+                exchangeCost = 100_000;
+                options = new int[][] {
+                        {77, 35}, {103, 30}, {50, 25},
+                        {101, 40}, {5, 25}, {14, 10}, {106, 0}
+                };
+                break;
+            case 2142: // Gogeta SSJ4
+                exchangeItem = 861;
+                exchangeCost = 100_000;
+                options = new int[][] {
+                        {77, 25}, {103, 30}, {50, 35},
+                        {101, 40}, {5, 25}, {14, 10}, {106, 0}
+                };
+                break;
+            case 2134: // Gohan
+                exchangeItem = 861;
+                exchangeCost = 50_000;
+                options = new int[][] {
+                        {77, 26}, {103, 26}, {50, 26},
+                        {101, 25}, {5, 20}, {14, 5}, {106, 0}
+                };
+                break;
+            case 2128: // Goten
+                exchangeItem = 861;
+                exchangeCost = 25_000;
+                options = new int[][] {
+                        {77, 24}, {103, 24}, {50, 24},
+                        {101, 20}, {106, 0}
+                };
+                break;
+            case 2117: // Goku Ultra
+                exchangeItem = 457; // Thỏi vàng
+                exchangeCost = 3_000;
+                options = new int[][] {
+                        {77, 22}, {103, 22}, {50, 22},
+                        {101, 15}, {106, 0}
+                };
+                break;
+            default:
+                return;
+        }
+
+        itemShop.itemExchange = exchangeItem;
+        itemShop.costSpec = exchangeCost;
+        if (ItemService.gI().getTemplate(exchangeItem) != null) {
+            itemShop.iconSpec = ItemService.gI().getTemplate(exchangeItem).iconID;
+        }
+
+        itemShop.options.clear();
+        for (int[] option : options) {
+            itemShop.options.add(new ItemOption(option[0], option[1]));
         }
     }
 
