@@ -103,6 +103,7 @@ public class GiftService {
                         int param = obj.getInt("param");
                         item.itemOptions.add(new ItemOption(optionID, param));
                     }
+                    ItemService.gI().normalizeDivineBaseOptions(item);
                     item.createTime = System.currentTimeMillis();
                     InventoryService.gI().addItemBag(player, item, 0);
                     sb.append(String.format("|2|%s %s", Util.numberToMoney(quantity), item.template.name)).append("\b");
