@@ -20,12 +20,14 @@ public class DoiVND {
         }
         Item phanQua = ItemService.gI().createNewItem((short) iD);
         InventoryService.gI().addItemBag(player, phanQua, 999);
+        // subVndBar đã tự trừ player.soDuVND và đồng bộ session.
         PlayerDAO.subVndBar(player, vND);
-        player.soDuVND -= vND;
 
         InventoryService.gI().sendItemBags(player);
-        Service.gI().sendThongBao(player, "Bạn nhận được " + phanQua.template.name);
-        InventoryService.gI().sendItemBags(player);
+        Service.getInstance().sendMoney(player);
+        Service.gI().sendThongBao(player,
+                "Bạn nhận được " + phanQua.template.name
+                        + "\nSố dư còn lại: " + nro.utils.Util.numberToMoney(player.soDuVND) + " VNĐ");
     }
 
 }
