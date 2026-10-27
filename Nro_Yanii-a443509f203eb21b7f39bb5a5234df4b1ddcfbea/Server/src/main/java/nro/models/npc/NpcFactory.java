@@ -991,7 +991,8 @@ public class NpcFactory {
                                     this.createOtherMenu(player, ConstNpc.BASE_MENU,
                                             "|7|Thành công là một hành trình, không phải là đích đến.\n"
                                                     + "|7|-----Nro Yanii-----\n"
-                                                    + "|5|Số Dư Hiện Tại Của Bạn là: " + player.soDuVND + " VNĐ",
+                                                    + "|5|Số Dư Hiện Tại Của Bạn là: "
+                                                    + Util.numberToMoney(player.soDuVND) + " VNĐ",
                                             "Đổi\n Thỏi Vàng", "Đổi \n Hồng Ngọc",
                                             "Mua Đệ Tử", "Từ chối");
                                 }
@@ -1011,8 +1012,8 @@ public class NpcFactory {
                                             this.createOtherMenu(player, 2,
                                                     "|7|Đừng sợ bắt đầu lại. Đôi khi, đó là cơ hội để xây lại tốt hơn.\n"
                                                             + "|7|-----Nro Yanii-----\n"
-                                                            + "|5|Số Dư Hiện Tại Của Bạn là: " + player.soDuVND
-                                                            + " VNĐ",
+                                                            + "|5|Số Dư Hiện Tại Của Bạn là: "
+                                                            + Util.numberToMoney(player.soDuVND) + " VNĐ",
                                                     "Đổi Đệ\n100K", "Đổi Đệ\n200k");
                                         }
                                     }
