@@ -35,12 +35,12 @@ public class ConstNpc {
                         + "\b1) Giữ ngọc sao đen trên người hơn 5 phút liên tục"
                         + "\b2) Sau 30 phút tham gia tàu sẽ đón về và đang giữ ngọc sao đen trên người\n"
                         + "Các phần thưởng như sau"
-                        + "\b1 sao đen: +24% sức đánh gốc"
-                        + "\b2 sao đen: +40% HP"
-                        + "\b3 sao đen: +40% KI"
-                        + "\b4 sao đen: +10% Chí mạng"
-                        + "\b5 sao đen: +16% giáp"
-                        + "\b6 sao đen: +16% né đòn"
+                        + "\b1 sao đen: +12% sức đánh gốc"
+                        + "\b2 sao đen: +20% HP"
+                        + "\b3 sao đen: +20% KI"
+                        + "\b4 sao đen: +5% Chí mạng"
+                        + "\b5 sao đen: +8% giáp"
+                        + "\b6 sao đen: +8% né đòn"
                         + "\b7 sao đen: Mỗi giờ 2 thỏi vàng"
                         + "\b Các phần thưởng mỗi giờ đến ta để nhận nhé";
 
