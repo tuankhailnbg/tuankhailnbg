@@ -1478,6 +1478,7 @@ public class RewardService {
                     }
                     it.itemOptions.add(new ItemOption(io.itemOption.optionTemplate.id, param));
                 }
+                ItemService.gI().normalizeDivineBaseOptions(it);
                 list.add(it);
             } else {
                 Item it = ItemService.gI().createNewItem((short) 189, Util.nextInt(5, 50) * 1000);
