@@ -546,6 +546,30 @@ public class NPoint {
         }
     }
 
+    private int getPetFusionBonusPercent() {
+        if (!this.player.isPet) {
+            return 0;
+        }
+        Pet pet = (Pet) this.player;
+        if (pet.master == null || pet.master.fusion == null
+                || pet.master.fusion.typeFusion == ConstPlayer.NON_FUSION) {
+            return 0;
+        }
+        if (pet.isMabu) {
+            return 5;
+        }
+        if (pet.isBillNhi) {
+            return 10;
+        }
+        if (pet.isFideTrau) {
+            return 15;
+        }
+        if (pet.isSuperPicolo) {
+            return 20;
+        }
+        return 0;
+    }
+
     private void setHpMax() {
         long hp = (long) this.hpg + this.hpAdd;
         // đồ
@@ -599,59 +623,9 @@ public class NPoint {
                 hp += calPercent(hp, percent);
             }
         }
-        /// bông tai cấp 2
-        if (this.player.isPet && ((Pet) this.player).isMabu
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            hp += calPercent(hp, 10);
-        }
-        /// Đệ vip
-        if (this.player.isPet && ((Pet) this.player).isBulo
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            hp += calPercent(hp, 20);
-        }
-        if (this.player.isPet && ((Pet) this.player).isCellBao
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            hp += calPercent(hp, 40);
-        }
-        if (this.player.isPet && ((Pet) this.player).isBillNhi
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            hp += calPercent(hp, 30);
-        }
-        if (this.player.isPet && ((Pet) this.player).isFideTrau
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            hp += calPercent(hp, 30);
-        }
-        /// end
-        // bông tai cấp 1
-        if (this.player.isPet && ((Pet) this.player).isMabu
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            hp += calPercent(hp, 10);
-        }
-        if (this.player.isPet && ((Pet) this.player).isBulo
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            hp += calPercent(hp, 20);
-        }
-        if (this.player.isPet && ((Pet) this.player).isCellBao
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            hp += calPercent(hp, 40);
-        }
-        if (this.player.isPet && ((Pet) this.player).isBillNhi
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            hp += calPercent(hp, 30);
-        }
-        if (this.player.isPet && ((Pet) this.player).isFideTrau
-                && ((Pet) this.player).master != null && ((Pet) this.player).master.fusion != null
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            hp += calPercent(hp, 30);
+        int petFusionBonus = getPetFusionBonusPercent();
+        if (petFusionBonus > 0) {
+            hp += calPercent(hp, petFusionBonus);
         }
         // phù
         if (this.player.zone != null && this.player.zone.map != null
@@ -762,48 +736,9 @@ public class NPoint {
         if (player.DH5) {
             this.mpMax += calPercent(this.mpMax, player.ChiSoKI_5);
         }
-        // pet mabư
-        if (this.player.isPet && ((Pet) this.player).isMabu
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            this.mpMax += calPercent(this.mpMax, 10);
-        }
-        /// đệ vip
-        if (this.player.isPet && ((Pet) this.player).isBulo
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            this.mpMax += calPercent(this.mpMax, 20);
-        }
-        if (this.player.isPet && ((Pet) this.player).isCellBao
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            this.mpMax += calPercent(this.mpMax, 40);
-        }
-        if (this.player.isPet && ((Pet) this.player).isBillNhi
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            this.mpMax += calPercent(this.mpMax, 30);
-        }
-        if (this.player.isPet && ((Pet) this.player).isFideTrau
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            this.mpMax += calPercent(this.mpMax, 30);
-        }
-        /// end
-        if (this.player.isPet && ((Pet) this.player).isMabu
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            this.mpMax += calPercent(this.mpMax, 10);
-        }
-        if (this.player.isPet && ((Pet) this.player).isBulo
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            this.mpMax += calPercent(this.mpMax, 20);
-        }
-        if (this.player.isPet && ((Pet) this.player).isCellBao
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            this.mpMax += calPercent(this.mpMax, 40);
-        }
-        if (this.player.isPet && ((Pet) this.player).isBillNhi
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            this.mpMax += calPercent(this.mpMax, 30);
-        }
-        if (this.player.isPet && ((Pet) this.player).isFideTrau
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            this.mpMax += calPercent(this.mpMax, 30);
+        int petFusionBonus = getPetFusionBonusPercent();
+        if (petFusionBonus > 0) {
+            this.mpMax += calPercent(this.mpMax, petFusionBonus);
         }
         // hợp thể
         if (this.player.fusion.typeFusion != 0) {
@@ -897,48 +832,9 @@ public class NPoint {
                 this.dame += calPercent(this.dame, percent);
             }
         }
-        // pet mabư
-        if (this.player.isPet && ((Pet) this.player).isMabu
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            this.dame += calPercent(this.dame, 10);
-        }
-        if (this.player.isPet && ((Pet) this.player).isBulo
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            this.dame += calPercent(this.dame, 20);
-        }
-        if (this.player.isPet && ((Pet) this.player).isCellBao
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            this.dame += calPercent(this.dame, 40);
-        }
-        if (this.player.isPet && ((Pet) this.player).isBillNhi
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            this.dame += calPercent(this.dame, 30);
-        }
-        if (this.player.isPet && ((Pet) this.player).isFideTrau
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA2) {
-            this.dame += calPercent(this.dame, 30);
-        }
-        // end
-        /// bong tai 1
-        if (this.player.isPet && ((Pet) this.player).isMabu
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            this.dame += calPercent(this.dame, 10);
-        }
-        if (this.player.isPet && ((Pet) this.player).isBulo
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            this.dame += calPercent(this.dame, 20);
-        }
-        if (this.player.isPet && ((Pet) this.player).isCellBao
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            this.dame += calPercent(this.dame, 40);
-        }
-        if (this.player.isPet && ((Pet) this.player).isBillNhi
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            this.dame += calPercent(this.dame, 30);
-        }
-        if (this.player.isPet && ((Pet) this.player).isFideTrau
-                && ((Pet) this.player).master.fusion.typeFusion == ConstPlayer.HOP_THE_PORATA) {
-            this.dame += calPercent(this.dame, 30);
+        int petFusionBonus = getPetFusionBonusPercent();
+        if (petFusionBonus > 0) {
+            this.dame += calPercent(this.dame, petFusionBonus);
         }
         // thức ăn
         if (!this.player.isPet && this.player.itemTime.isEatMeal
