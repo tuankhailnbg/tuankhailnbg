@@ -45,6 +45,9 @@ public class ItemShop {
         this.gold = itemShop.gold;
         this.gem = itemShop.gem;
         this.isNew = itemShop.isNew;
+        this.iconSpec = itemShop.iconSpec;
+        this.costSpec = itemShop.costSpec;
+        this.itemExchange = itemShop.itemExchange;
         this.options = new ArrayList<>();
         for (ItemOption io : itemShop.options) {
             this.options.add(new ItemOption(io));
