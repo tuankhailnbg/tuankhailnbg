@@ -216,6 +216,10 @@ public class ConstNpc {
         public static final int MENU_MO_THANH_VIEN = 1009;
 
         public static final int MENU_MUA_DE = 1010;
+        public static final int MENU_DE_TU_VIP = 79100;
+        public static final int MENU_DE_TU_VIP_50K = 79101;
+        public static final int MENU_DE_TU_VIP_100K = 79102;
+        public static final int MENU_DE_TU_VIP_150K = 79103;
         public static final int MENU_QUA_MOC_NAP = 1011;
         // end index 3 ông già
         // index ly_tieu_nuong_54//
