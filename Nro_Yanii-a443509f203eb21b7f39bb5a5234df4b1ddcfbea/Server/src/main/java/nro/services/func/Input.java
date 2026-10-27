@@ -158,28 +158,49 @@ public class Input {
                     break;
                 case DOI_THOI_VANG:
                     try {
-                        int soVang = Integer.parseInt(text[0]);
-                        if (soVang <= 0) {
-                            Service.getInstance().sendThongBao(player, "Số thỏi vàng không hợp lệ");
+                        // Người chơi nhập số K muốn đổi.
+                        // Ví dụ: nhập 10 = 10.000 VNĐ = 1.000 Thỏi Vàng.
+                        int soK = Integer.parseInt(text[0].trim());
+                        if (soK <= 0) {
+                            Service.getInstance().sendThongBao(player, "Số K muốn đổi không hợp lệ");
                             return;
                         }
-                        int tongTien = soVang * 10;
+
+                        long tongTienLong = (long) soK * 1_000L;
+                        long soVangLong = (long) soK * 100L;
+                        if (tongTienLong > Integer.MAX_VALUE || soVangLong > Integer.MAX_VALUE) {
+                            Service.getInstance().sendThongBao(player, "Số lượng muốn đổi quá lớn");
+                            return;
+                        }
+
+                        int tongTien = (int) tongTienLong;
+                        int soVang = (int) soVangLong;
 
                         if (player.soDuVND < tongTien) {
-                            Service.getInstance().sendThongBao(player, "Bạn không đủ số Dư");
+                            Service.getInstance().sendThongBao(player,
+                                    "Bạn không đủ số dư. Cần " + Util.numberToMoney(tongTien) + " VNĐ");
                             return;
                         }
                         if (InventoryService.gI().getCountEmptyBag(player) <= 0) {
                             Service.getInstance().sendThongBao(player, "Cần 1 ô trống trong hành trang");
                             return;
                         }
-                        Item thoivang = ItemService.gI().createNewConsignmentItem((short) ConstItem.THOI_VANG, soVang);
+
+                        Item thoivang = ItemService.gI().createNewConsignmentItem(
+                                (short) ConstItem.THOI_VANG, soVang);
                         thoivang.itemOptions.add(new ItemOption(73, 0));
                         InventoryService.gI().addItemBag(player, thoivang, 99999);
+
+                        // subVndBar đã tự trừ player.soDuVND và đồng bộ session,
+                        // không được trừ player.soDuVND thêm lần nữa.
                         PlayerDAO.subVndBar(player, tongTien);
-                        player.soDuVND -= tongTien;
+
                         InventoryService.gI().sendItemBags(player);
-                        Service.getInstance().sendThongBao(player, "Bạn nhận được " + thoivang.getName());
+                        Service.getInstance().sendMoney(player);
+                        Service.getInstance().sendThongBao(player,
+                                "Đã đổi " + Util.numberToMoney(tongTien) + " VNĐ nhận "
+                                        + Util.numberToMoney(soVang) + " Thỏi Vàng.\n"
+                                        + "Số dư còn lại: " + Util.numberToMoney(player.soDuVND) + " VNĐ");
                     } catch (NumberFormatException e) {
                         Service.getInstance().sendThongBao(player, "Định dạng số không hợp lệ");
                     }
@@ -202,12 +223,17 @@ public class Input {
                             return;
                         }
                         player.inventory.ruby += tongTien;
+
+                        // subVndBar đã tự trừ player.soDuVND và đồng bộ session,
+                        // không được trừ player.soDuVND thêm lần nữa.
                         PlayerDAO.subVndBar(player, tongTien);
-                        player.soDuVND -= tongTien;
+
                         InventoryService.gI().sendItemBags(player);
                         Service.getInstance().sendMoney(player);
 
-                        Service.getInstance().sendThongBao(player, "Bạn nhận được " + tongTien + " Hồng Ngọc");
+                        Service.getInstance().sendThongBao(player,
+                                "Bạn nhận được " + Util.numberToMoney(tongTien) + " Hồng Ngọc.\n"
+                                        + "Số dư còn lại: " + Util.numberToMoney(player.soDuVND) + " VNĐ");
                     } catch (NumberFormatException e) {
                         Service.getInstance().sendThongBao(player, "Định dạng số không hợp lệ");
                     }
@@ -508,7 +534,9 @@ public class Input {
     }
 
     public void createFormDoiThoiVang(Player pl) {
-        createForm(pl, DOI_THOI_VANG, "1K VNĐ = 100 TV", new SubInput("Nhập Số TV Muốn Đổi", NUMERIC));
+        createForm(pl, DOI_THOI_VANG,
+                "1K VNĐ = 100 Thỏi Vàng\nVí dụ: nhập 10 = 10K = 1.000 Thỏi Vàng",
+                new SubInput("Nhập số K muốn đổi", NUMERIC));
     }
 
     public void createFormDoiHongNgoc(Player pl) {
