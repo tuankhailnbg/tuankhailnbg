@@ -333,8 +333,11 @@ public class ShopService {
                         }
                         msg.writer().writeByte(itemShop.isNew ? 1 : 0);
                         CaiTrang caiTrang = Manager.gI().getCaiTrangByItemId(itemShop.temp.id);
-                        msg.writer().writeByte(caiTrang != null ? 1 : 0);
-                        if (caiTrang != null) {
+                        // Goten/Goku Ultra từng làm client lỗi khi mở preview trong shop đặc biệt.
+                        // Chỉ tắt preview tại shop; skin thật khi mặc vẫn dùng bảng cai_trang bình thường.
+                        boolean safeCostumePreview = itemShop.temp.id != 2128 && itemShop.temp.id != 2117;
+                        msg.writer().writeByte(caiTrang != null && safeCostumePreview ? 1 : 0);
+                        if (caiTrang != null && safeCostumePreview) {
                             msg.writer().writeShort(caiTrang.getID()[0]);
                             msg.writer().writeShort(caiTrang.getID()[1]);
                             msg.writer().writeShort(caiTrang.getID()[2]);
