@@ -120,7 +120,8 @@ public class ShopDAO {
     }
 
     private static void applySantaSpecialCostumeConfig(ItemShop itemShop) {
-        if (itemShop == null || itemShop.temp == null) {
+        if (itemShop == null || itemShop.temp == null
+                || itemShop.tabShop == null || itemShop.tabShop.id != 13) {
             return;
         }
 
