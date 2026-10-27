@@ -49,6 +49,7 @@ public class ItemService {
 
             removeAndAddOptionTemplate(item.itemOptions, new ItemOption(io).optionTemplate.id);
         }
+        normalizeDivineBaseOptions(item);
         return item;
     }
 
@@ -160,6 +161,7 @@ public class ItemService {
     public Item createItemFromItemMap(ItemMap itemMap) {
         Item item = createNewItem(itemMap.itemTemplate.id, itemMap.quantity);
         item.itemOptions = itemMap.options;
+        normalizeDivineBaseOptions(item);
         return item;
     }
 
