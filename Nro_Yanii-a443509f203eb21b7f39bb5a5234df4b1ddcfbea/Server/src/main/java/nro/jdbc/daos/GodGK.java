@@ -334,6 +334,7 @@ public class GodGK {
                                 item.itemOptions.add(new ItemOption(Integer.parseInt(String.valueOf(opt.get(0))),
                                         Integer.parseInt(String.valueOf(opt.get(1)))));
                             }
+                            ItemService.gI().normalizeDivineBaseOptions(item);
                             item.createTime = Long.parseLong(String.valueOf(dataObject.get("create_time")));
                             if (ItemService.gI().isOutOfDateTime(item)) {
                                 item = ItemService.gI().createItemNull();
@@ -364,6 +365,7 @@ public class GodGK {
                                     item.itemOptions.add(new ItemOption(Integer.parseInt(String.valueOf(opt.get(0))),
                                             Integer.parseInt(String.valueOf(opt.get(1)))));
                                 }
+                                ItemService.gI().normalizeDivineBaseOptions(item);
                                 item.createTime = Long.parseLong(String.valueOf(dataObject.get("create_time")));
                                 if (ItemService.gI().isOutOfDateTime(item)) {
                                     item = ItemService.gI().createItemNull();
@@ -395,6 +397,7 @@ public class GodGK {
                                 item.itemOptions.add(new ItemOption(Integer.parseInt(String.valueOf(opt.get(0))),
                                         Integer.parseInt(String.valueOf(opt.get(1)))));
                             }
+                            ItemService.gI().normalizeDivineBaseOptions(item);
                             item.createTime = Long.parseLong(String.valueOf(dataObject.get("create_time")));
                             if (ItemService.gI().isOutOfDateTime(item)) {
                                 item = ItemService.gI().createItemNull();
@@ -423,6 +426,7 @@ public class GodGK {
                                 item.itemOptions.add(new ItemOption(Integer.parseInt(String.valueOf(opt.get(0))),
                                         Integer.parseInt(String.valueOf(opt.get(1)))));
                             }
+                            ItemService.gI().normalizeDivineBaseOptions(item);
                         } else {
                             item = ItemService.gI().createItemNull();
                         }
@@ -782,7 +786,8 @@ public class GodGK {
                                     item.itemOptions.add(new ItemOption(Integer.parseInt(String.valueOf(opt.get(0))),
                                             Integer.parseInt(String.valueOf(opt.get(1)))));
                                 }
-                                item.createTime = Long.parseLong(String.valueOf(dataObject.get("create_time")));
+                                ItemService.gI().normalizeDivineBaseOptions(item);
+                            item.createTime = Long.parseLong(String.valueOf(dataObject.get("create_time")));
                                 if (ItemService.gI().isOutOfDateTime(item)) {
                                     item = ItemService.gI().createItemNull();
                                 }
