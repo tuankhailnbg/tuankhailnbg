@@ -119,94 +119,91 @@ public class ShopDAO {
         }
     }
 
+    /**
+     * Cấu hình cố định các cải trang ở cửa hàng đặc biệt của Santa.
+     * Override lúc load để VPS chỉ cần pull/build, không phải sửa DB thủ công.
+     */
     private static void applySantaSpecialCostumeConfig(ItemShop itemShop) {
         if (itemShop == null || itemShop.temp == null
                 || itemShop.tabShop == null || itemShop.tabShop.id != 13) {
             return;
         }
 
+        int exchangeItem = -1;
+        int exchangeCost = 0;
+        int[][] options = null;
+
         switch (itemShop.temp.id) {
-            case 2147: // Super Saiyan 5
-                configureSantaCostume(itemShop, 861, 100_000,
-                        new int[][] {
-                                {77, 30}, {103, 30}, {50, 30},
-                                {101, 40}, {5, 25}, {14, 10}, {106, 0}
-                        });
+            case 2147: // Black Super Saiyan 5
+                exchangeItem = 861; // Hồng ngọc
+                exchangeCost = 100_000;
+                options = new int[][] {
+                        {77, 30}, {103, 30}, {50, 30},
+                        {101, 40}, {5, 25}, {14, 10}, {106, 0}
+                };
                 break;
             case 2145: // Black Goku
-                configureSantaCostume(itemShop, 861, 75_000,
-                        new int[][] {
-                                {77, 28}, {103, 28}, {50, 28},
-                                {101, 30}, {5, 25}, {14, 8}, {106, 1}
-                        });
+                exchangeItem = 861;
+                exchangeCost = 75_000;
+                options = new int[][] {
+                        {77, 28}, {103, 28}, {50, 28},
+                        {101, 30}, {5, 25}, {14, 8}, {106, 0}
+                };
                 break;
             case 2125: // Android 21
-                configureSantaCostume(itemShop, 861, 100_000,
-                        new int[][] {
-                                {77, 35}, {103, 30}, {50, 25},
-                                {101, 40}, {5, 25}, {14, 10}, {106, 1}
-                        });
+                exchangeItem = 861;
+                exchangeCost = 100_000;
+                options = new int[][] {
+                        {77, 35}, {103, 30}, {50, 25},
+                        {101, 40}, {5, 25}, {14, 10}, {106, 0}
+                };
                 break;
             case 2142: // Gogeta SSJ4
-                configureSantaCostume(itemShop, 861, 100_000,
-                        new int[][] {
-                                {77, 25}, {103, 30}, {50, 35},
-                                {101, 40}, {5, 25}, {14, 10}, {106, 0}
-                        });
+                exchangeItem = 861;
+                exchangeCost = 100_000;
+                options = new int[][] {
+                        {77, 25}, {103, 30}, {50, 35},
+                        {101, 40}, {5, 25}, {14, 10}, {106, 0}
+                };
                 break;
             case 2134: // Gohan
-                configureSantaCostume(itemShop, 861, 50_000,
-                        new int[][] {
-                                {77, 26}, {103, 26}, {50, 26},
-                                {101, 25}, {5, 20}, {14, 5}, {106, 0}
-                        });
+                exchangeItem = 861;
+                exchangeCost = 50_000;
+                options = new int[][] {
+                        {77, 26}, {103, 26}, {50, 26},
+                        {101, 25}, {5, 20}, {14, 5}, {106, 0}
+                };
                 break;
             case 2128: // Goten
-                configureSantaCostume(itemShop, 861, 25_000,
-                        new int[][] {
-                                {77, 24}, {103, 24}, {50, 24},
-                                {101, 20}, {106, 0}
-                        });
+                exchangeItem = 861;
+                exchangeCost = 25_000;
+                options = new int[][] {
+                        {77, 24}, {103, 24}, {50, 24},
+                        {101, 20}, {106, 0}
+                };
                 break;
             case 2117: // Goku Ultra
-                configureSantaCostume(itemShop, 457, 3_000,
-                        new int[][] {
-                                {77, 22}, {103, 22}, {50, 22},
-                                {101, 15}, {106, 0}
-                        });
+                exchangeItem = 457; // Thỏi vàng
+                exchangeCost = 3_000;
+                options = new int[][] {
+                        {77, 22}, {103, 22}, {50, 22},
+                        {101, 15}, {106, 0}
+                };
                 break;
             default:
-                break;
-        }
-    }
-
-    private static void configureSantaCostume(ItemShop itemShop, int itemExchange,
-            int costSpec, int[][] configuredOptions) {
-        itemShop.itemExchange = itemExchange;
-        itemShop.costSpec = costSpec;
-
-        if (ItemService.gI().getTemplate(itemExchange) != null) {
-            itemShop.iconSpec = ItemService.gI().getTemplate(itemExchange).iconID;
+                return;
         }
 
-        // Chỉ thay các option thuộc bộ chỉ số cải trang; giữ nguyên option khác nếu có.
-        itemShop.options.removeIf(option -> option != null
-                && option.optionTemplate != null
-                && isSantaCostumeStatOption(option.optionTemplate.id));
+        itemShop.itemExchange = exchangeItem;
+        itemShop.costSpec = exchangeCost;
+        if (ItemService.gI().getTemplate(exchangeItem) != null) {
+            itemShop.iconSpec = ItemService.gI().getTemplate(exchangeItem).iconID;
+        }
 
-        for (int[] option : configuredOptions) {
+        itemShop.options.clear();
+        for (int[] option : options) {
             itemShop.options.add(new ItemOption(option[0], option[1]));
         }
-    }
-
-    private static boolean isSantaCostumeStatOption(int optionId) {
-        return optionId == 77   // HP %
-                || optionId == 103 // KI %
-                || optionId == 50  // Sức đánh %
-                || optionId == 101 // TN/SM %
-                || optionId == 5   // Sức đánh chí mạng %
-                || optionId == 14  // Chí mạng %
-                || optionId == 106; // Không ảnh hưởng bởi cái lạnh
     }
 
     private static void loadItemShopOption(Connection con, ItemShop itemShop) {
