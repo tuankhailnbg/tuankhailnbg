@@ -102,9 +102,9 @@ public class NpcFactory {
                         public void openBaseMenu(Player player) {
                             if (canOpenNpc(player)) {
                                 createOtherMenu(player, ConstNpc.BASE_MENU,
-                                        "|1|SỰ KIỆN GIỚI THIỆU BẠN BÈ\\n"
+                                        "|1|SỰ KIỆN GIỚI THIỆU BẠN BÈ\n"
                                         + nro.services.ReferralService.gI().status(player),
-                                        "Giới thiệu\\nbạn bè", "Nhận quà", "Đóng");
+                                        "Giới thiệu\nbạn bè", "Nhận quà", "Đóng");
                             }
                         }
                         @Override
@@ -114,11 +114,11 @@ public class NpcFactory {
                                 switch (select) {
                                     case 0 -> createOtherMenu(player, REFERRAL_MENU,
                                             "|1|MÃ CỦA BẠN: " + nro.services.ReferralService.gI().code(player)
-                                            + "\\nSự kiện VĨNH VIỄN.\\n"
+                                            + "\nSự kiện VĨNH VIỄN.\n"
                                             + "Người được mời: 50 tỷ sức mạnh, 10 giờ hoạt động, "
-                                            + "hoàn thành nhiệm vụ Cell.\\n"
+                                            + "hoàn thành nhiệm vụ Cell.\n"
                                             + "Một tài khoản chỉ nhận một mã giới thiệu.",
-                                            "Nhập mã\\ngiới thiệu", "Xem tiến độ", "Nhận quà", "Đóng");
+                                            "Nhập mã\ngiới thiệu", "Xem tiến độ", "Nhận quà", "Đóng");
                                     case 1 -> Service.gI().sendThongBaoOK(player,
                                             nro.services.ReferralService.gI().claim(player));
                                     default -> { }
