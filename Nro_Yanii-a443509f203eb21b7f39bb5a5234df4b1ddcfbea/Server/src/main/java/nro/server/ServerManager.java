@@ -341,5 +341,11 @@ public class ServerManager {
 //            TopBanDoKhoBau.getInstance().load();
         }, 0, 600000, TimeUnit.MILLISECONDS);
 
+        ScheduledExecutorService autoDuaTop = Executors.newScheduledThreadPool(1);
+        autoDuaTop.scheduleWithFixedDelay(() -> {
+            // Snapshot Top Nạp theo mùa, bổ sung account mới và tự chốt kết quả.
+            nro.manager.DuaTopManager.getInstance().tick();
+        }, 0, 1, TimeUnit.MINUTES);
+
     }
 }

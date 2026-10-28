@@ -3723,8 +3723,15 @@ public class NpcFactory {
                         public void openBaseMenu(Player player) {
                             if (canOpenNpc(player)) {
                                 if (this.mapId == 113) {
-                                    this.createOtherMenu(player, ConstNpc.BASE_MENU, "Sieu Hang Test By Louis Goku",
-                                            "BXH");
+                                    nro.manager.DuaTopManager.getInstance().tick();
+                                    this.createOtherMenu(player, ConstNpc.BASE_MENU,
+                                            "Sự kiện Đua Top máy chủ\\nChọn bảng xếp hạng hoặc nhận thưởng",
+                                            "Top\\nSức Mạnh",
+                                            "Top\\nNhiệm Vụ",
+                                            "Top\\nĐệ Tử",
+                                            "Top\\nNạp",
+                                            "Thể lệ\\nPhần thưởng",
+                                            "Nhận\\nthưởng");
                                 } else {
                                     super.openBaseMenu(player);
                                 }
@@ -3738,7 +3745,22 @@ public class NpcFactory {
                                     if (player.iDMark.isBaseMenu()) {
                                         switch (select) {
                                             case 0:
-                                                Service.getInstance().showTopPower(player);
+                                                nro.manager.DuaTopManager.getInstance().showTop(player, nro.manager.DuaTopManager.POWER);
+                                                break;
+                                            case 1:
+                                                nro.manager.DuaTopManager.getInstance().showTop(player, nro.manager.DuaTopManager.TASK);
+                                                break;
+                                            case 2:
+                                                nro.manager.DuaTopManager.getInstance().showTop(player, nro.manager.DuaTopManager.PET);
+                                                break;
+                                            case 3:
+                                                nro.manager.DuaTopManager.getInstance().showTop(player, nro.manager.DuaTopManager.RECHARGE);
+                                                break;
+                                            case 4:
+                                                nro.manager.DuaTopManager.getInstance().showInfo(player);
+                                                break;
+                                            case 5:
+                                                nro.manager.DuaTopManager.getInstance().claimAll(player);
                                                 break;
                                         }
                                     }
