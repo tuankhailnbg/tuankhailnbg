@@ -63,8 +63,13 @@ public final class ReferralService {
         // Dùng connection riêng (không dùng connection chia sẻ giữa các luồng).
         try {
             Connection c = DBService.gI().getConnection();
-            ensureSchema(c);
-            return c;
+            try {
+                ensureSchema(c);
+                return c;
+            } catch (SQLException ex) {
+                c.close();
+                throw ex;
+            }
         } catch (Exception ex) {
             if (ex instanceof SQLException sql) throw sql;
             throw new SQLException("Không thể lấy DB connection", ex);
@@ -165,6 +170,22 @@ public final class ReferralService {
         }
     }
 
+    private String diagnostic(Player player, String action, Exception ex) {
+        Throwable root = ex;
+        while (root.getCause() != null && root != root.getCause()) root = root.getCause();
+        System.err.println("[REFERRAL][" + action + "] " + ex);
+        ex.printStackTrace(System.err);
+        if (player != null && player.isAdmin()) {
+            if (root instanceof SQLException sql) {
+                return "Lỗi " + action + " - SQL " + sql.getErrorCode() + " / "
+                        + sql.getSQLState() + ": " + sql.getMessage();
+            }
+            return "Lỗi " + action + ": " + root.getClass().getSimpleName()
+                    + " - " + root.getMessage();
+        }
+        return "Không thể " + action + ". Hãy báo quản trị viên kiểm tra log [REFERRAL].";
+    }
+
     public String status(Player p) {
         if (p == null || p.getSession() == null) return "Chưa đăng nhập";
         try (Connection c = connect()) {
@@ -184,8 +205,7 @@ public final class ReferralService {
                     + "\nAdmin kiểm tra và cấp điểm thủ công."
                     + "\nSự kiện vĩnh viễn.";
         } catch (SQLException ex) {
-            return "Mã: " + code(p)
-                    + "\nKhông khởi tạo được dữ liệu giới thiệu. Kiểm tra quyền CREATE/ALTER của user DB.";
+            return "Mã: " + code(p) + "\n" + diagnostic(p, "đọc điểm giới thiệu", ex);
         }
     }
 
@@ -380,7 +400,7 @@ public final class ReferralService {
             ResultSet rs=st.executeQuery()) {
             while(rs.next())rows.add(new RankRow(rs));
         } catch(SQLException e) {
-            Service.gI().sendThongBao(viewer,"Không tải được Top Giới Thiệu.");return;
+            Service.gI().sendThongBao(viewer, diagnostic(viewer, "tải Top giới thiệu", e));return;
         }
         try {
             Message msg=new Message(Cmd.TOP);
@@ -474,7 +494,7 @@ public final class ReferralService {
             // Đánh dấu trước khi gửi để gói click trả về luôn được định tuyến đúng.
             REWARD_PANELS.put(p.id,System.currentTimeMillis()+5*60_000L);
             p.sendMessage(m);m.cleanup();
-        }catch(Exception e){Service.gI().sendThongBao(p,"Không mở được bảng nhận quà giới thiệu.");}
+        }catch(Exception e){closeRewardPanel(p);Service.gI().sendThongBaoOK(p, diagnostic(p, "mở bảng nhận quà giới thiệu", e));}
     }
 
     /** Xử lý một dòng trên bảng thành tựu; mỗi mốc chỉ nhận một lần. */
