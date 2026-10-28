@@ -67,7 +67,7 @@ def static_contract():
           "special-milestone claim reports pending costume after receiving gold bars")
     check("getItemOptionTemplate(id) == null" in source,
           "costume options are checked against loaded server templates")
-    credit_form = user_input.split("public void createFormAdminCredit(Player pl) {",1)[1].split("\\n    }",1)[0]
+    credit_form = user_input.split("public void createFormAdminCredit(Player pl) {",1)[1].split("\n    }",1)[0]
     check(credit_form.count("new SubInput(") == 2,
           "admin credit form shows only recipient and amount")
     print("All static contract checks passed.")
