@@ -144,14 +144,23 @@ public class ShopDAO {
      * Override lúc load để VPS chỉ cần pull/build, không phải sửa DB thủ công.
      */
     private static void configureChiChiHotShop(TabShop tabShop) {
+        // Sách Tuyệt Kĩ 1 dùng chung cho cả 3 hành tinh.
+        // Giữ 1285 làm bản bán chính; 1287/1289 vẫn được đổi gender=3 để
+        // những sách người chơi đã sở hữu từ trước vẫn có thể trang bị bình thường.
         int[] universalBookIds = {1285, 1287, 1289};
         for (int bookId : universalBookIds) {
             ItemTemplate book = ItemService.gI().getTemplate(bookId);
             if (book != null) {
                 book.gender = 3;
+                book.type = 35;
+                book.name = "Sách tuyệt kỹ 1";
+                book.description = "Sách tuyệt kỹ dùng chung cho cả 3 hành tinh";
             }
         }
+        tabShop.itemShops.removeIf(itemShop -> itemShop != null && itemShop.temp != null
+                && (itemShop.temp.id == 1287 || itemShop.temp.id == 1289));
 
+        // Khôi phục đúng template Hematite/Dùi đục của cơ chế Sao Pha Lê.
         ItemTemplate hematite = ItemService.gI().getTemplate(1423);
         if (hematite != null) {
             hematite.type = 27;
@@ -172,7 +181,7 @@ public class ShopDAO {
         duiDuc.type = 27;
         duiDuc.gender = 3;
         duiDuc.name = "Dùi đục";
-        duiDuc.description = "Dùng để cường hóa, mở khóa lỗ Sao Pha Lê từ ô thứ 8";
+        duiDuc.description = "Vật phẩm hỗ trợ. Gặp Bà Hạt Mít để cường hóa lỗ Sao Pha Lê";
         duiDuc.level = 1;
         duiDuc.iconID = 12139;
         duiDuc.part = -1;
