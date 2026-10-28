@@ -1,7 +1,7 @@
 param([string]$ServerFolder = (Get-Location).Path)
 $ErrorActionPreference='Stop'
 $source='https://raw.githubusercontent.com/NDLong1601/nro-server/main/data/icon'
-$map=@'
+$csv = @'
 25104,32406
 25107,32407
 25108,32408
@@ -122,7 +122,8 @@ $map=@'
 26169,32523
 26170,32524
 26171,32525
-'@ | ConvertFrom-Csv -Header OldId,NewId
+'@
+$map = $csv | ConvertFrom-Csv -Header OldId,NewId
 $downloaded = 0
 $reused = 0
 foreach($z in 1..4){
