@@ -73,14 +73,20 @@ def static_contract():
     check("referral_claims(inviter_player_id,milestone,gold_bars,status)" in source,
           "gold bar ledger deduplicates claims")
     check('"Cấp điểm\\ngiới thiệu"' in manager, "admin chat menu offers points grant")
-    for milestone, days, name in [(5, 7, "Goku SSJ3"), (10, 7, "Vegito Blue"), (15, None, "Gogeta Blue"), (20, None, "Zeno")]:
+    for milestone, item_id, days, name in [
+        (5, 1304, 7, "Goku SSJ4"),
+        (10, 1305, 7, "Vegeta SSJ4"),
+        (15, 1306, None, "Omega"),
+        (20, 2045, None, "Cumber"),
+    ]:
         flag = str(days) if days is not None else "NULL"
-        check(f"({milestone},NULL,'{name}',{flag}," in catalog,
-              f"catalog includes {name}, duration {flag}")
+        check(f"({milestone},{item_id},'{name}',{flag}," in catalog,
+              f"catalog includes non-shop {name} ID {item_id}, duration {flag}")
     check("item.template.type != 5" in source, "costume claim rejects non-costume item templates")
     check("linkExistingCostume(c, milestone)" in source
-          and "c.item_template_id IS NULL" in source and "i.TYPE=5" in source,
-          "interrupted costume import safely relinks existing known TYPE=5 items")
+          and "case 5 -> 1304" in source and "case 10 -> 1305" in source
+          and "case 15 -> 1306" in source and "case 20 -> 2045" in source,
+          "fallback relinks milestones only to the current non-shop costume IDs")
     check("Cải trang CHƯA được nhận:" in source,
           "special-milestone claim reports pending costume after receiving gold bars")
     check("getItemOptionTemplate(id) == null" in source,
