@@ -585,7 +585,8 @@ public class Manager {
             Log.success("Load side task thành công (" + SIDE_TASKS_TEMPLATE.size() + ")");
 
             // load item template
-            ps = con.prepareStatement("select * from item_template");
+            // ItemService.getTemplate(id) truy cập theo index, bắt buộc sắp xếp theo ID.
+            ps = con.prepareStatement("select * from item_template ORDER BY id ASC");
             rs = ps.executeQuery();
             while (rs.next()) {
                 ItemTemplate itemTemp = new ItemTemplate();
