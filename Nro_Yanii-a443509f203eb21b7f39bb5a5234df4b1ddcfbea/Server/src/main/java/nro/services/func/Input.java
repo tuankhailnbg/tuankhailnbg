@@ -131,11 +131,11 @@ public class Input {
                 case ADMIN_CREDIT_FORM:
                     if (player.isAdmin()) {
                         try {
-                            String recipient = text[0].trim();
-                            int amount = Integer.parseInt(text[1].trim());
-                            String transCode = (text.length > 2 && !text[2].trim().isEmpty()) ? text[2].trim() : AdminBalanceService.gI().generateDefaultTransCode();
-                            String note = text.length > 3 ? text[3].trim() : "";
-                            AdminBuffItemService.gI().handleAdminCreditFormInput(player, recipient, amount, transCode, note);
+                            String recipient = text != null && text.length > 0 ? text[0].trim() : "";
+                            int amount = Integer.parseInt(text != null && text.length > 1 ? text[1].trim() : "");
+                            String transCode = AdminBalanceService.gI().generateDefaultTransCode();
+                            AdminBuffItemService.gI().handleAdminCreditFormInput(player, recipient, amount,
+                                    transCode, "Admin cộng số dư từ game");
                         } catch (NumberFormatException e) {
                             Service.getInstance().sendThongBao(player, "Số tiền nạp phải là số hợp lệ!");
                         }
