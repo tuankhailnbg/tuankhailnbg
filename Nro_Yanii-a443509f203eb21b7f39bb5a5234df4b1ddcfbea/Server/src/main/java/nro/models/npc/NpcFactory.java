@@ -120,13 +120,12 @@ public class NpcFactory {
                                             createOtherMenu(player, REFERRAL_MENU, details,
                                                     "Bảng xếp\nhạng giới thiệu",
                                                     "Nhận quà\ngiới thiệu",
-                                                    "Nhập mã\ngiới thiệu",
                                                     "Cấp điểm\n(Admin)", "Đóng");
                                         } else {
                                             createOtherMenu(player, REFERRAL_MENU, details,
                                                     "Bảng xếp\nhạng giới thiệu",
                                                     "Nhận quà\ngiới thiệu",
-                                                    "Nhập mã\ngiới thiệu", "Đóng");
+                                                    "Đóng");
                                         }
                                     }
                                     case 1 -> Service.gI().sendThongBaoOK(player,
@@ -141,10 +140,6 @@ public class NpcFactory {
                                     }
                                     case 1 -> nro.services.ReferralService.gI().sendRewardPanel(player);
                                     case 2 -> {
-                                        nro.services.ReferralService.gI().closeRewardPanel(player);
-                                        Input.gI().createFormReferralCode(player);
-                                    }
-                                    case 3 -> {
                                         nro.services.ReferralService.gI().closeRewardPanel(player);
                                         if (player.isAdmin()) Input.gI().createFormAdminReferralPoints(player);
                                     }

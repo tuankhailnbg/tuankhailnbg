@@ -5,7 +5,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Locale;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import nro.consts.Cmd;
@@ -20,7 +19,6 @@ import java.util.Set;
 import java.util.ArrayList;
 import nro.jdbc.daos.PlayerDAO;
 import java.util.Map;
-import nro.services.func.Input;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONValue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,36 +27,17 @@ import nro.models.item.Item;
 import nro.models.item.ItemOption;
 import nro.models.player.Player;
 
-/** NPC giới thiệu vĩnh viễn: mã GT, điểm do quản trị viên cấp, mốc nhận Thỏi Vàng. */
+/** NPC giới thiệu vĩnh viễn: điểm do quản trị viên cấp, mốc nhận Thỏi Vàng. */
 public final class ReferralService {
     private static final ReferralService INSTANCE = new ReferralService();
     private static final int BAR_ID = 457;
     private static final int MAX_MILESTONE = 20;
-    private static final int REQUIRED_SECONDS = 10 * 60 * 60;
-    private static final long REQUIRED_POWER = 50_000_000_000L;
-    private static final int AFTER_CELL_TASK_ID = 30;
-    private static final long INPUT_WINDOW_HOURS = 24L;
     private static final Map<Long, Long> REWARD_PANELS = new ConcurrentHashMap<>();
-    private static final Set<Integer> PROMPTED = ConcurrentHashMap.newKeySet();
     private static final Object SCHEMA_LOCK = new Object();
     private static volatile boolean SCHEMA_READY = false;
 
     private ReferralService() { }
     public static ReferralService gI() { return INSTANCE; }
-
-    public String code(Player p) {
-        return "GT" + Long.toString(p.id, 36).toUpperCase(Locale.ROOT);
-    }
-
-    private Long parseCode(String raw) {
-        if (raw == null) return null;
-        String code = raw.trim().toUpperCase(Locale.ROOT);
-        if (!code.matches("GT[0-9A-Z]{1,12}")) return null;
-        try {
-            long id = Long.parseLong(code.substring(2), 36);
-            return id > 0 ? id : null;
-        } catch (NumberFormatException ex) { return null; }
-    }
 
     private Connection connect() throws SQLException {
         // Dùng connection riêng (không dùng connection chia sẻ giữa các luồng).
@@ -181,22 +160,9 @@ public final class ReferralService {
         if (p == null || p.getSession() == null) return "Chưa đăng nhập";
         try (Connection c = connect()) {
             int points = pointsOf(c, p.id);
-            String self = "Chưa nhập mã giới thiệu";
-            try (PreparedStatement st = c.prepareStatement(
-                    "SELECT referral_code FROM referral_invites WHERE invited_account_id=?")) {
-                st.setInt(1, p.getSession().userId);
-                try (ResultSet rs = st.executeQuery()) {
-                    if (rs.next()) self = "Đã nhập mã " + rs.getString(1);
-                }
-            }
-            return "Mã giới thiệu của bạn: " + code(p)
-                    + "\nĐiểm giới thiệu: " + points
-                    + "\n" + self
-                    + "\nĐiều kiện duyệt: 50 tỷ sức mạnh, 10 giờ hoạt động, qua nhiệm vụ Cell."
-                    + "\nAdmin kiểm tra và cấp điểm thủ công."
-                    + "\nSự kiện vĩnh viễn.";
+            return "Điểm giới thiệu: " + points;
         } catch (SQLException ex) {
-            return "Mã: " + code(p) + "\n" + diagnostic(p, "đọc điểm giới thiệu", ex);
+            return diagnostic(p, "đọc điểm giới thiệu", ex);
         }
     }
 
@@ -209,99 +175,6 @@ public final class ReferralService {
             }
         }
     }
-
-    /** Nhập mã ngay sau tạo tài khoản, trước khi tài khoản đủ 24 giờ. */
-    public String register(Player invitee, String raw) {
-        if (invitee == null || invitee.getSession() == null) return "Bạn chưa đăng nhập.";
-        Long inviterId = parseCode(raw);
-        if (inviterId == null || inviterId == invitee.id) return "Mã giới thiệu không hợp lệ.";
-        int accountId = invitee.getSession().userId;
-        try (Connection c = connect()) {
-            c.setAutoCommit(false);
-            try {
-                int inviterAccount;
-                try (PreparedStatement st = c.prepareStatement(
-                        "SELECT account_id FROM player WHERE id=? LIMIT 1")) {
-                    st.setLong(1, inviterId);
-                    try (ResultSet rs = st.executeQuery()) {
-                        if (!rs.next()) { c.rollback(); return "Nhân vật giới thiệu không tồn tại."; }
-                        inviterAccount = rs.getInt(1);
-                    }
-                }
-                if (inviterAccount == accountId) { c.rollback(); return "Không thể tự giới thiệu tài khoản của mình."; }
-                try (PreparedStatement st = c.prepareStatement(
-                        "SELECT id FROM account WHERE id=? AND create_time >= DATE_SUB(NOW(),INTERVAL 24 HOUR) FOR UPDATE")) {
-                    st.setInt(1, accountId);
-                    try (ResultSet rs = st.executeQuery()) {
-                        if (!rs.next()) { c.rollback(); return "Chỉ tài khoản mới trong vòng 24 giờ được nhập mã."; }
-                    }
-                }
-                // Chỉ đánh dấu kiểm tra khi nhiều tài khoản chung IP.
-                // Không khóa vĩnh viễn các bạn chơi cùng Wi-Fi.
-                int review = 0;
-                try (PreparedStatement st = c.prepareStatement(
-                        "SELECT (a1.ip_address=a2.ip_address AND a1.ip_address<>''),"
-                        + "(SELECT COUNT(*) FROM account ax WHERE ax.ip_address=a1.ip_address "
-                        + "AND ax.create_time>=DATE_SUB(NOW(),INTERVAL 3 DAY)) "
-                        + "FROM account a1 JOIN account a2 ON a2.id=? WHERE a1.id=?")) {
-                    st.setInt(1, inviterAccount);
-                    st.setInt(2, accountId);
-                    try (ResultSet rs = st.executeQuery()) {
-                        if (rs.next() && (rs.getBoolean(1) || rs.getInt(2) >= 4)) review = 1;
-                    }
-                }
-                try (PreparedStatement st = c.prepareStatement(
-                        "INSERT INTO referral_invites(invited_account_id,invited_player_id,inviter_player_id,"
-                        + "referral_code,review_required) VALUES(?,?,?,?,?)")) {
-                    st.setInt(1, accountId);
-                    st.setLong(2, invitee.id);
-                    st.setLong(3, inviterId);
-                    st.setString(4, codeOf(inviterId));
-                    st.setInt(5, review);
-                    st.executeUpdate();
-                }
-                c.commit();
-                return "Nhập mã thành công! Đạt 50 tỷ sức mạnh, 10 giờ hoạt động và xong nhiệm vụ Cell để được tính lượt."
-                        + (review == 1 ? " Tài khoản cần được xác minh chống farm trước khi cộng mốc." : "");
-            } catch (SQLException ex) {
-                c.rollback();
-                if ("23000".equals(ex.getSQLState())) return "Tài khoản đã liên kết một mã giới thiệu.";
-                return "Không thể lưu mã giới thiệu. Hãy báo quản trị viên.";
-            } finally { c.setAutoCommit(true); }
-        } catch (SQLException ex) {
-            return "Lỗi kết nối cơ sở dữ liệu.";
-        }
-    }
-
-    private String codeOf(long id) { return "GT" + Long.toString(id, 36).toUpperCase(Locale.ROOT); }
-
-    /**
-     * Gọi từ Player.update(); không cộng thời gian chỉ vì treo online.
-     * Chỉ tăng khi có di chuyển đủ 24px, thay đổi sức mạnh hoặc nhiệm vụ.
-     * Mỗi lần cộng tối đa 60 giây, không đếm thời gian offline.
-     */
-    /** Chỉ hiện ô nhập mã tài khoản mới; không tự tính hoặc cấp điểm. */
-    public void tick(Player p) {
-        if (p == null || !p.loaded || p.getSession() == null
-                || p.isBoss || p.isPet || p.isMiniPet) return;
-        promptOnFirstLogin(p);
-    }
-
-    // Để người mới biết có ô nhập mã ngay trong game, không cần sửa client.
-    private void promptOnFirstLogin(Player p) {
-        int accountId = p.getSession().userId;
-        if (!PROMPTED.add(accountId)) return;
-        try (Connection c = connect(); PreparedStatement st = c.prepareStatement(
-                "SELECT a.id FROM account a WHERE a.id=? "
-                + "AND a.create_time >= DATE_SUB(NOW(),INTERVAL 24 HOUR) "
-                + "AND NOT EXISTS (SELECT 1 FROM referral_invites r WHERE r.invited_account_id=a.id)")) {
-            st.setInt(1, accountId);
-            try (ResultSet rs = st.executeQuery()) {
-                if (rs.next()) Input.gI().createFormReferralCode(p);
-            }
-        } catch (SQLException ignored) { }
-    }
-
 
     /**
      * Cấp/trừ điểm trực tiếp qua form chỉ admin được dùng.

@@ -5,7 +5,7 @@
 ## 1. Menu NPC
 NPC **Sự Kiện** (template ID 73, map 5 – Đảo Kame) có **đúng hai chức năng**:
 
-1. **Sự kiện giới thiệu** → mở menu phụ gồm **Bảng xếp hạng giới thiệu**, **Nhận quà giới thiệu**, **Đóng**. Phía trên menu có **mã GT... của nhân vật** và **điểm giới thiệu**. Admin sẽ thấy thêm tùy chọn **Cấp điểm (Admin)**.
+1. **Sự kiện giới thiệu** → mở menu phụ gồm **Bảng xếp hạng giới thiệu**, **Nhận quà giới thiệu**, **Đóng**. Phía trên menu có tiêu đề **GIỚI THIỆU BẠN BÈ** và **điểm giới thiệu**. Admin sẽ thấy thêm tùy chọn **Cấp điểm (Admin)**.
 2. **Đua top** → chỉ báo "Sự kiện Đua Top đang chuẩn bị", chưa triển khai.
 
 NPC dự kiến tại x=780 y=408 map 5; đã dùng ID 73 và thông tin hình có sẵn trong `npc_template`. Nếu map 5 đã có ID73 thì không tự thêm trùng.
@@ -14,8 +14,8 @@ NPC dự kiến tại x=780 y=408 map 5; đã dùng ID 73 và thông tin hình c
 
 ## 2. Cách tính điểm (CHỈ ADMIN CẤP)
 
-- Tài khoản người chơi mới vẫn có thể nhập **mã GT** của người giới thiệu trong 24 giờ đầu tại popup khi đăng nhập. Dữ liệu chỉ ghi nhận mã/người giới thiệu vào `referral_invites`.
-- **Không cộng điểm tự động khi nhập mã, đạt 50 tỷ, chơi 10 giờ, hoàn thành nhiệm vụ Cell**. Các tiêu chí 50 tỷ, 10 giờ, Cell có thể dùng để admin tự xác nhận trước khi cấp.
+- Đã bỏ hoàn toàn chức năng nhập mã giới thiệu: không còn nút nhập mã tại NPC, popup cho tài khoản mới hoặc xử lý lưu mã ở server. Bảng `referral_invites` và dữ liệu lịch sử được giữ nguyên; người chơi không cần nhập mã để được admin cấp điểm.
+- **Không cộng điểm tự động khi đạt 50 tỷ, chơi 10 giờ, hoàn thành nhiệm vụ Cell**. Các tiêu chí 50 tỷ, 10 giờ, Cell có thể dùng để admin tự xác nhận trước khi cấp.
 - **Admin quyết định và nhập số điểm (+1, +2,... hoặc -1)** cho ID/tên nhân vật người giới thiệu.
 - Điểm được lưu vào `referral_points`, mọi lần cộng/trừ lưu vào `referral_points_audit` (người cấp, người nhận, điểm trước/sau, lý do và thời gian).
 - Admin có thể cấp qua NPC Sự Kiện → Giới thiệu → Cấp điểm (Admin), hoặc **gõ `admin` trong khung chat → Cấp điểm giới thiệu**.

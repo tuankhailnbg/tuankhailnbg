@@ -28,8 +28,18 @@ def static_contract():
     check(sum(100+25*i for i in range(20)) == 6750, "total 20-milestone payout is 6750 bars")
     check('case ConstNpc.EVENT ->' in npc and '"Đua top"' in npc, "NPC has two main event options")
     check('sendLeaderboard(player)' in npc and 'sendRewardPanel(player)' in npc, "referral submenu opens top and reward panel")
-    check('createFormReferralCode(player)' in npc and '"Nhập mã\\ngiới thiệu"' in npc,
-          "referral code form can be reopened explicitly from event NPC")
+    check('createFormReferralCode' not in npc and '"Nhập mã\\ngiới thiệu"' not in npc,
+          "event NPC no longer offers referral code entry")
+    player_source = (GAME / "models" / "player" / "Player.java").read_text(encoding="utf-8")
+    check('promptOnFirstLogin' not in source and 'ReferralService.gI().tick(this)' not in player_source,
+          "new accounts are not prompted for referral codes")
+    check('case REFERRAL_CODE:' not in user_input and 'createFormReferralCode' not in user_input
+          and 'public String register(' not in source and 'INSERT INTO referral_invites' not in source,
+          "server cannot accept or store referral codes")
+    event_npc = npc.split('case ConstNpc.EVENT ->', 1)[1].split('case ConstNpc.OBITO ->', 1)[0]
+    check('case 2 ->' in event_npc and 'case 3 ->' not in event_npc
+          and 'if (player.isAdmin()) Input.gI().createFormAdminReferralPoints(player);' in event_npc,
+          "admin grant moves to submenu index 2 with server permission check")
     check('for(int n=1;n<=MAX_MILESTONE;n++)' in source, "reward panel generates all 20 rows")
     check("case ADMIN_REFERRAL_POINTS:" in user_input and 'player.isAdmin()' in user_input,
           "admin-only referral score input")
