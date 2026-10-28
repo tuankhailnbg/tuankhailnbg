@@ -115,25 +115,9 @@ BEGIN
         SET MESSAGE_TEXT = 'ID item moi vuot gioi han short 32767 cua server Java.';
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM item_template WHERE icon_id = 4843) THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Client/DB thieu icon 9979 cho Whis';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM item_template WHERE icon_id = 4879) THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Client/DB thieu icon 12793 cho Champa';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM item_template WHERE icon_id = 4665) THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Client/DB thieu icon 20160 cho Tapion';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM item_template WHERE icon_id = 549) THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Client/DB thieu icon 20403 cho Vua Vegeta';
-    END IF;
+    -- Icon được lấy trực tiếp từ frame đầu của head part tương ứng.
+    -- Vì vậy chỉ cần xác minh head/body/leg tồn tại; không yêu cầu icon đã được
+    -- một item_template cũ tham chiếu trước đó.
 
     IF NOT EXISTS (SELECT 1 FROM part WHERE id=505 AND TYPE=0)
        OR NOT EXISTS (SELECT 1 FROM part WHERE id=506 AND TYPE=1)
