@@ -309,10 +309,7 @@ public class AdminBuffItemService {
 
         NpcService.gI().createMenuConMeo(admin, ConstNpc.ADMIN_CONFIRM_CREDIT, 17997,
                 info,
-                "Xác nhận nạp\n(Chế độ A)",
-                "Điều chỉnh ví\n(Chế độ B)",
-                "Mở Web\nAdmin",
-                "Hủy");
+                "Xác nhận cộng", "Hủy");
     }
 
     /**
@@ -335,19 +332,6 @@ public class AdminBuffItemService {
             } else {
                 Service.getInstance().sendThongBao(admin, "|7|[THẤT BẠI] " + res.message);
             }
-        } else if (select == 1) {
-            // Chế độ B: Điều chỉnh số dư
-            AdminBalanceService.CreditResult res = AdminBalanceService.gI().creditBalance(
-                    admin.name, pc.recipient, pc.amount, pc.transCode, pc.note, "ADJUST");
-            if (res.success) {
-                Service.getInstance().sendThongBao(admin, res.message);
-            } else {
-                Service.getInstance().sendThongBao(admin, "|7|[THẤT BẠI] " + res.message);
-            }
-        } else if (select == 2) {
-            // Mở Web Admin
-            String token = AdminWebAuth.gI().createOneTimeLoginToken(admin);
-            Service.getInstance().sendThongBaoOK(admin, "Mở trình duyệt truy cập Web Admin tại:\nhttp://localhost:" + AdminWebServer.gI().getPort() + "/auth-token?t=" + token);
         } else {
             Service.getInstance().sendThongBao(admin, "Đã hủy thao tác cộng số dư.");
         }
