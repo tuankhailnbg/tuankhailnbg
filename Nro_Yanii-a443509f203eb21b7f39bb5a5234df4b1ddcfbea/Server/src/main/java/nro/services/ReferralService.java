@@ -129,7 +129,7 @@ public final class ReferralService {
                         + "(5,1304,'Goku SSJ4',7,'[[77,20],[103,20],[50,20],[14,4],[101,10],[30,0]]'),"
                         + "(10,1305,'Vegeta SSJ4',7,'[[77,23],[103,23],[50,23],[14,6],[101,13],[8,5],[30,0]]'),"
                         + "(15,1306,'Omega',NULL,'[[77,25],[103,25],[50,25],[14,8],[101,17],[8,8],[30,0]]'),"
-                        + "(20,2045,'Cumber',NULL,'[[77,27],[103,27],[50,27],[14,10],[101,20],[8,10],[30,0]]')");
+                        + "(20,2129,'Fu',NULL,'[[77,27],[103,27],[50,27],[14,10],[101,20],[8,10],[30,0]]')");
 
                 // Tự sửa các mapping cũ/legacy về bộ cải trang không nằm trong shop.
                 st.executeUpdate("UPDATE referral_costume_catalog c JOIN item_template i "
@@ -148,10 +148,10 @@ public final class ReferralService {
                         + "WHERE c.milestone=15 AND (c.item_template_id IS NULL "
                         + "OR c.item_template_id IN (2142,2156))");
                 st.executeUpdate("UPDATE referral_costume_catalog c JOIN item_template i "
-                        + "ON i.id=2045 AND i.TYPE=5 "
-                        + "SET c.item_template_id=2045,c.costume_name='Cumber',c.duration_days=NULL "
+                        + "ON i.id=2129 AND i.TYPE=5 "
+                        + "SET c.item_template_id=2129,c.costume_name='Fu',c.duration_days=NULL "
                         + "WHERE c.milestone=20 AND (c.item_template_id IS NULL "
-                        + "OR c.item_template_id IN (1276,2129,2157))");
+                        + "OR c.item_template_id IN (1276,2045,2157))");
             }
             SCHEMA_READY = true;
         }
@@ -356,7 +356,7 @@ public final class ReferralService {
                 String costume=n==5?"Goku SSJ4 (7 ngày)":
                                n==10?"Vegeta SSJ4 (7 ngày)":
                                n==15?"Omega (vĩnh viễn)":
-                               n==20?"Cumber (vĩnh viễn)":"";
+                               n==20?"Fu (vĩnh viễn)":"";
                 // Một mốc đặc biệt chỉ hoàn tất khi cả Thỏi Vàng và cải trang đều đã nhận.
                 boolean claimed=gotBars.contains(n) &&
                      (!hasCostume||gotCostumes.contains(n));
@@ -496,7 +496,7 @@ public final class ReferralService {
             case 5 -> 1304; // Goku SSJ4
             case 10 -> 1305; // Vegeta SSJ4
             case 15 -> 1306; // Omega
-            case 20 -> 2045; // Cumber
+            case 20 -> 2129; // Fu
             default -> -1;
         };
         int legacyId = switch (milestone) {
