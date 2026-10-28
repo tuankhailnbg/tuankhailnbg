@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS referral_claims (
 
 -- 4 cải trang referral dùng item TYPE=5 có sẵn trong client và không nằm trong item_shop:
 -- 5: Goku SSJ4 ID 1304 (7 ngày); 10: Vegeta SSJ4 ID 1305 (7 ngày);
--- 15: Omega ID 1306 (vĩnh viễn); 20: Cumber ID 2045 (vĩnh viễn).
+-- 15: Omega ID 1306 (vĩnh viễn); 20: Fu ID 2129 (vĩnh viễn).
 CREATE TABLE IF NOT EXISTS referral_costume_catalog (
     milestone INT NOT NULL PRIMARY KEY,
     item_template_id INT NULL,
@@ -40,7 +40,7 @@ INSERT INTO referral_costume_catalog (milestone,item_template_id,costume_name,du
 (5,1304,'Goku SSJ4',7,'[[77,20],[103,20],[50,20],[14,4],[101,10],[30,0]]'),
 (10,1305,'Vegeta SSJ4',7,'[[77,23],[103,23],[50,23],[14,6],[101,13],[8,5],[30,0]]'),
 (15,1306,'Omega',NULL,'[[77,25],[103,25],[50,25],[14,8],[101,17],[8,8],[30,0]]'),
-(20,2045,'Cumber',NULL,'[[77,27],[103,27],[50,27],[14,10],[101,20],[8,10],[30,0]]')
+(20,2129,'Fu',NULL,'[[77,27],[103,27],[50,27],[14,10],[101,20],[8,10],[30,0]]')
 ON DUPLICATE KEY UPDATE
     item_template_id=VALUES(item_template_id),
     costume_name=VALUES(costume_name),
