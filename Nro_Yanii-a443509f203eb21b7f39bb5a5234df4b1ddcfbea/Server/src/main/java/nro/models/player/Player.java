@@ -1163,6 +1163,7 @@ public class Player {
     }
 
     public void dispose() {
+        ReferralService.gI().closeRewardPanel(this);
         if (escortedBoss != null) {
             escortedBoss.stopEscorting();
         }
