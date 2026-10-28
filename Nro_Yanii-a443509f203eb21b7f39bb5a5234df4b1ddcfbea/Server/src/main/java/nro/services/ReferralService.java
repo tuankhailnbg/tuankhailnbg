@@ -13,10 +13,11 @@ import nro.models.PartManager;
 import nro.server.Client;
 import nro.server.io.Message;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.ArrayList;
 import nro.jdbc.daos.PlayerDAO;
 import java.util.Map;
-import java.util.Set;
 import nro.services.func.Input;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONValue;
@@ -183,6 +184,185 @@ public final class ReferralService {
                 if (rs.next()) Input.gI().createFormReferralCode(p);
             }
         } catch (SQLException ignored) { }
+    }
+
+
+    /**
+     * Cấp/trừ điểm trực tiếp qua form chỉ admin được dùng.
+     * Log trước và sau mỗi lần cấp; không cộng tự động từ đăng ký/tác vụ.
+     */
+    public String adminGrantPoints(Player admin, String target, String deltaText, String reason) {
+        if (admin == null || admin.getSession() == null || !admin.isAdmin()) return "Không đủ quyền Admin.";
+        if (target == null || target.isBlank()) return "Nhập ID hoặc tên chính xác của nhân vật.";
+        int delta;
+        try { delta = Integer.parseInt(deltaText.trim()); }
+        catch (Exception e) { return "Điểm phải là số nguyên (+1 hoặc -1)."; }
+        if (delta == 0 || delta < -100 || delta > 100)
+            return "Mỗi lần chỉ được cộng/trừ 1–100 điểm.";
+        if (reason == null || reason.isBlank() || reason.trim().length() > 255)
+            return "Phải nhập lý do, tối đa 255 ký tự.";
+        try (Connection c = connect()) {
+            c.setAutoCommit(false);
+            try {
+                long targetId = -1;
+                try (PreparedStatement st = c.prepareStatement(
+                        "SELECT id FROM player WHERE id=CAST(? AS UNSIGNED) OR name=? ORDER BY id LIMIT 2")) {
+                    st.setString(1, target.trim().matches("[0-9]+") ? target.trim() : "0");
+                    st.setString(2, target.trim());
+                    try (ResultSet rs = st.executeQuery()) {
+                        if (!rs.next()) { c.rollback(); return "Không tìm thấy nhân vật."; }
+                        targetId = rs.getLong(1);
+                        if (rs.next()) { c.rollback(); return "Tên không duy nhất, hãy nhập ID nhân vật."; }
+                    }
+                }
+                try (PreparedStatement st = c.prepareStatement(
+                        "INSERT INTO referral_points(player_id,points) VALUES(?,0) "
+                        + "ON DUPLICATE KEY UPDATE player_id=VALUES(player_id)")) {
+                    st.setLong(1,targetId); st.executeUpdate();
+                }
+                int old;
+                try (PreparedStatement st = c.prepareStatement(
+                        "SELECT points FROM referral_points WHERE player_id=? FOR UPDATE")) {
+                    st.setLong(1,targetId);
+                    try (ResultSet rs = st.executeQuery()) {
+                        if (!rs.next()) throw new SQLException("Không có dòng điểm");
+                        old=rs.getInt(1);
+                    }
+                }
+                long after=(long)old+delta;
+                if(after<0 || after>100_000) { c.rollback(); return "Điểm sau thay đổi phải trong khoảng 0–100.000."; }
+                try(PreparedStatement st=c.prepareStatement(
+                        "UPDATE referral_points SET points=? WHERE player_id=?")) {
+                    st.setLong(1,after);st.setLong(2,targetId);st.executeUpdate();
+                }
+                try(PreparedStatement st=c.prepareStatement(
+                        "INSERT INTO referral_points_audit(admin_player_id,player_id,delta_points,"
+                        + "previous_points,current_points,reason) VALUES(?,?,?,?,?,?)")) {
+                    st.setLong(1,admin.id);st.setLong(2,targetId);st.setInt(3,delta);
+                    st.setInt(4,old);st.setLong(5,after);st.setString(6,reason.trim());st.executeUpdate();
+                }
+                c.commit();
+                return "Đã "+(delta>0?"cộng ":"trừ ")+Math.abs(delta)
+                       +" điểm cho ID "+targetId+". Tổng: "+after+" điểm.";
+            } catch(SQLException e) {
+                c.rollback();
+                return "Lỗi khi cấp điểm; đã hủy thao tác. Kiểm tra DB/migration.";
+            } finally { c.setAutoCommit(true); }
+        } catch(SQLException e){return "Lỗi kết nối DB cấp điểm.";}
+    }
+
+    private static final class RankRow {
+        long id;
+        int points;
+        short head;
+        byte gender;
+        String name;
+        RankRow(ResultSet rs) throws SQLException {
+            id=rs.getLong("id");points=rs.getInt("points");
+            head=rs.getShort("head");gender=rs.getByte("gender");
+            name=rs.getString("name");
+        }
+    }
+
+    public void sendLeaderboard(Player viewer) {
+        if (viewer==null || viewer.getSession()==null) return;
+        List<RankRow> rows=new ArrayList<>();
+        try(Connection c=connect();
+            PreparedStatement st=c.prepareStatement(
+                "SELECT p.id,p.name,p.head,p.gender,r.points FROM referral_points r "
+                + "JOIN player p ON p.id=r.player_id WHERE r.points>0 "
+                + "ORDER BY r.points DESC,r.updated_at ASC,p.id ASC LIMIT 30");
+            ResultSet rs=st.executeQuery()) {
+            while(rs.next())rows.add(new RankRow(rs));
+        } catch(SQLException e) {
+            Service.gI().sendThongBao(viewer,"Không tải được Top Giới Thiệu.");return;
+        }
+        try {
+            Message msg=new Message(Cmd.TOP);
+            msg.writer().writeByte(0);
+            msg.writer().writeUTF("TOP GIỚI THIỆU");
+            msg.writer().writeByte(rows.size());
+            for(int i=0;i<rows.size();i++){
+                RankRow row=rows.get(i);
+                Player online=Client.gI().getPlayer(row.id);
+                short h=online==null?row.head:online.getHead();
+                short body=online==null?(short)(row.gender==1?59:57):online.getBody();
+                short leg=online==null?(short)(row.gender==1?60:58):online.getLeg();
+                msg.writer().writeInt(i+1);
+                msg.writer().writeInt((int)row.id);
+                msg.writer().writeShort(h);
+                if(viewer.isVersionAbove(220)){
+                    Part part=PartManager.getInstance().find(h);
+                    msg.writer().writeShort(part==null?h:part.getIcon(0));
+                }
+                msg.writer().writeShort(body);
+                msg.writer().writeShort(leg);
+                msg.writer().writeUTF(row.name);
+                msg.writer().writeUTF(online==null?"Offline":"Online");
+                msg.writer().writeUTF(row.points+" Điểm giới thiệu");
+            }
+            viewer.sendMessage(msg);msg.cleanup();
+        }catch(IOException e){Service.gI().sendThongBao(viewer,"Không hiển thị được bảng xếp hạng.");}
+    }
+
+    public void closeRewardPanel(Player player) {
+        if(player!=null) REWARD_PANELS.remove(player.id);
+    }
+
+    public boolean isRewardPanel(Player p) {
+        if(p==null) return false;
+        Long expiry=REWARD_PANELS.get(p.id);
+        if(expiry==null)return false;
+        if(System.currentTimeMillis()>expiry){REWARD_PANELS.remove(p.id);return false;}
+        return true;
+    }
+
+    public void sendRewardPanel(Player p){
+        if(p==null||p.getSession()==null)return;
+        try(Connection c=connect()){
+            int points=pointsOf(c,p.id);
+            Set<Integer> gotBars=new HashSet<>(), gotCostumes=new HashSet<>(), mappedCostumes=new HashSet<>();
+            try(PreparedStatement st=c.prepareStatement(
+                    "SELECT milestone FROM referral_claims WHERE inviter_player_id=? AND status=1")){
+                st.setLong(1,p.id);
+                try(ResultSet rs=st.executeQuery()){while(rs.next())gotBars.add(rs.getInt(1));}
+            }
+            try(PreparedStatement st=c.prepareStatement(
+                    "SELECT milestone FROM referral_costume_claims WHERE inviter_player_id=?")){
+                st.setLong(1,p.id);
+                try(ResultSet rs=st.executeQuery()){while(rs.next())gotCostumes.add(rs.getInt(1));}
+            }
+            try(PreparedStatement st=c.prepareStatement(
+                    "SELECT milestone FROM referral_costume_catalog WHERE item_template_id IS NOT NULL")){
+                try(ResultSet rs=st.executeQuery()){while(rs.next())mappedCostumes.add(rs.getInt(1));}
+            }
+            // Cùng kiểu bảng thành tựu 'Nhận ngọc miễn phí' ở Bò Mộng.
+            Message m=new Message(Cmd.ACHIEVEMENT);
+            DataOutputStream ds=m.writer();
+            ds.writeByte(0);
+            ds.writeByte(MAX_MILESTONE);
+            for(int n=1;n<=MAX_MILESTONE;n++){
+                int bars=100+(n-1)*25;
+                boolean hasCostume=n==5||n==10||n==15||n==20;
+                String costume=n==5?"Goku SSJ3 (7 ngày)":
+                               n==10?"Vegito Blue (7 ngày)":
+                               n==15?"Gogeta Blue (vĩnh viễn)":
+                               n==20?"Zeno (vĩnh viễn)":"";
+                boolean claimed=gotBars.contains(n) &&
+                     (!hasCostume||gotCostumes.contains(n)||!mappedCostumes.contains(n));
+                String detail="Điểm của bạn: "+points+"/"+n+". Thưởng "+bars+" Thỏi Vàng"
+                        +(hasCostume?"; "+costume:"")
+                        +(hasCostume&&!mappedCostumes.contains(n)?". Cải trang đang cấu hình ID.":"");
+                ds.writeUTF("Mốc giới thiệu "+n);
+                ds.writeUTF(detail);
+                ds.writeShort(bars); // số hiển thị trên kiểu bảng thành tựu
+                ds.writeBoolean(points>=n);
+                ds.writeBoolean(claimed);
+            }
+            ds.flush();
+            REWARD_PANELS.put(p.id,System.currentTimeMillis()+5*60_000L);
+            p.sendMessage(m);m.cleanup();
+        }catch(Exception e){Service.gI().sendThongBao(p,"Không mở được bảng nhận quà giới thiệu.");}
     }
 
     /** Mỗi mốc n nhận 100+(n-1)*25 thỏi, từ 1 tới 20. */
