@@ -206,52 +206,64 @@ public final class DuaTopManager {
                     continue;
                 }
 
-                if (costume != null) {
-                    InventoryService.gI().addItemBag(player, costume, 99);
-                }
-                if (title != null) {
-                    InventoryService.gI().addItemBag(player, title, 99);
-                }
-                if (reward.ruby > 0) {
-                    player.inventory.addRuby(reward.ruby);
-                }
+                // Snapshot memory de co the rollback neu DB transaction that bai.
+                List<Item> bagBefore = new ArrayList<>(player.inventory.itemsBag);
+                int rubyBefore = player.inventory.ruby;
+                int goldBarBefore = player.getSession().goldBar;
 
-                // Luu vat pham + ruby + thoi vang + trang thai claimed trong mot transaction.
-                try (Connection con = DBService.gI().getConnection()) {
-                    con.setAutoCommit(false);
-                    try {
-                        if (reward.goldBar > 0) {
-                            try (PreparedStatement ps = con.prepareStatement(
-                                    "UPDATE account SET thoi_vang=thoi_vang+? WHERE id=?")) {
-                                ps.setInt(1, reward.goldBar);
-                                ps.setInt(2, player.getSession().userId);
-                                ps.executeUpdate();
-                            }
-                            player.getSession().goldBar += reward.goldBar;
-                        }
-
-                        PlayerDAO.updatePlayer(player, con);
-
-                        try (PreparedStatement ps = con.prepareStatement(
-                                "UPDATE dua_top_result SET claimed=1,claimed_at=NOW() "
-                                        + "WHERE id=? AND claimed=0 AND eligible=1")) {
-                            ps.setLong(1, result.resultId);
-                            if (ps.executeUpdate() != 1) {
-                                throw new IllegalStateException("Reward already claimed");
-                            }
-                        }
-                        con.commit();
-                    } catch (Exception ex) {
-                        con.rollback();
-                        // Hoan tien memory neu transaction bi loi. Vat pham da add vao bag
-                        // se duoc reload tu DB sau khi reconnect; khong mark claimed.
-                        if (reward.goldBar > 0) {
-                            player.getSession().goldBar -= reward.goldBar;
-                        }
-                        throw ex;
-                    } finally {
-                        con.setAutoCommit(true);
+                try {
+                    if (costume != null) {
+                        InventoryService.gI().addItemBag(player, costume, 99);
                     }
+                    if (title != null) {
+                        InventoryService.gI().addItemBag(player, title, 99);
+                    }
+                    if (reward.ruby > 0) {
+                        player.inventory.addRuby(reward.ruby);
+                    }
+
+                    // Luu item + ruby + thoi vang + claimed trong cung mot transaction.
+                    try (Connection con = DBService.gI().getConnection()) {
+                        con.setAutoCommit(false);
+                        try {
+                            if (reward.goldBar > 0) {
+                                try (PreparedStatement ps = con.prepareStatement(
+                                        "UPDATE account SET thoi_vang=thoi_vang+? WHERE id=?")) {
+                                    ps.setInt(1, reward.goldBar);
+                                    ps.setInt(2, player.getSession().userId);
+                                    if (ps.executeUpdate() != 1) {
+                                        throw new IllegalStateException("Cannot update gold bar");
+                                    }
+                                }
+                                player.getSession().goldBar += reward.goldBar;
+                            }
+
+                            // Ham nay khong nuot SQLException, phu hop giao dich nhan thuong.
+                            PlayerDAO.updateAdminGrantStateOrThrow(player, con);
+
+                            try (PreparedStatement ps = con.prepareStatement(
+                                    "UPDATE dua_top_result SET claimed=1,claimed_at=NOW() "
+                                            + "WHERE id=? AND claimed=0 AND eligible=1")) {
+                                ps.setLong(1, result.resultId);
+                                if (ps.executeUpdate() != 1) {
+                                    throw new IllegalStateException("Reward already claimed");
+                                }
+                            }
+                            con.commit();
+                        } catch (Exception ex) {
+                            con.rollback();
+                            throw ex;
+                        } finally {
+                            con.setAutoCommit(true);
+                        }
+                    }
+                } catch (Exception ex) {
+                    // Rollback ca memory de autosave khong vo tinh ghi quyen loi chua claim.
+                    player.inventory.itemsBag.clear();
+                    player.inventory.itemsBag.addAll(bagBefore);
+                    player.inventory.ruby = rubyBefore;
+                    player.getSession().goldBar = goldBarBefore;
+                    throw ex;
                 }
 
                 claimedCount++;
