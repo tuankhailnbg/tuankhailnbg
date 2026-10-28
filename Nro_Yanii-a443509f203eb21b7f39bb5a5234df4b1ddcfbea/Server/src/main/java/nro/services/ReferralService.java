@@ -174,7 +174,7 @@ public final class ReferralService {
         if (p == null || p.getSession() == null) return "Chưa đăng nhập";
         try (Connection c = connect()) {
             int points = pointsOf(c, p.id);
-            return "Điểm giới thiệu: " + points;
+            return "Điểm của bạn: " + points;
         } catch (SQLException ex) {
             return diagnostic(p, "đọc điểm giới thiệu", ex);
         }
