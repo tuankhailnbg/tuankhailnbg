@@ -510,6 +510,10 @@ public class Player {
                     if (event != null) {
                         event.update();
                     }
+                    // Theo dõi giờ hoạt động của người được giới thiệu.
+                    if (!this.isBoss && !this.isPet && !this.isMiniPet) {
+                        ReferralService.gI().tick(this);
+                    }
                     try {
                         BlackBallWar.gI().update(this);
                     } catch (Exception e) {
@@ -1159,6 +1163,7 @@ public class Player {
     }
 
     public void dispose() {
+        ReferralService.gI().closeRewardPanel(this);
         if (escortedBoss != null) {
             escortedBoss.stopEscorting();
         }

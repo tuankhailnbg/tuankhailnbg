@@ -95,6 +95,52 @@ public class NpcFactory {
         Npc npc = null;
         try {
             npc = switch (tempId) {
+                case ConstNpc.EVENT ->
+                    new Npc(mapId, status, cx, cy, tempId, avartar) {
+                        private static final int REFERRAL_MENU = 20261028;
+                        @Override
+                        public void openBaseMenu(Player player) {
+                            if (canOpenNpc(player) && this.mapId == 5) {
+                                createOtherMenu(player, ConstNpc.BASE_MENU,
+                                        "|1|NPC SỰ KIỆN\nChọn sự kiện muốn tham gia",
+                                        "Sự kiện\ngiới thiệu", "Đua top");
+                            }
+                        }
+                        @Override
+                        public void confirmMenu(Player player, int select) {
+                            if (!canOpenNpc(player) || this.mapId != 5) return;
+                            if (player.iDMark.isBaseMenu()) {
+                                switch (select) {
+                                    case 0 -> {
+                                        String details = "|1|GIỚI THIỆU BẠN BÈ\n"
+                                                + nro.services.ReferralService.gI().status(player);
+                                        if (player.isAdmin()) {
+                                            createOtherMenu(player, REFERRAL_MENU, details,
+                                                    "Bảng xếp\nhạng giới thiệu",
+                                                    "Nhận quà\ngiới thiệu",
+                                                    "Cấp điểm\n(Admin)", "Đóng");
+                                        } else {
+                                            createOtherMenu(player, REFERRAL_MENU, details,
+                                                    "Bảng xếp\nhạng giới thiệu",
+                                                    "Nhận quà\ngiới thiệu", "Đóng");
+                                        }
+                                    }
+                                    case 1 -> Service.gI().sendThongBaoOK(player,
+                                            "Sự kiện Đua Top đang chuẩn bị. Sẽ cập nhật sau.");
+                                    default -> { }
+                                }
+                            } else if (player.iDMark.getIndexMenu() == REFERRAL_MENU) {
+                                switch (select) {
+                                    case 0 -> nro.services.ReferralService.gI().sendLeaderboard(player);
+                                    case 1 -> nro.services.ReferralService.gI().sendRewardPanel(player);
+                                    case 2 -> {
+                                        if (player.isAdmin()) Input.gI().createFormAdminReferralPoints(player);
+                                    }
+                                    default -> { }
+                                }
+                            }
+                        }
+                    };
                 case ConstNpc.OBITO ->
                     new Npc(mapId, status, cx, cy, tempId, avartar) {
                         @Override
@@ -6356,6 +6402,9 @@ public class NpcFactory {
                                 break;
                             case 5:
                                 Input.gI().createFormFindPlayer(player);
+                                break;
+                            case 6:
+                                if (player.isAdmin()) Input.gI().createFormAdminReferralPoints(player);
                                 break;
                         }
                         break;

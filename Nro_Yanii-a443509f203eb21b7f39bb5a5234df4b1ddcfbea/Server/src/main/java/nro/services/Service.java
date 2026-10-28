@@ -797,7 +797,7 @@ public class Service {
                                 + "|1|Số người chơi đang online: " + Client.gI().getPlayers().size() + "\n"
                                 + "|8|Current thread server: " + Thread.activeCount() + "\n"
                                 + "|6|Time start server: " + ServerManager.timeStart,
-                        "Buff\nvật phẩm", "Cộng\nsố dư", "Ngọc rồng", "Đệ tử", "Bảo trì", "Tìm kiếm\nngười chơi", "Đóng");
+                        "Buff\nvật phẩm", "Cộng\nsố dư", "Ngọc rồng", "Đệ tử", "Bảo trì", "Tìm kiếm\nngười chơi", "Cấp điểm\ngiới thiệu", "Đóng");
                 return;
             }
             if (text.equals("quanct")) {

@@ -3233,6 +3233,7 @@ public class TaskService {
     }
 
     public void sendAchivement(Player player) {
+        ReferralService.gI().closeRewardPanel(player);
         List<Achivement> achivements = player.playerTask.achivements;
         Message m = new Message(Cmd.ACHIEVEMENT);
         DataOutputStream ds = m.writer();

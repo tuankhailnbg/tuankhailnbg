@@ -135,6 +135,20 @@ public class Map implements Runnable {
         for (int i = 0; i < npcId.length; i++) {
             this.npcs.add(NpcFactory.createNPC(this.mapId, 1, npcX[i], npcY[i], npcId[i], npcAvatar[i]));
         }
+        // Sứ Giả Sự Kiện tại Đảo Kamê. Không thêm trùng nếu đã có trong DB.
+        if (this.mapId == 5) {
+            boolean present = false;
+            for (Npc npc : this.npcs) {
+                if (npc != null && npc.tempId == nro.consts.ConstNpc.EVENT) {
+                    present = true;
+                    break;
+                }
+            }
+            if (!present) {
+                this.npcs.add(NpcFactory.createNPC(this.mapId, 1, 780, 408,
+                        nro.consts.ConstNpc.EVENT, 1173));
+            }
+        }
     }
 
     @Override

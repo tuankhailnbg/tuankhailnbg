@@ -1397,6 +1397,7 @@ public class InventoryService {
                 JSONArray options = new JSONArray();
                 dataItem.put("temp_id", item.template.id);
                 dataItem.put("quantity", item.quantity);
+                dataItem.put("create_time", item.createTime);
                 for (ItemOption io : item.itemOptions) {
                     JSONArray option = new JSONArray();
                     option.add(io.optionTemplate.id);

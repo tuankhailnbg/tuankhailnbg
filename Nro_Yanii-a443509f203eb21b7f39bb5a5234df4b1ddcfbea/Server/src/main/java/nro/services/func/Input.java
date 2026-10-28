@@ -55,6 +55,8 @@ public class Input {
     public static final int BUFF_INPUT_PARAM = 525;
     public static final int BUFF_STEP_1 = 528;
     public static final int ADMIN_CREDIT_FORM = 529;
+    public static final int REFERRAL_CODE = 530;
+    public static final int ADMIN_REFERRAL_POINTS = 531;
     public static final byte NUMERIC = 0;
     public static final byte ANY = 1;
     public static final byte PASSWORD = 2;
@@ -145,6 +147,20 @@ public class Input {
                     break;
                 case GIFT_CODE:
                     GiftService.gI().use(player, text[0]);
+                    break;
+                case ADMIN_REFERRAL_POINTS:
+                    if (player != null && player.getSession() != null && player.isAdmin()) {
+                        Service.gI().sendThongBaoOK(player,
+                                nro.services.ReferralService.gI().adminGrantPoints(player,
+                                        text.length>0?text[0]:"",
+                                        text.length>1?text[1]:"",
+                                        text.length>2?text[2]:""));
+                    }
+                    break;
+                case REFERRAL_CODE:
+                    Service.gI().sendThongBaoOK(player,
+                            nro.services.ReferralService.gI().register(player,
+                                    text.length > 0 ? text[0] : ""));
                     break;
                 case FIND_PLAYER:
                     pl = Client.gI().getPlayer(text[0]);
@@ -519,6 +535,19 @@ public class Input {
         createForm(pl, CHANGE_PASSWORD, "Đổi mật khẩu", new SubInput("Mật khẩu cũ", PASSWORD),
                 new SubInput("Mật khẩu mới", PASSWORD),
                 new SubInput("Nhập lại mật khẩu mới", PASSWORD));
+    }
+
+    public void createFormAdminReferralPoints(Player pl) {
+        if (pl == null || pl.getSession() == null || !pl.isAdmin()) return;
+        createForm(pl, ADMIN_REFERRAL_POINTS, "ADMIN - CẤP ĐIỂM GIỚI THIỆU",
+                new SubInput("ID / tên chính xác nhân vật", ANY),
+                new SubInput("Điểm cộng/trừ (+1 / -1)", ANY),
+                new SubInput("Lý do xác nhận giới thiệu", ANY));
+    }
+
+    public void createFormReferralCode(Player pl) {
+        createForm(pl, REFERRAL_CODE, "Nhập mã giới thiệu trong 24 giờ đầu",
+                new SubInput("Mã người giới thiệu (GT...)", ANY));
     }
 
     public void createFormGiftCode(Player pl) {

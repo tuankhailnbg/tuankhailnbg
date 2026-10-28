@@ -54,7 +54,14 @@ public class Controller {
                     KiGuiShop.getInstance().handler(player, _msg);
                     break;
                 case Cmd.ACHIEVEMENT:
-                    TaskService.gI().rewardAchivement(player, _msg.reader().readByte());
+                    if (player != null) {
+                        byte rewardIndex = _msg.reader().readByte();
+                        if (nro.services.ReferralService.gI().isRewardPanel(player)) {
+                            nro.services.ReferralService.gI().onRewardSelection(player, rewardIndex);
+                        } else {
+                            TaskService.gI().rewardAchivement(player, rewardIndex);
+                        }
+                    }
                     break;
                 case Cmd.RADA_CARD:
                     RadaService.getInstance().controller(player, _msg);
