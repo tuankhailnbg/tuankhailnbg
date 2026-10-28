@@ -6,6 +6,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import nro.services.func.Input;
 import java.util.concurrent.ConcurrentHashMap;
 import nro.jdbc.DBService;
 import nro.models.item.Item;
@@ -27,6 +29,7 @@ public final class ReferralService {
     private static final int AFTER_CELL_TASK_ID = 30;
     private static final long INPUT_WINDOW_HOURS = 24L;
     private static final Map<Long, Activity> ACTIVITY = new ConcurrentHashMap<>();
+    private static final Set<Integer> PROMPTED = ConcurrentHashMap.newKeySet();
 
     private static final class Activity {
         long lastSample, lastActivity, lastPersist, power;
@@ -68,7 +71,7 @@ public final class ReferralService {
         try (Connection c = connect()) {
             int completed = 0, claimed = 0;
             try (PreparedStatement st = c.prepareStatement(
-                    "SELECT COUNT(*) FROM referral_invites WHERE inviter_player_id=? AND status=1")) {
+                    "SELECT COUNT(*) FROM referral_invites WHERE inviter_player_id=? AND status=1 AND review_required=0")) {
                 st.setLong(1, p.id);
                 try (ResultSet rs = st.executeQuery()) { if (rs.next()) completed = rs.getInt(1); }
             }
@@ -79,11 +82,12 @@ public final class ReferralService {
             }
             String self = "Chưa nhập mã giới thiệu";
             try (PreparedStatement st = c.prepareStatement(
-                    "SELECT status,active_seconds FROM referral_invites WHERE invited_account_id=?")) {
+                    "SELECT status,active_seconds,review_required FROM referral_invites WHERE invited_account_id=?")) {
                 st.setInt(1, p.getSession().userId);
                 try (ResultSet rs = st.executeQuery()) {
-                    if (rs.next()) self = (rs.getInt(1) == 1 ? "Đã hợp lệ" :
-                            "Đang làm nhiệm vụ (" + rs.getInt(2) / 3600 + "/10 giờ)");
+                    if (rs.next()) self = rs.getInt(3) == 1 ? "Đang chờ kiểm tra chống farm"
+                            : (rs.getInt(1) == 1 ? "Đã hợp lệ"
+                            : "Đang làm nhiệm vụ (" + rs.getInt(2) / 3600 + "/10 giờ)");
                 }
             }
             return "Mã giới thiệu của bạn: " + code(p)
@@ -122,16 +126,33 @@ public final class ReferralService {
                         if (!rs.next()) { c.rollback(); return "Chỉ tài khoản mới trong vòng 24 giờ được nhập mã."; }
                     }
                 }
+                // Chỉ đánh dấu kiểm tra khi nhiều tài khoản chung IP.
+                // Không khóa vĩnh viễn các bạn chơi cùng Wi-Fi.
+                int review = 0;
                 try (PreparedStatement st = c.prepareStatement(
-                        "INSERT INTO referral_invites(invited_account_id,invited_player_id,inviter_player_id,referral_code) VALUES(?,?,?,?)")) {
+                        "SELECT (a1.ip_address=a2.ip_address AND a1.ip_address<>''),"
+                        + "(SELECT COUNT(*) FROM account ax WHERE ax.ip_address=a1.ip_address "
+                        + "AND ax.create_time>=DATE_SUB(NOW(),INTERVAL 3 DAY)) "
+                        + "FROM account a1 JOIN account a2 ON a2.id=? WHERE a1.id=?")) {
+                    st.setInt(1, inviterAccount);
+                    st.setInt(2, accountId);
+                    try (ResultSet rs = st.executeQuery()) {
+                        if (rs.next() && (rs.getBoolean(1) || rs.getInt(2) >= 4)) review = 1;
+                    }
+                }
+                try (PreparedStatement st = c.prepareStatement(
+                        "INSERT INTO referral_invites(invited_account_id,invited_player_id,inviter_player_id,"
+                        + "referral_code,review_required) VALUES(?,?,?,?,?)")) {
                     st.setInt(1, accountId);
                     st.setLong(2, invitee.id);
                     st.setLong(3, inviterId);
                     st.setString(4, codeOf(inviterId));
+                    st.setInt(5, review);
                     st.executeUpdate();
                 }
                 c.commit();
-                return "Nhập mã thành công! Đạt 50 tỷ sức mạnh, 10 giờ hoạt động và xong nhiệm vụ Cell để được tính lượt.";
+                return "Nhập mã thành công! Đạt 50 tỷ sức mạnh, 10 giờ hoạt động và xong nhiệm vụ Cell để được tính lượt."
+                        + (review == 1 ? " Tài khoản cần được xác minh chống farm trước khi cộng mốc." : "");
             } catch (SQLException ex) {
                 c.rollback();
                 if ("23000".equals(ex.getSQLState())) return "Tài khoản đã liên kết một mã giới thiệu.";
@@ -152,6 +173,7 @@ public final class ReferralService {
     public void tick(Player p) {
         if (p == null || !p.loaded || p.getSession() == null || p.isBoss || p.isPet || p.isMiniPet
                 || p.playerTask == null || p.nPoint == null || p.location == null) return;
+        promptOnFirstLogin(p);
         long now = System.currentTimeMillis();
         Activity a = ACTIVITY.computeIfAbsent(p.id, id -> new Activity(p, now));
         synchronized (a) {
@@ -188,6 +210,21 @@ public final class ReferralService {
                 }
             } catch (SQLException ignored) { /* Không làm rớt phiên game khi DB lỗi. */ }
         }
+    }
+
+    // Để người mới biết có ô nhập mã ngay trong game, không cần sửa client.
+    private void promptOnFirstLogin(Player p) {
+        int accountId = p.getSession().userId;
+        if (!PROMPTED.add(accountId)) return;
+        try (Connection c = connect(); PreparedStatement st = c.prepareStatement(
+                "SELECT a.id FROM account a WHERE a.id=? "
+                + "AND a.create_time >= DATE_SUB(NOW(),INTERVAL 24 HOUR) "
+                + "AND NOT EXISTS (SELECT 1 FROM referral_invites r WHERE r.invited_account_id=a.id)")) {
+            st.setInt(1, accountId);
+            try (ResultSet rs = st.executeQuery()) {
+                if (rs.next()) Input.gI().createFormReferralCode(p);
+            }
+        } catch (SQLException ignored) { }
     }
 
     /** Mỗi mốc n nhận 100+(n-1)*25 thỏi, từ 1 tới 20. */
