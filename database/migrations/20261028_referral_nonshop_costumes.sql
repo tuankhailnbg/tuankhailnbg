@@ -6,7 +6,7 @@
 --   * Moc 5  -> ID 1304: Cai trang Goku SSJ4
 --   * Moc 10 -> ID 1305: Cai trang Vegeta SSJ4
 --   * Moc 15 -> ID 1306: Cai trang Omega
---   * Moc 20 -> ID 2129: Cai Trang Fu
+--   * Moc 20 -> ID 2045: Cai trang Cumber
 --
 -- Ly do chon:
 --   * 4 item da ton tai san trong item_template, TYPE=5.
@@ -16,7 +16,7 @@
 --       1304: icon 20371 == head 1345 frame dau 20371
 --       1305: icon 20403 == head 1348 frame dau 20403
 --       1306: icon 20339 == head 1342 frame dau 20339
---       2129: icon 32116 == head 1425 frame dau 32116
+--       2045: icon 11379 == head 1387 frame dau 11379
 --   * Bo animation player day du:
 --       head = 3 frame, body = 17 frame, leg = 14 frame.
 --
@@ -89,8 +89,8 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Thieu cai trang Omega ID 1306';
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM item_template WHERE id=2129 AND TYPE=5) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Thieu cai trang Fu ID 2129';
+    IF NOT EXISTS (SELECT 1 FROM item_template WHERE id=2045 AND TYPE=5) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Thieu cai trang Cumber ID 2045';
     END IF;
 
     -- --------------------------------------------------------
@@ -98,10 +98,10 @@ BEGIN
     -- --------------------------------------------------------
     IF EXISTS (
         SELECT 1 FROM item_shop
-        WHERE temp_id IN (1304,1305,1306,2129)
+        WHERE temp_id IN (1304,1305,1306,2045)
     ) THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT='DUNG IMPORT: mot trong 4 ID 1304/1305/1306/2129 dang nam trong item_shop';
+        SET MESSAGE_TEXT='DUNG IMPORT: mot trong 4 ID 1304/1305/1306/2045 dang nam trong item_shop';
     END IF;
 
     -- --------------------------------------------------------
@@ -130,9 +130,9 @@ BEGIN
 
     IF NOT EXISTS (
         SELECT 1 FROM cai_trang
-        WHERE id_temp=2129 AND head=1425 AND body=1426 AND leg=1427
+        WHERE id_temp=2045 AND head=1387 AND body=1388 AND leg=1389
     ) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Mapping Fu ID 2129 khong dung';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Mapping Cumber ID 2045 khong dung';
     END IF;
 
     -- --------------------------------------------------------
@@ -169,9 +169,9 @@ BEGIN
         SELECT 1
         FROM cai_trang c
         JOIN item_shop s ON s.temp_id=c.id_temp
-        WHERE c.head=1425 AND c.body=1426 AND c.leg=1427
+        WHERE c.head=1387 AND c.body=1388 AND c.leg=1389
     ) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Ngoai hinh Fu dang bi item shop su dung';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Ngoai hinh Cumber dang bi item shop su dung';
     END IF;
 
     -- --------------------------------------------------------
@@ -196,10 +196,10 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Part Omega thieu frame animation';
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM part WHERE id=1425 AND TYPE=0 AND JSON_LENGTH(DATA)=3)
-       OR NOT EXISTS (SELECT 1 FROM part WHERE id=1426 AND TYPE=1 AND JSON_LENGTH(DATA)=17)
-       OR NOT EXISTS (SELECT 1 FROM part WHERE id=1427 AND TYPE=2 AND JSON_LENGTH(DATA)=14) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Part Fu thieu frame animation';
+    IF NOT EXISTS (SELECT 1 FROM part WHERE id=1387 AND TYPE=0 AND JSON_LENGTH(DATA)=3)
+       OR NOT EXISTS (SELECT 1 FROM part WHERE id=1388 AND TYPE=1 AND JSON_LENGTH(DATA)=17)
+       OR NOT EXISTS (SELECT 1 FROM part WHERE id=1389 AND TYPE=2 AND JSON_LENGTH(DATA)=14) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Part Cumber thieu frame animation';
     END IF;
 
     -- --------------------------------------------------------
@@ -234,11 +234,11 @@ BEGIN
 
     IF NOT EXISTS (
         SELECT 1
-        FROM item_template i JOIN part p ON p.id=1425
-        WHERE i.id=2129 AND i.icon_id=32116
-          AND CAST(JSON_UNQUOTE(JSON_EXTRACT(p.DATA,'$[0][0]')) AS UNSIGNED)=32116
+        FROM item_template i JOIN part p ON p.id=1387
+        WHERE i.id=2045 AND i.icon_id=11379
+          AND CAST(JSON_UNQUOTE(JSON_EXTRACT(p.DATA,'$[0][0]')) AS UNSIGNED)=11379
     ) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Icon Fu khong trung hinh head';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Icon Cumber khong trung hinh head';
     END IF;
 
     -- --------------------------------------------------------
@@ -266,8 +266,8 @@ BEGIN
     WHERE milestone=15;
 
     UPDATE referral_costume_catalog
-    SET item_template_id=2129,
-        costume_name='Fu',
+    SET item_template_id=2045,
+        costume_name='Cumber',
         duration_days=NULL,
         options_json='[[77,27],[103,27],[50,27],[14,10],[101,20],[8,10],[30,0]]'
     WHERE milestone=20;
@@ -294,7 +294,7 @@ DROP PROCEDURE nro_set_referral_nonshop_costumes_20261028;
 -- KIEM TRA SAU IMPORT
 -- ============================================================
 
--- 4 moc phai ra 1304/1305/1306/2129.
+-- 4 moc phai ra 1304/1305/1306/2045.
 SELECT milestone,item_template_id,costume_name,duration_days,options_json
 FROM referral_costume_catalog
 WHERE milestone IN (5,10,15,20)
@@ -304,13 +304,13 @@ ORDER BY milestone;
 SELECT s.id AS shop_row,s.tab_id,s.temp_id,i.NAME
 FROM item_shop s
 JOIN item_template i ON i.id=s.temp_id
-WHERE s.temp_id IN (1304,1305,1306,2129);
+WHERE s.temp_id IN (1304,1305,1306,2045);
 
 -- Mapping + icon.
 SELECT i.id,i.NAME,i.icon_id,c.head,c.body,c.leg,c.bag
 FROM item_template i
 JOIN cai_trang c ON c.id_temp=i.id
-WHERE i.id IN (1304,1305,1306,2129)
+WHERE i.id IN (1304,1305,1306,2045)
 ORDER BY i.id;
 
 -- Khong co 2 moc dung chung 1 item ID: query nay BAT BUOC tra 0 dong.
