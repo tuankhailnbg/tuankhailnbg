@@ -407,9 +407,14 @@ public class Manager {
                     nClass.classId = nClassId;
                     NCLASS.add(nClass);
                 }
+                byte skillTemplateId = rs.getByte("id");
+                if (skillTemplateId == Skill.BIEN_HINH) {
+                    continue;
+                }
+
                 SkillTemplate skillTemplate = new SkillTemplate();
                 skillTemplate.classId = nClassId;
-                skillTemplate.id = rs.getByte("id");
+                skillTemplate.id = skillTemplateId;
                 skillTemplate.name = rs.getString("name");
                 skillTemplate.maxPoint = rs.getByte("max_point");
                 skillTemplate.manaUseType = rs.getByte("mana_use_type");
