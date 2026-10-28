@@ -175,8 +175,7 @@ public class TopRaceManager {
                             ps.setString(2, type);
                             ps.setInt(3, entry.rank);
                             ps.setInt(4, (int) entry.player.id);
-                            ps.setInt(5, entry.player.getSession() != null
-                                    ? entry.player.getSession().userId : getAccountId((int) entry.player.id));
+                            ps.setInt(5, getAccountId((int) entry.player.id));
                             ps.setLong(6, entry.score);
                             ps.setString(7, entry.detail);
                             ps.setInt(8, rewardStatus);
