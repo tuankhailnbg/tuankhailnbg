@@ -10,7 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 EVENT = ROOT / "database/migrations/20261028_referral_event_kame.sql"
 MANUAL = ROOT / "database/migrations/20261028_referral_manual_points.sql"
-NONSHOP = ROOT / "database/migrations/20261028_referral_nonshop_costumes.sql"\nCLEAN_TEXT = ROOT / "database/migrations/20261028_cleanup_nro_yanii_text.sql"
+NONSHOP = ROOT / "database/migrations/20261028_referral_nonshop_costumes.sql"
+CLEAN_TEXT = ROOT / "database/migrations/20261028_cleanup_nro_yanii_text.sql"
 
 EXPECTED = [
     (5, 1304, 7, "Goku SSJ4"),
