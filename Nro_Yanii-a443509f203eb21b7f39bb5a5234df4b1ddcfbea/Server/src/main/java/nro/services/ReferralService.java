@@ -236,7 +236,7 @@ public final class ReferralService {
             try (Connection c = connect()) {
                 int total = 0;
                 try (PreparedStatement st = c.prepareStatement(
-                        "SELECT COUNT(*) FROM referral_invites WHERE inviter_player_id=? AND status=1")) {
+                        "SELECT COUNT(*) FROM referral_invites WHERE inviter_player_id=? AND status=1 AND review_required=0")) {
                     st.setLong(1, player.id);
                     try (ResultSet rs = st.executeQuery()) { if (rs.next()) total = Math.min(MAX_MILESTONE, rs.getInt(1)); }
                 }
@@ -319,6 +319,7 @@ public final class ReferralService {
                 try (ResultSet rs = st.executeQuery()) { if (rs.next()) continue; }
             }
             if (InventoryService.gI().getCountEmptyBag(p) < 1) break;
+            if (ItemService.gI().getTemplate((short) itemId) == null) continue;
             Item item = ItemService.gI().createNewItem((short) itemId, 1);
             if (item == null || item.template == null) continue;
             item.itemOptions.clear();
