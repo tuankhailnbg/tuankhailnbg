@@ -60,6 +60,16 @@ def static_contract():
         check(f"({milestone},NULL,'{name}',{flag}," in catalog,
               f"catalog includes {name}, duration {flag}")
     check("item.template.type != 5" in source, "costume claim rejects non-costume item templates")
+    check("linkExistingCostume(c, milestone)" in source
+          and "c.item_template_id IS NULL" in source and "i.TYPE=5" in source,
+          "interrupted costume import safely relinks existing known TYPE=5 items")
+    check("Cải trang CHƯA được nhận:" in source,
+          "special-milestone claim reports pending costume after receiving gold bars")
+    check("getItemOptionTemplate(id) == null" in source,
+          "costume options are checked against loaded server templates")
+    credit_form = user_input.split("public void createFormAdminCredit(Player pl) {",1)[1].split("\\n    }",1)[0]
+    check(credit_form.count("new SubInput(") == 2,
+          "admin credit form shows only recipient and amount")
     print("All static contract checks passed.")
 
 def read_sql(name):
