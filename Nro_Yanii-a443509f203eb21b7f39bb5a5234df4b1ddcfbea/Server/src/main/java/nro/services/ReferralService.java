@@ -347,11 +347,14 @@ public final class ReferralService {
                                n==10?"Vegito Blue (7 ngày)":
                                n==15?"Gogeta Blue (vĩnh viễn)":
                                n==20?"Zeno (vĩnh viễn)":"";
+                // Một mốc đặc biệt chỉ hoàn tất khi cả Thỏi Vàng và cải trang đều đã nhận.
                 boolean claimed=gotBars.contains(n) &&
-                     (!hasCostume||gotCostumes.contains(n)||!mappedCostumes.contains(n));
+                     (!hasCostume||gotCostumes.contains(n));
                 String detail="Điểm của bạn: "+points+"/"+n+". Thưởng "+bars+" Thỏi Vàng"
                         +(hasCostume?"; "+costume:"")
-                        +(hasCostume&&!mappedCostumes.contains(n)?". Cải trang đang cấu hình ID.":"");
+                        +(gotBars.contains(n)?". Đã nhận Thỏi Vàng.":"")
+                        +(hasCostume&&!gotCostumes.contains(n)&&!mappedCostumes.contains(n)
+                                ? ". Cải trang chưa có ID, phần quà được bảo lưu." : "");
                 ds.writeUTF("Mốc giới thiệu "+n);
                 ds.writeUTF(detail);
                 ds.writeShort(bars); // số hiển thị trên kiểu bảng thành tựu
@@ -430,7 +433,14 @@ public final class ReferralService {
                             +", nhưng chưa thể lưu cải trang. Hãy thử lại sau.";
                     }
                     InventoryService.gI().sendItemBags(player);
-                    if(paid&&costumes==0)return "Mốc "+milestone+" đã nhận Thỏi Vàng trước đó.";
+                    if (paid&&costumes==0) {
+                        if (isSpecialMilestone(milestone) && !costumeAlreadyClaimed(c,player.id,milestone)) {
+                            return "Đã nhận Thỏi Vàng mốc " + milestone
+                                  + ". Cải trang đang chờ cấu hình ID hoặc chờ chỗ trống trong túi; "
+                                  + "bạn có thể nhận bổ sung sau.";
+                        }
+                        return "Bạn đã nhận đủ quà mốc " + milestone + ".";
+                    }
                     return (paid?"":"Đã nhận "+bars+" Thỏi Vàng ở mốc "+milestone+". ")
                             +(costumes>0?"Đã nhận thêm "+costumes+" cải trang.":"");
                 }catch(SQLException ex){return "Lỗi cơ sở dữ liệu khi nhận quà.";}
@@ -442,10 +452,10 @@ public final class ReferralService {
      * Chỉ phát cải trang khi admin đã gán ID item thật trong referral_costume_catalog.
      * Nếu chưa có sprite/item_template, quà vẫn chờ, không đánh dấu đã nhận.
      */
-    private int claimCostumes(Player p, Connection c, int completed) throws SQLException {
+    private int claimCostumes(Player p, Connection c, int selectedMilestone) throws SQLException {
         int delivered = 0;
         for (int milestone : new int[] { 5, 10, 15, 20 }) {
-            if (completed < milestone) continue;
+            if (selectedMilestone != milestone) continue;
             int itemId, days;
             String options;
             try (PreparedStatement st = c.prepareStatement(
@@ -468,7 +478,10 @@ public final class ReferralService {
             if (InventoryService.gI().getCountEmptyBag(p) < 1) break;
             if (ItemService.gI().getTemplate((short) itemId) == null) continue;
             Item item = ItemService.gI().createNewItem((short) itemId, 1);
-            if (item == null || item.template == null) continue;
+            if (item == null || item.template == null || item.template.type != 5) {
+                // Không phát nhầm vật phẩm khác loại cải trang (5).
+                continue;
+            }
             item.itemOptions.clear();
             try {
                 JSONArray list = (JSONArray) JSONValue.parse(options);
@@ -515,6 +528,19 @@ public final class ReferralService {
             } finally { c.setAutoCommit(true); }
         }
         return delivered;
+    }
+
+    private boolean isSpecialMilestone(int milestone) {
+        return milestone == 5 || milestone == 10 || milestone == 15 || milestone == 20;
+    }
+
+    private boolean costumeAlreadyClaimed(Connection c, long playerId, int milestone) throws SQLException {
+        try (PreparedStatement st = c.prepareStatement(
+                "SELECT 1 FROM referral_costume_claims WHERE inviter_player_id=? AND milestone=?")) {
+            st.setLong(1, playerId);
+            st.setInt(2, milestone);
+            try (ResultSet rs = st.executeQuery()) { return rs.next(); }
+        }
     }
 
     private List<Item> snapshotBag(Player p) {
