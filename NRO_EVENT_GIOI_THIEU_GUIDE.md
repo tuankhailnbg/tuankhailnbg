@@ -34,6 +34,11 @@ Danh sách gồm **20 mốc**, mỗi dòng có tên mốc, số điểm hiện c
 - Tổng 20 mốc = **6.750 Thỏi Vàng**.
 - Mỗi mốc phát 1 lần, lưu `referral_claims` (khóa chính người chơi+mốc); không cộng tự động khi admin cấp điểm.
 - Mỗi mốc bấm nhận riêng. Server dùng khóa lưu nhân vật và giao dịch DB, chống gửi lệnh nhận trùng.
+- **Đủ điểm là có thể bấm nhận tại mọi mốc từ 1 tới 20**; không bắt buộc nhận tuần tự. Thưởng mốc 1: 100 Thỏi Vàng, mỗi mốc kế tiếp +25 Thỏi Vàng.
+- **Riêng 5/10/15/20 cộng thêm cải trang cùng mốc**, không thay thế phần Thỏi Vàng.
+- Nếu chưa gắn được ID cải trang thật, **Thỏi Vàng vẫn nhận bình thường**, mốc vẫn hiển thị chờ phần cải trang; khi đã cấu hình đúng ID và túi còn chỗ, bấm lại mốc đó chỉ phát cải trang, **không phát lại Thỏi Vàng**.
+- Bản sửa cũng bổ sung lưu `create_time` của item vào chuỗi hành trang để HSD 7 ngày không bị tính lại khi nhận quà rồi lưu trực tiếp.
+
 - Đây là cách **tận dụng kiểu bảng của Bò Mộng**; icon tiền thưởng mặc định của client có thể vẫn là Hồng Ngọc vì giao thức thành tựu cũ; nội dung dòng đã ghi rõ Thỏi Vàng. Muốn đổi icon riêng cần sửa client.
 
 ## 5. Cải trang mốc 5/10/15/20
@@ -45,7 +50,24 @@ Danh sách gồm **20 mốc**, mỗi dòng có tên mốc, số điểm hiện c
 | 15 | Gogeta Blue | Vĩnh viễn | 25% | 25% | 25% | 8% | 17% | 8% |
 | 20 | Zeno | Vĩnh viễn | 27% | 27% | 27% | 10% | 20% | 10% |
 
-**Chưa xác định đúng item_template/sprite của 4 cải trang; `referral_costume_catalog.item_template_id` đang là NULL, nên chưa tự phát cải trang.** Khi có đúng item ID và client asset, cập nhật bảng cấu hình để hệ thống phát chỉ số tương ứng và hạn 7 ngày dùng item option 93. Bảng `referral_costume_claims` giữ lịch sử phát. Không tự gán ID ngẫu nhiên khi chưa đối chiếu SQL/assets.
+**Chưa xác định đúng item_template/sprite của 4 cải trang; `referral_costume_catalog.item_template_id` đang là NULL, nên chưa tự phát cải trang.**
+Đã kiểm tra `ngocrong.sql` hiện có: **không tìm thấy đủ 4 cải trang với tên/hình chính xác** Goku SSJ3, Vegito Blue, Gogeta Blue, Zeno. Có những cải trang khác như Black Goku SSJ3 White và Gogeta SSJ4, nhưng **không được thay thế âm thầm** vì hình/nhân vật khác yêu cầu.
+
+Sau khi thêm đúng template và icon/sprite vào database **và client**, có thể đối chiếu danh sách:
+```sql
+SELECT id, NAME, TYPE, icon_id, part FROM item_template
+WHERE TYPE=5
+ORDER BY id;
+```
+Sau đó gắn riêng từng ID thật:
+```sql
+UPDATE referral_costume_catalog SET item_template_id=<ID_GOKU_SSJ3> WHERE milestone=5;
+UPDATE referral_costume_catalog SET item_template_id=<ID_VEGITO_BLUE> WHERE milestone=10;
+UPDATE referral_costume_catalog SET item_template_id=<ID_GOGETA_BLUE> WHERE milestone=15;
+UPDATE referral_costume_catalog SET item_template_id=<ID_ZENO> WHERE milestone=20;
+```
+Các placeholder `<ID_...>` cần thay bằng ID **đã tồn tại thực tế**; **không chạy nguyên xi** bốn lệnh mẫu. Service kiểm tra `item_template.type=5` trước khi tạo vật phẩm.
+ Khi có đúng item ID và client asset, cập nhật bảng cấu hình để hệ thống phát chỉ số tương ứng và hạn 7 ngày dùng item option 93. Bảng `referral_costume_claims` giữ lịch sử phát. Không tự gán ID ngẫu nhiên khi chưa đối chiếu SQL/assets.
 
 ## 6. Cài trên VPS Windows (SAO LƯU trước)
 
