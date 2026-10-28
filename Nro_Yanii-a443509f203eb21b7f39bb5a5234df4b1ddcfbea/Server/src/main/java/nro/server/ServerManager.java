@@ -334,6 +334,8 @@ public class ServerManager {
         ScheduledExecutorService autoTopPower = Executors.newScheduledThreadPool(1);
         autoTopPower.scheduleWithFixedDelay(() -> {
             TopManager.getInstance().loadTopNangDong();
+            // Snapshot Top Nạp theo mùa + tự chốt kết quả khi hết hạn.
+            nro.manager.DuaTopManager.getInstance().tick();
             //  TopManager.getInstance().loadTopVnd();
             //TopPowerManager.getInstance().load();
 //            TopRichManManager.getInstance().load();
