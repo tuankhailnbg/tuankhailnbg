@@ -25,10 +25,9 @@ CREATE TABLE IF NOT EXISTS referral_claims (
     PRIMARY KEY (inviter_player_id, milestone)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Mốc cải trang giữ lại để cấu hình ID item_template thực tế:
--- 5: Goku SSJ3 (7 ngày); 10: Vegito Blue (7 ngày);
--- 15: Gogeta Blue (vĩnh viễn); 20: Zeno (vĩnh viễn).
--- Cần bổ sung sprite/item_template và xử lý thời hạn trước khi mở nhận cải trang.
+-- 4 cải trang referral dùng item TYPE=5 có sẵn trong client và không nằm trong item_shop:
+-- 5: Goku SSJ4 ID 1304 (7 ngày); 10: Vegeta SSJ4 ID 1305 (7 ngày);
+-- 15: Omega ID 1306 (vĩnh viễn); 20: Cumber ID 2045 (vĩnh viễn).
 CREATE TABLE IF NOT EXISTS referral_costume_catalog (
     milestone INT NOT NULL PRIMARY KEY,
     item_template_id INT NULL,
@@ -37,11 +36,16 @@ CREATE TABLE IF NOT EXISTS referral_costume_catalog (
     options_json TEXT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT IGNORE INTO referral_costume_catalog (milestone,item_template_id,costume_name,duration_days,options_json) VALUES
-(5,NULL,'Goku SSJ3',7,'[[77,20],[103,20],[50,20],[14,4],[101,10],[30,0]]'),
-(10,NULL,'Vegito Blue',7,'[[77,23],[103,23],[50,23],[14,6],[101,13],[8,5],[30,0]]'),
-(15,NULL,'Gogeta Blue',NULL,'[[77,25],[103,25],[50,25],[14,8],[101,17],[8,8],[30,0]]'),
-(20,NULL,'Zeno',NULL,'[[77,27],[103,27],[50,27],[14,10],[101,20],[8,10],[30,0]]');
+INSERT INTO referral_costume_catalog (milestone,item_template_id,costume_name,duration_days,options_json) VALUES
+(5,1304,'Goku SSJ4',7,'[[77,20],[103,20],[50,20],[14,4],[101,10],[30,0]]'),
+(10,1305,'Vegeta SSJ4',7,'[[77,23],[103,23],[50,23],[14,6],[101,13],[8,5],[30,0]]'),
+(15,1306,'Omega',NULL,'[[77,25],[103,25],[50,25],[14,8],[101,17],[8,8],[30,0]]'),
+(20,2045,'Cumber',NULL,'[[77,27],[103,27],[50,27],[14,10],[101,20],[8,10],[30,0]]')
+ON DUPLICATE KEY UPDATE
+    item_template_id=VALUES(item_template_id),
+    costume_name=VALUES(costume_name),
+    duration_days=VALUES(duration_days),
+    options_json=VALUES(options_json);
 
 CREATE TABLE IF NOT EXISTS referral_costume_claims (
     inviter_player_id BIGINT NOT NULL,
