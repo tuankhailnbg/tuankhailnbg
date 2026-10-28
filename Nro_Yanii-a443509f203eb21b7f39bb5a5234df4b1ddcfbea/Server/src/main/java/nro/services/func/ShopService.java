@@ -421,6 +421,7 @@ public class ShopService {
         int reopenNpc = -1;
         int reopenSelect = -1;
         boolean sendItemBags = false;
+        boolean sendItemBox = false;
 
         synchronized (player.inventory) {
             // 1. Dynamic limit checks
@@ -647,8 +648,11 @@ public class ShopService {
                                                         sendItemBags = true;
                                                         thongBaoMsg = "Mua thành công " + is.temp.name;
                                                         if (is.temp.id == 517 || is.temp.id == 518) {
+                                                            // Purchases expand capacity directly; refresh the corresponding
+                                                            // inventory packet so the client sees the new slot immediately.
+                                                            sendItemBox = (is.temp.id == 518);
                                                             needsReopen = true;
-                                                            reopenNpc = 39;
+                                                            reopenNpc = ConstNpc.SANTA;
                                                             reopenSelect = 1;
                                                         }
                                                         success = true;
@@ -695,6 +699,9 @@ public class ShopService {
         if (sendItemBags) {
             InventoryService.gI().sendItemBags(player);
         }
+        if (sendItemBox) {
+            InventoryService.gI().sendItemBox(player);
+        }
         if (thongBaoMsg != null) {
             if (sendOKDialog) {
                 Service.getInstance().sendThongBaoOK(player, thongBaoMsg);
@@ -703,7 +710,11 @@ public class ShopService {
             }
         }
         if (needsReopen) {
-            if (isCharmShop(reopenNpc)) {
+            if (reopenNpc == ConstNpc.SANTA && reopenSelect == 1) {
+                // Send fresh dynamic prices without requiring another NPC click.
+                Shop santaStorage = getShop(player, ConstNpc.SANTA, 2, player.gender);
+                openShopType0(player, santaStorage, ConstNpc.SHOP_SANTA_2);
+            } else if (isCharmShop(reopenNpc)) {
                 openShopBua(player, player.iDMark.getShopId(), reopenSelect);
             } else {
                 reopenShop(player, reopenNpc, reopenSelect);
