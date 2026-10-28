@@ -8,6 +8,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import nro.services.func.Input;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONValue;
 import java.util.concurrent.ConcurrentHashMap;
 import nro.jdbc.DBService;
 import nro.models.item.Item;
@@ -279,11 +281,90 @@ public final class ReferralService {
                         return "Không thể nhận quà mốc " + m + ", hãy thử lại. Nếu vật phẩm đã vào túi hãy báo admin.";
                     } finally { c.setAutoCommit(true); }
                 }
+                int costumes = claimCostumes(player, c, total);
                 InventoryService.gI().sendItemBags(player);
-                return taken == 0 ? "Bạn đã nhận tất cả mốc Thỏi Vàng hiện có."
+                String result = taken == 0 ? "Bạn đã nhận tất cả mốc Thỏi Vàng hiện có."
                         : "Đã nhận " + gained + " Thỏi Vàng từ " + taken + " mốc giới thiệu!";
+                if (costumes > 0) result += " Đồng thời nhận " + costumes + " cải trang sự kiện!";
+                return result;
             } catch (SQLException ex) { return "Lỗi cơ sở dữ liệu khi nhận quà."; }
         }
+    }
+
+    /**
+     * Chỉ phát cải trang khi admin đã gán ID item thật trong referral_costume_catalog.
+     * Nếu chưa có sprite/item_template, quà vẫn chờ, không đánh dấu đã nhận.
+     */
+    private int claimCostumes(Player p, Connection c, int completed) throws SQLException {
+        int delivered = 0;
+        for (int milestone : new int[] { 5, 10, 15, 20 }) {
+            if (completed < milestone) continue;
+            int itemId, days;
+            String options;
+            try (PreparedStatement st = c.prepareStatement(
+                    "SELECT item_template_id,duration_days,options_json FROM referral_costume_catalog "
+                    + "WHERE milestone=? AND item_template_id IS NOT NULL")) {
+                st.setInt(1, milestone);
+                try (ResultSet rs = st.executeQuery()) {
+                    if (!rs.next()) continue;
+                    itemId = rs.getInt(1);
+                    days = rs.getInt(2); // 0 = vĩnh viễn
+                    options = rs.getString(3);
+                }
+            }
+            if (itemId <= 0 || itemId > Short.MAX_VALUE) continue;
+            try (PreparedStatement st = c.prepareStatement(
+                    "SELECT 1 FROM referral_costume_claims WHERE inviter_player_id=? AND milestone=?")) {
+                st.setLong(1, p.id); st.setInt(2, milestone);
+                try (ResultSet rs = st.executeQuery()) { if (rs.next()) continue; }
+            }
+            if (InventoryService.gI().getCountEmptyBag(p) < 1) break;
+            Item item = ItemService.gI().createNewItem((short) itemId, 1);
+            if (item == null || item.template == null) continue;
+            item.itemOptions.clear();
+            try {
+                JSONArray list = (JSONArray) JSONValue.parse(options);
+                if (list == null) continue;
+                for (Object obj : list) {
+                    JSONArray pair = (JSONArray) obj;
+                    int id = ((Number) pair.get(0)).intValue();
+                    int param = ((Number) pair.get(1)).intValue();
+                    item.itemOptions.add(new ItemOption(id, param));
+                }
+            } catch (Exception ex) { continue; }
+            if (days > 0) item.itemOptions.add(new ItemOption(93, days));
+            // Bắt buộc không giao dịch.
+            boolean nonTrade = false;
+            for (ItemOption op : item.itemOptions) {
+                if (op.optionTemplate.id == 30) { nonTrade = true; break; }
+            }
+            if (!nonTrade) item.itemOptions.add(new ItemOption(30, 0));
+            c.setAutoCommit(false);
+            try {
+                try (PreparedStatement st = c.prepareStatement(
+                        "INSERT INTO referral_costume_claims(inviter_player_id,milestone,item_template_id) "
+                        + "VALUES(?,?,?)")) {
+                    st.setLong(1, p.id); st.setInt(2, milestone); st.setInt(3, itemId);
+                    st.executeUpdate();
+                }
+                if (!InventoryService.gI().addItemBag(p, item, 9999)) {
+                    c.rollback();
+                    break;
+                }
+                try (PreparedStatement st = c.prepareStatement(
+                        "UPDATE player SET items_bag=? WHERE id=?")) {
+                    st.setString(1, InventoryService.gI().itemsBagToString(p));
+                    st.setLong(2, p.id);
+                    if (st.executeUpdate() != 1) throw new SQLException("Không lưu được cải trang");
+                }
+                c.commit();
+                delivered++;
+            } catch (SQLException ex) {
+                c.rollback();
+                throw ex;
+            } finally { c.setAutoCommit(true); }
+        }
+        return delivered;
     }
 
     private boolean alreadyClaimed(Connection c, long id, int milestone) throws SQLException {
