@@ -1,78 +1,75 @@
-# NPC Sự Kiện – Giới thiệu bạn bè (Đảo Kamê, map 5)
+# NRO — NPC Sự Kiện tại Đảo Kame: Giới thiệu (Admin cấp điểm)
 
-**Trạng thái: BẢN NHÁP CHƯA BUILD/TEST TRÊN VPS, không tự động triển khai máy chủ.**
-Code nằm trên nhánh `feature/nro-event-referral-kame`, không sửa branch `main`.
+**Trạng thái: mã nguồn đang trong PR nháp, chưa build và chưa thử trên VPS/client Unity. Không gộp main trước khi test.**
 
-## Hoạt động
+## 1. Menu NPC
+NPC **Sự Kiện** (template ID 73, map 5 – Đảo Kame) có **đúng hai chức năng**:
 
-- Sử dụng **NPC ID 73: Sự Kiện** đã có trong `npc_template` (tên/hình có sẵn).
-- Xuất hiện ở **map ID 5 – Đảo Kamê**, vị trí dự kiến **x=780, y=408**.
-- Khi bấm NPC, mã nhân vật hiện ngay đầu menu: `GT` + ID nhân vật dạng base36, chữ in hoa.
-- Menu: `Giới thiệu bạn bè` → `Nhập mã giới thiệu`, `Xem tiến độ`, `Nhận quà`; màn hình đầu cũng có `Nhận quà`.
-- Sự kiện **vĩnh viễn**, không phụ thuộc ngày bắt đầu/kết thúc.
-- Tài khoản mới được mời nhập mã trong **24 giờ đầu** và chỉ **một mã/tài khoản**.
-- Client NRO hiện tại chưa có trường mã giới thiệu trên màn hình tạo account. Bản này hiển thị **ô nhập ngay khi nhân vật mới đăng nhập vào game** (và có thể nhập từ NPC). Muốn nhập trực tiếp trên giao diện đăng ký tài khoản cần sửa riêng client / trang đăng ký.
-- Một nhân vật giới thiệu được tính khi **50 tỷ sức mạnh + 10 giờ hoạt động + qua nhiệm vụ 29 (Cell/Xên), sang task ID >= 30**.
-- Thời gian chỉ được tính lúc có hoạt động di chuyển/thay đổi sức mạnh/nhiệm vụ; không cộng thời gian offline và không tính thuần AFK (đây là kiểm tra sơ bộ, chưa chống bot tinh vi).
-- Tài khoản chung IP với người giới thiệu, hoặc có từ 4 account mới cùng IP trong 3 ngày, được gắn cờ `review_required=1`. Lượt được giữ để admin xem xét, không tự động khóa tài khoản.
-- Chỉ các lời mời đủ điều kiện và **không bị giữ kiểm tra** mới tính mốc.
+1. **Sự kiện giới thiệu** → mở menu phụ gồm **Bảng xếp hạng giới thiệu**, **Nhận quà giới thiệu**, **Đóng**. Phía trên menu có **mã GT... của nhân vật** và **điểm giới thiệu**. Admin sẽ thấy thêm tùy chọn **Cấp điểm (Admin)**.
+2. **Đua top** → chỉ báo "Sự kiện Đua Top đang chuẩn bị", chưa triển khai.
 
-## Phần thưởng Thỏi Vàng (ID vật phẩm 457)
+NPC dự kiến tại x=780 y=408 map 5; đã dùng ID 73 và thông tin hình có sẵn trong `npc_template`. Nếu map 5 đã có ID73 thì không tự thêm trùng.
 
-Tại mốc số `n`, 1 <= n <= 20, nhận `100 + (n - 1)*25` Thỏi Vàng.
-Tổng thưởng 20 mốc: **6.750 Thỏi Vàng**. Mỗi mốc chỉ nhận 1 lần, có bảng ledger riêng và khóa chính `(inviter_player_id,milestone)`.
+**Sự kiện giới thiệu vĩnh viễn, không có thời hạn kết thúc.**
 
-## Cải trang mốc 5/10/15/20
+## 2. Cách tính điểm (CHỈ ADMIN CẤP)
 
-| Mốc | Cải trang | HSD | HP/KI/SĐ | Chí mạng | TNSM | Hút HP/KI |
-|---|---|---|---|---|---|---|
-| 5 | Goku SSJ3 | 7 ngày | 20% | 4% | 10% | Không |
-| 10 | Vegito Blue | 7 ngày | 23% | 6% | 13% | 5% |
-| 15 | Gogeta Blue | Vĩnh viễn | 25% | 8% | 17% | 8% |
-| 20 | Zeno | Vĩnh viễn | 27% | 10% | 20% | 10% |
+- Tài khoản người chơi mới vẫn có thể nhập **mã GT** của người giới thiệu trong 24 giờ đầu tại popup khi đăng nhập. Dữ liệu chỉ ghi nhận mã/người giới thiệu vào `referral_invites`.
+- **Không cộng điểm tự động khi nhập mã, đạt 50 tỷ, chơi 10 giờ, hoàn thành nhiệm vụ Cell**. Các tiêu chí 50 tỷ, 10 giờ, Cell có thể dùng để admin tự xác nhận trước khi cấp.
+- **Admin quyết định và nhập số điểm (+1, +2,... hoặc -1)** cho ID/tên nhân vật người giới thiệu.
+- Điểm được lưu vào `referral_points`, mọi lần cộng/trừ lưu vào `referral_points_audit` (người cấp, người nhận, điểm trước/sau, lý do và thời gian).
+- Admin có thể cấp qua NPC Sự Kiện → Giới thiệu → Cấp điểm (Admin), hoặc **gõ `admin` trong khung chat → Cấp điểm giới thiệu**.
+- Hệ thống giới hạn 1–100 điểm mỗi lần thao tác (có thể trừ -1 tới -100), không cho âm, tối đa 100.000; kiểm tra quyền admin ở server.
+- Khi cấp điểm nhớ nhập **lý do và ID nhân vật**, ví dụ `Người được mời ID 123 hoàn thành đủ điều kiện`.
+- Điểm đã bị trừ không tự thu hồi vật phẩm đã nhận; hãy kiểm duyệt trước khi cấp và xử lý gian lận riêng.
 
-**Quan trọng:** SQL có `referral_costume_catalog` với `item_template_id=NULL` cho cả bốn mốc.
-Các sprite Goku SSJ3, Vegito Blue, Gogeta Blue và Zeno chính xác chưa được xác minh có trong `item_template`/client, nên **cải trang chưa tự phát trong bản này**. Hệ thống giữ quyền nhận thưởng riêng trong `referral_costume_claims` để có thể nhận sau khi gắn ID vật phẩm có asset thật.
-Khi gắn ID, service tự tạo option theo bảng JSON, thêm `30` để không giao dịch; với mốc 5 và 10 thêm option `93` = 7 ngày để hệ thống hiện tại tự xử lý HSD. Không nên tự gán ID sai khi chưa kiểm tra client.
+## 3. Bảng xếp hạng giới thiệu
+Dùng giao diện TOP sẵn của NRO. Lấy **Top 30 nhân vật theo điểm được Admin cấp**, hỗ trợ cả nhân vật offline, đồng điểm xét thời gian cập nhật điểm rồi ID.
 
-## Triển khai thử trên VPS (Windows)
+## 4. Giao diện nhận mốc (giống Bò Mộng)
+Dùng giao thức `Cmd.ACHIEVEMENT` (bảng "Nhận ngọc miễn phí" ở Bò Mộng).
+Danh sách gồm **20 mốc**, mỗi dòng có tên mốc, số điểm hiện có / yêu cầu, số **Thỏi Vàng** và quà cải trang.
+- Khi đủ n điểm, dòng n có thể bấm nhận.
+- Thỏi Vàng cho mốc n: `100 + 25 × (n - 1)`. Mốc 1=100; 2=125; 5=200; 10=325; 15=450; 20=575.
+- Tổng 20 mốc = **6.750 Thỏi Vàng**.
+- Mỗi mốc phát 1 lần, lưu `referral_claims` (khóa chính người chơi+mốc); không cộng tự động khi admin cấp điểm.
+- Mỗi mốc bấm nhận riêng. Server dùng khóa lưu nhân vật và giao dịch DB, chống gửi lệnh nhận trùng.
+- Đây là cách **tận dụng kiểu bảng của Bò Mộng**; icon tiền thưởng mặc định của client có thể vẫn là Hồng Ngọc vì giao thức thành tựu cũ; nội dung dòng đã ghi rõ Thỏi Vàng. Muốn đổi icon riêng cần sửa client.
 
-1. **Sao lưu MariaDB** và thư mục `Server` hiện tại.
-2. Checkout nhánh tính năng vào máy thử (không ghi đè server production cho đến khi test).
-3. Mở MariaDB console đăng nhập database tương ứng `ngocrong`, chạy:
-   `SOURCE D:/duong-dan-repo/database/migrations/20261028_referral_event_kame.sql;`
-4. Build bằng Maven trong thư mục `Server`, ví dụ:
-   `& "C:\tools\maven\bin\mvn.cmd" clean package -DskipTests`
-5. Kiểm tra `BUILD SUCCESS` và JAR mới, dùng quy trình khởi động Login/Server BAT hiện có.
-6. Đăng nhập nhân vật ở map 5 để xem NPC ID 73, xác minh hiển thị mã GT và ô nhập trên account mới.
+## 5. Cải trang mốc 5/10/15/20
 
-## Test tích hợp tối thiểu trước khi merge
+| Mốc | Cải trang | HSD | HP | KI | Sức đánh | Chí mạng | TNSM | Hút HP/KI |
+|---|---|---|---|---|---|---|---|---|
+| 5 | Goku SSJ3 | 7 ngày | 20% | 20% | 20% | 4% | 10% | — |
+| 10 | Vegito Blue | 7 ngày | 23% | 23% | 23% | 6% | 13% | 5% |
+| 15 | Gogeta Blue | Vĩnh viễn | 25% | 25% | 25% | 8% | 17% | 8% |
+| 20 | Zeno | Vĩnh viễn | 27% | 27% | 27% | 10% | 20% | 10% |
 
-1. Tài khoản A tạo nhân vật có mã GT..., đăng nhập NPC để lấy mã.
-2. Tạo tài khoản B mới; ô nhập GT...; xác minh `referral_invites` có một dòng mới.
-3. B không đủ điều kiện: A chưa được tính lượt.
-4. Cho B đạt nhiệm vụ ID >=30, sức mạnh >=50 tỷ, 10 giờ **hoạt động thật**: A được tính 1.
-5. Test mốc 1: A nhận 100 Thỏi Vàng ID 457, nhận lại không phát trùng.
-6. Tài khoản C cùng IP sẽ bị giữ để admin duyệt; sau khi xác minh mới tính.
-7. Test 5/10/15/20 mốc khi đã gắn đúng `item_template_id`, kiểm tra costume 7 ngày/vĩnh viễn.
-8. Kiểm tra đóng server bất ngờ ngay lúc phát quà; đây là tình huống rủi ro cần test lưu hành trang và sổ giao dịch.
-9. Kiểm tra nhiều phiên/account spam bấm nhận cùng lúc; khóa chính DB phải chặn trùng.
+**Chưa xác định đúng item_template/sprite của 4 cải trang; `referral_costume_catalog.item_template_id` đang là NULL, nên chưa tự phát cải trang.** Khi có đúng item ID và client asset, cập nhật bảng cấu hình để hệ thống phát chỉ số tương ứng và hạn 7 ngày dùng item option 93. Bảng `referral_costume_claims` giữ lịch sử phát. Không tự gán ID ngẫu nhiên khi chưa đối chiếu SQL/assets.
 
-### Admin duyệt lời mời bị giữ
+## 6. Cài trên VPS Windows (SAO LƯU trước)
 
-Sau khi điều tra và thấy hợp lệ, chạy trong MariaDB:
+1. Backup MariaDB database `ngocrong` và thư mục Server/Login đang chạy.
+2. Lấy code từ nhánh `feature/nro-event-referral-kame` của PR #26 vào bản thử nghiệm; không ghi đè main.
+3. Chạy migration lần lượt:
+   - `database/migrations/20261028_referral_event_kame.sql`
+   - `database/migrations/20261028_referral_manual_points.sql`
+4. Trong Server chạy PowerShell: `& "C:\tools\maven\bin\mvn.cmd" clean package -DskipTests`.
+5. Nếu `BUILD SUCCESS`, triển khai JAR thử nghiệm và dùng BAT khởi động Login/Server bình thường.
+6. Test với ít nhất 2 tài khoản (1 admin): admin nhập cấp 1 điểm cho nhân vật A → bảng top xuất hiện A; A mở bảng nhận mốc 1, bấm nhận 100 Thỏi Vàng → thử bấm lại không được cộng lần hai.
+7. Test 5/10/15/20 mốc, túi đầy, logout ngay sau nhận, server restart, admin cấp/trừ, bảng top offline, mở lại bảng Bò Mộng để đảm bảo không lẫn phiên nhận quà.
+8. Chỉ merge và đưa lên VPS chính khi pass toàn bộ test.
+
+## 7. SQL kiểm tra admin audit
 
 ```sql
-UPDATE referral_invites
-SET review_required = 0
-WHERE invited_account_id = <ID_ACCOUNT_DA_XAC_MINH>;
+SELECT p.id, p.name, rp.points
+FROM referral_points rp JOIN player p ON p.id=rp.player_id
+ORDER BY rp.points DESC LIMIT 30;
+
+SELECT id, admin_player_id, player_id, delta_points, previous_points,
+       current_points, reason, created_at
+FROM referral_points_audit ORDER BY id DESC LIMIT 50;
 ```
 
-**Không tự động bỏ cờ cho toàn bộ account cùng IP.**
-
-### Điều còn cần kiểm nghiệm
-
-- Chưa kiểm tra BUILD SUCCESS trong môi trường Maven của VPS.
-- Chưa chứng minh gameplay/màn hình đăng ký thực tế với client Unity đang phát hành.
-- Chưa có asset và template ID chính xác cho 4 cải trang.
-- Giao dịch phát quà hiện khóa theo hành trang + ledger/DB; cần thử tình huống crash và autosave đồng thời trước khi mở công khai.
+**Chưa thử compile Maven/kiểm thử UI trực tiếp.** Chưa có quyền truy cập VPS production và không có client asset chính xác cho 4 cải trang.
