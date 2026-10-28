@@ -17,7 +17,7 @@ EXPECTED = [
     (5, 1304, 7, "Goku SSJ4"),
     (10, 1305, 7, "Vegeta SSJ4"),
     (15, 1306, None, "Omega"),
-    (20, 2045, None, "Cumber"),
+    (20, 2129, None, "Fu"),
 ]
 
 def check(cond, msg):
@@ -135,7 +135,7 @@ def test_database():
                 (1304,5,3,"Cải trang Goku SSJ4","Nro Yanii",20371,-1,0,0),
                 (1305,5,3,"Cải trang Vegeta SSJ4","Nro Yanii",20403,-1,0,0),
                 (1306,5,3,"Cải trang Omega","Nro Yanii",20339,-1,0,0),
-                (2045,5,3,"Cải trang Cumber","Cải trang thành Cumber",11379,-1,0,0),
+                (2129,5,3,"Cải trang Fu","Cải trang thành Fu",11379,-1,0,0),
             ]
             cur.executemany("""INSERT INTO item_template
                 (id,TYPE,gender,NAME,description,icon_id,part,is_up_to_up,power_require)
@@ -150,7 +150,7 @@ def test_database():
                 (1304,1345,1346,1347,-1),
                 (1305,1348,1349,1350,-1),
                 (1306,1342,1343,1344,-1),
-                (2045,1387,1388,1389,-1),
+                (2129,1387,1388,1389,-1),
             ]
             cur.executemany("""INSERT INTO cai_trang(id_temp,head,body,leg,bag)
                 VALUES(%s,%s,%s,%s,%s)
@@ -191,7 +191,7 @@ def test_database():
             check(cur.fetchall() == tuple(EXPECTED),
                   "catalog uses the four current non-shop costumes")
 
-            cur.execute("SELECT COUNT(*) FROM item_shop WHERE temp_id IN (1304,1305,1306,2045)")
+            cur.execute("SELECT COUNT(*) FROM item_shop WHERE temp_id IN (1304,1305,1306,2129)")
             check(cur.fetchone()[0] == 0,
                   "current referral costumes are not present in item_shop")
 
