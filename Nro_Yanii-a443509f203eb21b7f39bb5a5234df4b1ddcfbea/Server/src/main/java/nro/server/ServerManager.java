@@ -334,14 +334,18 @@ public class ServerManager {
         ScheduledExecutorService autoTopPower = Executors.newScheduledThreadPool(1);
         autoTopPower.scheduleWithFixedDelay(() -> {
             TopManager.getInstance().loadTopNangDong();
-            // Snapshot Top Nạp theo mùa + tự chốt kết quả khi hết hạn.
-            nro.manager.DuaTopManager.getInstance().tick();
             //  TopManager.getInstance().loadTopVnd();
             //TopPowerManager.getInstance().load();
 //            TopRichManManager.getInstance().load();
 //            TopKillWhisManager.getInstance().load();
 //            TopBanDoKhoBau.getInstance().load();
         }, 0, 600000, TimeUnit.MILLISECONDS);
+
+        ScheduledExecutorService autoDuaTop = Executors.newScheduledThreadPool(1);
+        autoDuaTop.scheduleWithFixedDelay(() -> {
+            // Snapshot Top Nạp theo mùa, bổ sung account mới và tự chốt kết quả.
+            nro.manager.DuaTopManager.getInstance().tick();
+        }, 0, 1, TimeUnit.MINUTES);
 
     }
 }
