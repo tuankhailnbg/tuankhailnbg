@@ -24,10 +24,16 @@ def static_contract():
     check("private static final int MAX_MILESTONE = 20" in source, "exactly 20 referral milestones")
     check("100+(milestone-1)*25" in source and "100+(n-1)*25" in source, "gold reward formula is 100 + 25*(n-1)")
     check(sum(100+25*i for i in range(20)) == 6750, "total 20-milestone payout is 6750 bars")
-    check('case ConstNpc.EVENT ->' in npc and '"Đua top"' in npc, "NPC has two main event options")
-    check('sendLeaderboard(player)' in npc and 'sendRewardPanel(player)' in npc, "referral submenu opens top and reward panel")
-    check('createFormReferralCode' not in npc and '"Nhập mã\\ngiới thiệu"' not in npc,
-          "event NPC no longer offers referral code entry")
+    check('case ConstNpc.EVENT ->' in npc and '"Đua top"' not in npc
+          and '"NPC SỰ KIỆN\\nChọn sự kiện muốn tham gia"' not in npc,
+          "event NPC opens the referral menu directly without extra event text")
+    check('"|1|GIỚI THIỆU BẠN BÈ\\n"' in npc and '"Điểm của bạn: " + points' in source,
+          "referral panel body only shows title and player points")
+    check('sendLeaderboard(player)' in npc and 'sendRewardPanel(player)' in npc,
+          "referral menu still opens leaderboard and reward panel")
+    check('createFormReferralCode' not in npc and '"Nhập mã\\ngiới thiệu"' not in npc
+          and 'Nhập mã giới thiệu' not in user_input,
+          "event NPC and input system no longer offer referral code entry")
     player_source = (GAME / "models" / "player" / "Player.java").read_text(encoding="utf-8")
     check('promptOnFirstLogin' not in source and 'ReferralService.gI().tick(this)' not in player_source,
           "new accounts are not prompted for referral codes")
@@ -37,7 +43,9 @@ def static_contract():
     event_npc = npc.split('case ConstNpc.EVENT ->', 1)[1].split('case ConstNpc.OBITO ->', 1)[0]
     check('case 2 ->' in event_npc and 'case 3 ->' not in event_npc
           and 'if (player.isAdmin()) Input.gI().createFormAdminReferralPoints(player);' in event_npc,
-          "admin grant moves to submenu index 2 with server permission check")
+          "admin grant remains submenu index 2 with server permission check")
+    check('"-----Nro Yanii-----"' not in user_input,
+          "runtime input forms no longer show Nro Yanii branding")
     check('for(int n=1;n<=MAX_MILESTONE;n++)' in source, "reward panel generates all 20 rows")
     check("case ADMIN_REFERRAL_POINTS:" in user_input and 'player.isAdmin()' in user_input,
           "admin-only referral score input")
