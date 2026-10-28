@@ -503,7 +503,9 @@ public final class ReferralService {
         int milestone=Byte.toUnsignedInt(selected)+1;
         if(milestone<1||milestone>MAX_MILESTONE)return;
         String result=claimMilestone(player,milestone);
-        Service.gI().sendThongBaoOK(player,result);
+        // Thông báo nhỏ trong game, không tạo modal OK che bảng nhận thưởng.
+        // claimMilestone đã cập nhật hành trang và lưu DB trước khi đến đây.
+        Service.gI().sendThongBao(player,result);
         sendRewardPanel(player);
     }
 
