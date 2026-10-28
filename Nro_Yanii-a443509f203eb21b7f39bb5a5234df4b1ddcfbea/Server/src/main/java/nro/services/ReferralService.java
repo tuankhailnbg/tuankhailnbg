@@ -5,6 +5,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Locale;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import nro.consts.Cmd;
+import nro.models.Part;
+import nro.models.PartManager;
+import nro.server.Client;
+import nro.server.io.Message;
 import java.util.List;
 import java.util.ArrayList;
 import nro.jdbc.daos.PlayerDAO;
@@ -19,12 +26,7 @@ import nro.models.item.Item;
 import nro.models.item.ItemOption;
 import nro.models.player.Player;
 
-/**
- * Sự kiện giới thiệu vĩnh viễn. Người được mời phải đạt 50 tỷ sức mạnh,
- * 10 giờ hoạt động hợp lệ và qua nhiệm vụ Xên (task id >= 30).
- * Mã GT<player.id in base36> thuộc từng nhân vật, nhưng giới thiệu
- * được giới hạn đúng một lần trên mỗi account mới.
- */
+/** NPC giới thiệu vĩnh viễn: mã GT, điểm do quản trị viên cấp, mốc nhận Thỏi Vàng. */
 public final class ReferralService {
     private static final ReferralService INSTANCE = new ReferralService();
     private static final int BAR_ID = 457;
@@ -33,20 +35,8 @@ public final class ReferralService {
     private static final long REQUIRED_POWER = 50_000_000_000L;
     private static final int AFTER_CELL_TASK_ID = 30;
     private static final long INPUT_WINDOW_HOURS = 24L;
-    private static final Map<Long, Activity> ACTIVITY = new ConcurrentHashMap<>();
+    private static final Map<Long, Long> REWARD_PANELS = new ConcurrentHashMap<>();
     private static final Set<Integer> PROMPTED = ConcurrentHashMap.newKeySet();
-
-    private static final class Activity {
-        long lastSample, lastActivity, lastPersist, power;
-        int x, y, taskId;
-        Activity(Player p, long now) {
-            lastSample = lastPersist = lastActivity = now;
-            x = p.location.x;
-            y = p.location.y;
-            power = p.nPoint.power;
-            taskId = p.playerTask.taskMain == null ? -1 : p.playerTask.taskMain.id;
-        }
-    }
 
     private ReferralService() { }
     public static ReferralService gI() { return INSTANCE; }
@@ -74,34 +64,32 @@ public final class ReferralService {
     public String status(Player p) {
         if (p == null || p.getSession() == null) return "Chưa đăng nhập";
         try (Connection c = connect()) {
-            int completed = 0, claimed = 0;
-            try (PreparedStatement st = c.prepareStatement(
-                    "SELECT COUNT(*) FROM referral_invites WHERE inviter_player_id=? AND status=1 AND review_required=0")) {
-                st.setLong(1, p.id);
-                try (ResultSet rs = st.executeQuery()) { if (rs.next()) completed = rs.getInt(1); }
-            }
-            try (PreparedStatement st = c.prepareStatement(
-                    "SELECT COUNT(*) FROM referral_claims WHERE inviter_player_id=? AND status=1")) {
-                st.setLong(1, p.id);
-                try (ResultSet rs = st.executeQuery()) { if (rs.next()) claimed = rs.getInt(1); }
-            }
+            int points = pointsOf(c, p.id);
             String self = "Chưa nhập mã giới thiệu";
             try (PreparedStatement st = c.prepareStatement(
-                    "SELECT status,active_seconds,review_required FROM referral_invites WHERE invited_account_id=?")) {
+                    "SELECT referral_code FROM referral_invites WHERE invited_account_id=?")) {
                 st.setInt(1, p.getSession().userId);
                 try (ResultSet rs = st.executeQuery()) {
-                    if (rs.next()) self = rs.getInt(3) == 1 ? "Đang chờ kiểm tra chống farm"
-                            : (rs.getInt(1) == 1 ? "Đã hợp lệ"
-                            : "Đang làm nhiệm vụ (" + rs.getInt(2) / 3600 + "/10 giờ)");
+                    if (rs.next()) self = "Đã nhập mã " + rs.getString(1);
                 }
             }
             return "Mã giới thiệu của bạn: " + code(p)
-                    + "\nGiới thiệu hợp lệ: " + completed
-                    + "\nĐã nhận mốc: " + claimed
-                    + "\nTrạng thái mã đã nhập: " + self
-                    + "\nSự kiện không giới hạn thời gian.";
+                    + "\nĐiểm giới thiệu: " + points
+                    + "\n" + self
+                    + "\nĐiểm do Admin xác nhận và cấp thủ công."
+                    + "\nSự kiện vĩnh viễn.";
         } catch (SQLException ex) {
-            return "Không đọc được dữ liệu giới thiệu. Kiểm tra migration SQL.";
+            return "Mã: " + code(p) + "\nChưa tải được điểm giới thiệu, kiểm tra migration SQL.";
+        }
+    }
+
+    private int pointsOf(Connection c, long playerId) throws SQLException {
+        try (PreparedStatement st = c.prepareStatement(
+                "SELECT points FROM referral_points WHERE player_id=?")) {
+            st.setLong(1, playerId);
+            try (ResultSet rs = st.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
         }
     }
 
@@ -175,46 +163,11 @@ public final class ReferralService {
      * Chỉ tăng khi có di chuyển đủ 24px, thay đổi sức mạnh hoặc nhiệm vụ.
      * Mỗi lần cộng tối đa 60 giây, không đếm thời gian offline.
      */
+    /** Chỉ hiện ô nhập mã tài khoản mới; không tự tính hoặc cấp điểm. */
     public void tick(Player p) {
-        if (p == null || !p.loaded || p.getSession() == null || p.isBoss || p.isPet || p.isMiniPet
-                || p.playerTask == null || p.nPoint == null || p.location == null) return;
+        if (p == null || !p.loaded || p.getSession() == null
+                || p.isBoss || p.isPet || p.isMiniPet) return;
         promptOnFirstLogin(p);
-        long now = System.currentTimeMillis();
-        Activity a = ACTIVITY.computeIfAbsent(p.id, id -> new Activity(p, now));
-        synchronized (a) {
-            int task = p.playerTask.taskMain == null ? -1 : p.playerTask.taskMain.id;
-            if (Math.abs(p.location.x - a.x) >= 24 || Math.abs(p.location.y - a.y) >= 24
-                    || p.nPoint.power != a.power || task != a.taskId) {
-                a.lastActivity = now;
-                a.x = p.location.x; a.y = p.location.y;
-                a.power = p.nPoint.power; a.taskId = task;
-            }
-            a.lastSample = now;
-            if (now - a.lastPersist < 60_000L) return;
-            long elapsed = Math.min(60L, (now - a.lastPersist) / 1000L);
-            a.lastPersist = now;
-            if (now - a.lastActivity > 45_000L || elapsed <= 0) return;
-            try (Connection c = connect(); PreparedStatement st = c.prepareStatement(
-                    "UPDATE referral_invites SET active_seconds=active_seconds+? "
-                    + "WHERE invited_account_id=? AND invited_player_id=? AND status=0")) {
-                st.setLong(1, elapsed);
-                st.setInt(2, p.getSession().userId);
-                st.setLong(3, p.id);
-                int changed = st.executeUpdate();
-                if (changed > 0 && p.nPoint.power >= REQUIRED_POWER && task >= AFTER_CELL_TASK_ID) {
-                    try (PreparedStatement complete = c.prepareStatement(
-                            "UPDATE referral_invites SET status=1,counted_at=NOW() "
-                            + "WHERE invited_account_id=? AND invited_player_id=? AND status=0 AND active_seconds>=?")) {
-                        complete.setInt(1, p.getSession().userId);
-                        complete.setLong(2, p.id);
-                        complete.setInt(3, REQUIRED_SECONDS);
-                        if (complete.executeUpdate() == 1) {
-                            Service.gI().sendThongBao(p, "Bạn đã hoàn thành điều kiện giới thiệu!");
-                        }
-                    }
-                }
-            } catch (SQLException ignored) { /* Không làm rớt phiên game khi DB lỗi. */ }
-        }
     }
 
     // Để người mới biết có ô nhập mã ngay trong game, không cần sửa client.
@@ -243,7 +196,7 @@ public final class ReferralService {
             try (Connection c = connect()) {
                 int total = 0;
                 try (PreparedStatement st = c.prepareStatement(
-                        "SELECT COUNT(*) FROM referral_invites WHERE inviter_player_id=? AND status=1 AND review_required=0")) {
+                        "SELECT points FROM referral_points WHERE player_id=?")) {
                     st.setLong(1, player.id);
                     try (ResultSet rs = st.executeQuery()) { if (rs.next()) total = Math.min(MAX_MILESTONE, rs.getInt(1)); }
                 }
