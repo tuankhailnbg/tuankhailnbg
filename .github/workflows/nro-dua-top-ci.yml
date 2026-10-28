@@ -1,0 +1,63 @@
+name: NRO Dua Top Build and SQL Smoke
+
+on:
+  push:
+    branches:
+      - feature/dua-top-2026
+  pull_request:
+    paths:
+      - "NRO_DUA_TOP/**"
+      - "Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea/Server/**"
+      - ".github/workflows/nro-dua-top-ci.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea/Server/pom.xml
+      - name: Build NRO Server
+        working-directory: Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea/Server
+        run: mvn -B -ntp -DskipTests clean package
+
+  sql-smoke:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: ci-not-production
+          MARIADB_DATABASE: ngocrong
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install MariaDB client
+        run: sudo apt-get update -qq && sudo apt-get install -y mariadb-client
+      - name: Create minimal account fixture
+        run: |
+          mariadb -h127.0.0.1 -uroot -pci-not-production ngocrong <<'SQL'
+          CREATE TABLE account (
+            id INT NOT NULL PRIMARY KEY,
+            tongnap INT NOT NULL DEFAULT 0
+          );
+          INSERT INTO account(id,tongnap) VALUES (1,75000),(2,25000);
+          SQL
+      - name: Import Dua Top migration
+        run: mariadb -h127.0.0.1 -uroot -pci-not-production ngocrong < NRO_DUA_TOP/01_import_dua_top.sql
+      - name: Verify Dua Top schema and seed
+        run: |
+          test "$(mariadb -N -h127.0.0.1 -uroot -pci-not-production ngocrong -e "SELECT COUNT(*) FROM dua_top_event;")" = "1"
+          test "$(mariadb -N -h127.0.0.1 -uroot -pci-not-production ngocrong -e "SELECT COUNT(*) FROM dua_top_reward;")" = "28"
+          test "$(mariadb -N -h127.0.0.1 -uroot -pci-not-production ngocrong -e "SELECT COUNT(*) FROM dua_top_recharge_baseline;")" = "2"
+          test "$(mariadb -N -h127.0.0.1 -uroot -pci-not-production ngocrong -e "SELECT min_top1_recharge FROM dua_top_event LIMIT 1;")" = "50000"
