@@ -77,7 +77,8 @@ public final class ReferralService {
             return "Mã giới thiệu của bạn: " + code(p)
                     + "\nĐiểm giới thiệu: " + points
                     + "\n" + self
-                    + "\nĐiểm do Admin xác nhận và cấp thủ công."
+                    + "\nĐiều kiện duyệt: 50 tỷ sức mạnh, 10 giờ hoạt động, qua nhiệm vụ Cell."
+                    + "\nAdmin kiểm tra và cấp điểm thủ công."
                     + "\nSự kiện vĩnh viễn.";
         } catch (SQLException ex) {
             return "Mã: " + code(p) + "\nChưa tải được điểm giới thiệu, kiểm tra migration SQL.";
