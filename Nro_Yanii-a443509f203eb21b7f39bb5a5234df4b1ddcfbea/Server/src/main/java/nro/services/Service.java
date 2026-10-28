@@ -48,6 +48,7 @@ import nro.jdbc.DBService;
 //import nro.manager.TopBangBDKBManager;
 import nro.manager.TopKillWhisManager;
 import nro.manager.TopManager;
+import nro.manager.TopRaceManager;
 
 import nro.models.boss.Boss;
 import nro.models.boss.BossData;
@@ -560,6 +561,23 @@ public class Service {
 
     public void chat(Player player, String text) {
         if (player.getSession() != null && player.isAdmin()) {
+            if (text.equalsIgnoreCase("duatop status")) {
+                Service.gI().sendThongBaoOK(player, TopRaceManager.gI().getStatusText());
+                return;
+            }
+            if (text.equalsIgnoreCase("duatop close")) {
+                Service.gI().sendThongBaoOK(player, TopRaceManager.gI().finalizeActiveSeason());
+                return;
+            }
+            if (text.toLowerCase().startsWith("duatop start ")) {
+                try {
+                    int days = Integer.parseInt(text.substring("duatop start ".length()).trim());
+                    Service.gI().sendThongBaoOK(player, TopRaceManager.gI().startSeason(days));
+                } catch (Exception e) {
+                    Service.gI().sendThongBao(player, "Cú pháp: duatop start <số ngày>");
+                }
+                return;
+            }
             if (text.equals("logskill")) {
                 Service.getInstance().sendThongBao(player, player.playerSkill.skillSelect.coolDown + "");
                 return;
