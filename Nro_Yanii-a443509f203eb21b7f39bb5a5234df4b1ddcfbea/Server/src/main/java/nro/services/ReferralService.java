@@ -152,19 +152,24 @@ public final class ReferralService {
                         + "(15,NULL,'Gogeta Blue',NULL,'[[77,25],[103,25],[50,25],[14,8],[101,17],[8,8],[30,0]]'),"
                         + "(20,NULL,'Zeno',NULL,'[[77,27],[103,27],[50,27],[14,10],[101,20],[8,10],[30,0]]')");
 
-                // Nếu migration costume đã tạo item nhưng catalog bị thiếu mapping, tự nối lại an toàn theo tên.
+                // Dùng item ID đã có sẵn trong client để tránh client không resolve được
+                // template mới 2154-2157 (triệu chứng: icon trống, bấm item bị lag/đơ).
                 st.executeUpdate("UPDATE referral_costume_catalog c JOIN item_template i "
-                        + "ON i.id=2154 AND i.NAME='Cải Trang Goku SSJ3 - GT' "
-                        + "SET c.item_template_id=2154 WHERE c.milestone=5");
+                        + "ON i.id=904 AND i.TYPE=5 "
+                        + "SET c.item_template_id=904 WHERE c.milestone=5 "
+                        + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))");
                 st.executeUpdate("UPDATE referral_costume_catalog c JOIN item_template i "
-                        + "ON i.id=2155 AND i.NAME='Cải Trang Vegito Blue - GT' "
-                        + "SET c.item_template_id=2155 WHERE c.milestone=10");
+                        + "ON i.id=2117 AND i.TYPE=5 "
+                        + "SET c.item_template_id=2117 WHERE c.milestone=10 "
+                        + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))");
                 st.executeUpdate("UPDATE referral_costume_catalog c JOIN item_template i "
-                        + "ON i.id=2156 AND i.NAME='Cải Trang Gogeta Blue - GT' "
-                        + "SET c.item_template_id=2156 WHERE c.milestone=15");
+                        + "ON i.id=2142 AND i.TYPE=5 "
+                        + "SET c.item_template_id=2142 WHERE c.milestone=15 "
+                        + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))");
                 st.executeUpdate("UPDATE referral_costume_catalog c JOIN item_template i "
-                        + "ON i.id=2157 AND i.NAME='Cải Trang Zeno - GT' "
-                        + "SET c.item_template_id=2157 WHERE c.milestone=20");
+                        + "ON i.id=1276 AND i.TYPE=5 "
+                        + "SET c.item_template_id=1276 WHERE c.milestone=20 "
+                        + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))");
             }
             SCHEMA_READY = true;
         }
@@ -607,39 +612,32 @@ public final class ReferralService {
     }
 
     /**
-     * Phục hồi migration bị dừng sau khi tạo item 2154-2157, trước khi
-     * cập nhật referral_costume_catalog. Chỉ liên kết đúng item TYPE=5
-     * và đúng tên; tuyệt đối không đè ID đã có trong catalog.
+     * Luôn ưu tiên item ID đã tồn tại trong client gốc. Các ID 2154-2157 từng
+     * được tạo chỉ ở database server nên một số client không có template tương ứng,
+     * khiến icon trống và có thể đơ khi bấm/mặc.
      */
     private void linkExistingCostume(Connection c, int milestone) throws SQLException {
         int expectedId = switch (milestone) {
-            case 5 -> 2154;
-            case 10 -> 2155;
-            case 15 -> 2156;
-            case 20 -> 2157;
+            case 5 -> 904;   // model Black Goku SSJ White
+            case 10 -> 2117; // model Goku Ultra
+            case 15 -> 2142; // model Gogeta SSJ4
+            case 20 -> 1276; // model Zamasu Tối Thượng
             default -> -1;
-        };
-        String expectedName = switch (milestone) {
-            case 5 -> "Cải Trang Goku SSJ3 - GT";
-            case 10 -> "Cải Trang Vegito Blue - GT";
-            case 15 -> "Cải Trang Gogeta Blue - GT";
-            case 20 -> "Cải Trang Zeno - GT";
-            default -> "";
         };
         if (expectedId < 0) return;
         try (PreparedStatement st = c.prepareStatement(
                 "UPDATE referral_costume_catalog c JOIN item_template i "
-                + "ON i.id=? AND i.TYPE=5 AND i.NAME=? "
+                + "ON i.id=? AND i.TYPE=5 "
                 + "SET c.item_template_id=? "
-                + "WHERE c.milestone=? AND c.item_template_id IS NULL")) {
+                + "WHERE c.milestone=? "
+                + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))")) {
             st.setInt(1, expectedId);
-            st.setString(2, expectedName);
-            st.setInt(3, expectedId);
-            st.setInt(4, milestone);
+            st.setInt(2, expectedId);
+            st.setInt(3, milestone);
             int linked = st.executeUpdate();
             if (linked > 0) {
-                System.out.println("[REFERRAL] Linked existing costume ID "
-                        + expectedId + " to milestone " + milestone);
+                System.out.println("[REFERRAL] Switched milestone " + milestone
+                        + " to client-compatible costume ID " + expectedId);
             }
         }
     }
