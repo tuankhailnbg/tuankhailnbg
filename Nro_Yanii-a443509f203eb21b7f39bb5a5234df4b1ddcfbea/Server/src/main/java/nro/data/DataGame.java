@@ -35,7 +35,7 @@ public class DataGame {
     public static byte vsSkill = 5;
     public static byte vsItem = 6;
 
-    public static String LINK_IP_PORT = "Yanii:localhost:14445:0,0,0";
+    public static String LINK_IP_PORT = "Server:localhost:14445:0,0,0";
     private static final String MOUNT_NUM = "733:1,734:2,735:3,743:4,744:5,746:6,795:7,849:8,897:9,920:10,1092:11,1135:12,1148:13,1176:14";
     public static final Map MAP_MOUNT_NUM = new HashMap();
 
