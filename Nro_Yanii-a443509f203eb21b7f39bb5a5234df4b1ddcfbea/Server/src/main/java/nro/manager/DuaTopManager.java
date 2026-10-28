@@ -435,22 +435,30 @@ public final class DuaTopManager {
                         + "+ CAST(split_str(p.data_task,',',3) AS UNSIGNED)) AS score, "
                         + "CAST(split_str(p.data_task,',',2) AS UNSIGNED) AS task_main, "
                         + "CAST(split_str(p.data_task,',',3) AS UNSIGNED) AS task_sub "
-                        + "FROM player p "
+                        + "FROM player p JOIN account a ON a.id=p.account_id "
+                        + "WHERE COALESCE(a.ban,0)=0 AND COALESCE(a.is_admin,0)=0 AND COALESCE(a.admin,0)=0 "
                         + "ORDER BY task_main DESC,task_sub DESC,p.power DESC LIMIT 50";
             case PET:
                 return "SELECT p.*,GREATEST(COALESCE(p.pet_power,0),0) AS score "
-                        + "FROM player p WHERE COALESCE(p.pet_power,0)>0 "
+                        + "FROM player p JOIN account a ON a.id=p.account_id "
+                        + "WHERE COALESCE(p.pet_power,0)>0 AND COALESCE(a.ban,0)=0 "
+                        + "AND COALESCE(a.is_admin,0)=0 AND COALESCE(a.admin,0)=0 "
                         + "ORDER BY score DESC,p.power DESC LIMIT 50";
             case RECHARGE:
                 return "SELECT p.*,GREATEST(COALESCE(a.tongnap,0)-COALESCE(b.tongnap_start,0),0) AS score "
-                        + "FROM player p JOIN account a ON a.id=p.account_id "
+                        + "FROM account a "
+                        + "JOIN player p ON p.account_id=a.id "
+                        + "AND p.id=(SELECT MIN(p2.id) FROM player p2 WHERE p2.account_id=a.id) "
                         + "JOIN dua_top_recharge_baseline b ON b.account_id=a.id AND b.event_id=? "
                         + "WHERE GREATEST(COALESCE(a.tongnap,0)-COALESCE(b.tongnap_start,0),0)>0 "
+                        + "AND COALESCE(a.ban,0)=0 AND COALESCE(a.is_admin,0)=0 AND COALESCE(a.admin,0)=0 "
                         + "ORDER BY score DESC,p.power DESC LIMIT 50";
             case POWER:
             default:
                 return "SELECT p.*,GREATEST(COALESCE(p.power,0),0) AS score "
-                        + "FROM player p ORDER BY score DESC LIMIT 50";
+                        + "FROM player p JOIN account a ON a.id=p.account_id "
+                        + "WHERE COALESCE(a.ban,0)=0 AND COALESCE(a.is_admin,0)=0 AND COALESCE(a.admin,0)=0 "
+                        + "ORDER BY score DESC LIMIT 50";
         }
     }
 
