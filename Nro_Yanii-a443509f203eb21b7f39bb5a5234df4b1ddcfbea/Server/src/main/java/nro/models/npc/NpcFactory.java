@@ -543,7 +543,7 @@ public class NpcFactory {
                                 if (!TaskService.gI().checkDoneTaskTalkNpc(player, this)) {
                                     this.createOtherMenu(player, ConstNpc.BASE_MENU,
                                             "|7|Người thành công là người làm những điều người khác không muốn làm.\n Áp Lực Tạo Lên Kim Cương.\n"
-                                                    + "|7|-----Nro Yanii-----",
+                                                    + "",
                                             "Nói\nchuyện", "Tặng\nCapsule bang", "Đổi tên");
                                 }
                             }
@@ -560,7 +560,7 @@ public class NpcFactory {
                                                 if (player.clan.isLeader(player)) {
                                                     this.createOtherMenu(player, ConstNpc.MENU_NOI_CHUYEN,
                                                             "|7|Đừng sợ bắt đầu lại. Đôi khi, đó là cơ hội để xây lại tốt hơn.\n"
-                                                                    + "|7|-----Nro Yanii-----",
+                                                                    + "",
                                                             "Nhiệm vụ\n", "Về khu\nvực bang\n",
                                                             "Giải tán\nBang hội",
                                                             "Kho báu\ndưới biển");
@@ -574,14 +574,14 @@ public class NpcFactory {
                                             } else {
                                                 this.createOtherMenu(player, ConstNpc.MENU_NOI_CHUYEN,
                                                         "|7|Đừng sợ bắt đầu lại. Đôi khi, đó là cơ hội để xây lại tốt hơn.\n"
-                                                                + "|7|-----Nro Yanii-----",
+                                                                + "",
                                                         "Nhiệm vụ\n", "Kho báu\ndưới biển");
                                             }
                                             break;
                                         case 1:
                                             this.createOtherMenu(player, ConstNpc.MENU_TANG_CAPSULE,
                                                     "|7|Đừng sợ bắt đầu lại. Đôi khi, đó là cơ hội để xây lại tốt hơn.\n"
-                                                            + "|7|-----Nro Yanii-----",
+                                                            + "",
                                                     "Đóng góp capsule", "Đóng");
                                             break;
 
@@ -908,14 +908,14 @@ public class NpcFactory {
                                     if (isHouseNpc()) {
                                         this.createOtherMenu(player, ConstNpc.BASE_MENU,
                                                 "|7|Thành công là một hành trình, không phải là đích đến.\n"
-                                                        + "|7|-----Nro Yanii-----",
+                                                        + "",
                                                 "Mã Quà Tặng", "Nhận Ngọc Xanh\n(Miễn phí)",
                                                 "Nhận đệ tử miễn phí",
                                                 "Hỗ trợ\nnhiệm vụ", "Từ chối");
                                     } else {
                                         this.createOtherMenu(player, ConstNpc.BASE_MENU,
                                                 "|7|Thành công là một hành trình, không phải là đích đến.\n"
-                                                        + "|7|-----Nro Yanii-----",
+                                                        + "",
                                                 "Mã Quà Tặng", "Nhận Ngọc Xanh\n(Miễn phí)",
                                                 "Hỗ trợ\nnhiệm vụ", "Từ chối");
                                     }
@@ -990,7 +990,7 @@ public class NpcFactory {
                                 if (!TaskService.gI().checkDoneTaskTalkNpc(player, this)) {
                                     this.createOtherMenu(player, ConstNpc.BASE_MENU,
                                             "|7|Thành công là một hành trình, không phải là đích đến.\n"
-                                                    + "|7|-----Nro Yanii-----\n"
+                                                    + ""
                                                     + "|5|Số dư: " + Util.numberToMoney(player.soDuVND) + " VNĐ\n"
                                                     + "|5|Hồng Ngọc: " + Util.numberToMoney(player.inventory.ruby),
                                             "Đổi\n Thỏi Vàng", "Đổi \n Hồng Ngọc",
@@ -1995,7 +1995,7 @@ public class NpcFactory {
                                 if (this.mapId == 5) {
                                     this.createOtherMenu(player, ConstNpc.BASE_MENU,
                                             "|7|Đừng chạy theo thành công, hãy trở nên xuất sắc và thành công sẽ tìm đến bạn.\n"
-                                                    + "|7|-----Nro Yanii-----",
+                                                    + "",
                                             "Chức năng\nPha lê", "Nâng Cấp\n Set Đồ",
                                             "Trang Bị\n Thiên Sứ");
                                 } else if (this.mapId == 112) {
@@ -6373,7 +6373,7 @@ public class NpcFactory {
                         switch (select) {
                             case 0:
                                 NpcService.gI().createMenuConMeo(player, ConstNpc.HOP_QUA_THAN_LINH, 9840,
-                                        "-----Nro Yanii-----",
+                                        "",
                                         "Trái đất", "Namek", "Xayda");
                                 break;
                             case 1:
