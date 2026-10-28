@@ -1,132 +1,196 @@
 -- ============================================================
--- FIX SU KIEN GIOI THIEU: KHOI PHUC 4 CAI TRANG EVENT MOI
--- Dung khi:
---   * Da import 20261028_referral_4_new_event_costumes_safe.sql
---   * Nhưng Java cu da doi catalog ve item shop 904/2117/2142/1276
---   * Hoac icon event dang dung icon khong giong hinh dang.
+-- FIX NGOAI HINH 4 CAI TRANG EVENT DA IMPORT BAN CU
 --
--- File nay:
---   * KHONG tao ID moi
---   * KHONG xoa item
---   * KHONG reset Thoi Vang
---   * KHONG xoa lich su claim
---   * Chi tim dung 4 item event theo TEN, sua icon va gan lai catalog.
+-- Dung khi database da co 4 item event cu:
+--   Whis Event / Champa Event / Tapion Event / Vua Vegeta Event
 --
--- Backup DB truoc khi import.
+-- File nay GIU NGUYEN item ID da cap, chi sua:
+--   * ten item
+--   * icon
+--   * head/body/leg
+--   * referral_costume_catalog
+--
+-- Khong tao them ID, khong xoa Thoi Vang, khong xoa claim.
+-- Sau import BAT BUOC restart Server Java.
 -- ============================================================
 
 USE ngocrong;
 
--- 1) Phai co dung 4 item event, moi ten chi 1 dong.
-SELECT id, NAME, TYPE, icon_id
-FROM item_template
-WHERE NAME IN (
-  'Cải Trang Whis Event',
-  'Cải Trang Champa Event',
-  'Cải Trang Tapion Event',
-  'Cải Trang Vua Vegeta Event'
-)
-ORDER BY id;
+DELIMITER $$
 
--- 2) Icon lấy trực tiếp từ frame đầu của HEAD tương ứng:
--- Whis head 505 -> small image 4843
--- Champa head 511 -> small image 4879
--- Tapion head 481 -> small image 4665
--- Vua Vegeta head 36 -> small image 549
-UPDATE item_template
-SET icon_id=4843
-WHERE NAME='Cải Trang Whis Event' AND TYPE=5;
+DROP PROCEDURE IF EXISTS nro_fix_referral_costume_animation_20261028$$
+CREATE PROCEDURE nro_fix_referral_costume_animation_20261028()
+BEGIN
+    DECLARE v_m5 INT DEFAULT NULL;
+    DECLARE v_m10 INT DEFAULT NULL;
+    DECLARE v_m15 INT DEFAULT NULL;
+    DECLARE v_m20 INT DEFAULT NULL;
+    DECLARE v_count INT DEFAULT 0;
 
-UPDATE item_template
-SET icon_id=4879
-WHERE NAME='Cải Trang Champa Event' AND TYPE=5;
+    -- Tim dung 4 ID event cu/moi theo ten. Moi nhom phai chi co 1 item.
+    SELECT COUNT(*),MIN(id) INTO v_count,v_m5
+    FROM item_template
+    WHERE TYPE=5 AND NAME IN ('Cải Trang Whis Event','Cải Trang Chi Chi Event');
+    IF v_count<>1 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT='Khong xac dinh duoc duy nhat item moc 5 (Whis/Chi Chi Event)';
+    END IF;
 
-UPDATE item_template
-SET icon_id=4665
-WHERE NAME='Cải Trang Tapion Event' AND TYPE=5;
+    SELECT COUNT(*),MIN(id) INTO v_count,v_m10
+    FROM item_template
+    WHERE TYPE=5 AND NAME='Cải Trang Champa Event';
+    IF v_count<>1 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT='Khong xac dinh duoc duy nhat item moc 10 Champa Event';
+    END IF;
 
-UPDATE item_template
-SET icon_id=549
-WHERE NAME='Cải Trang Vua Vegeta Event' AND TYPE=5;
+    SELECT COUNT(*),MIN(id) INTO v_count,v_m15
+    FROM item_template
+    WHERE TYPE=5 AND NAME IN ('Cải Trang Tapion Event','Cải Trang Cađíc Event');
+    IF v_count<>1 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT='Khong xac dinh duoc duy nhat item moc 15 (Tapion/Cadic Event)';
+    END IF;
 
--- 3) Đảm bảo mapping hình dáng đúng từng nhân vật.
--- Chỉ insert nếu chưa có id_temp tương ứng.
-INSERT INTO cai_trang(id_temp,head,body,leg,bag)
-SELECT id,505,506,507,-1 FROM item_template
-WHERE NAME='Cải Trang Whis Event' AND TYPE=5
-ON DUPLICATE KEY UPDATE head=VALUES(head),body=VALUES(body),leg=VALUES(leg),bag=VALUES(bag);
+    SELECT COUNT(*),MIN(id) INTO v_count,v_m20
+    FROM item_template
+    WHERE TYPE=5 AND NAME IN ('Cải Trang Vua Vegeta Event','Cải Trang Bill Event');
+    IF v_count<>1 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT='Khong xac dinh duoc duy nhat item moc 20 (Vua Vegeta/Bill Event)';
+    END IF;
 
-INSERT INTO cai_trang(id_temp,head,body,leg,bag)
-SELECT id,511,512,513,-1 FROM item_template
-WHERE NAME='Cải Trang Champa Event' AND TYPE=5
-ON DUPLICATE KEY UPDATE head=VALUES(head),body=VALUES(body),leg=VALUES(leg),bag=VALUES(bag);
+    IF v_m5=v_m10 OR v_m5=v_m15 OR v_m5=v_m20
+       OR v_m10=v_m15 OR v_m10=v_m20 OR v_m15=v_m20 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT='4 moc event dang bi trung item ID';
+    END IF;
 
-INSERT INTO cai_trang(id_temp,head,body,leg,bag)
-SELECT id,481,482,483,-1 FROM item_template
-WHERE NAME='Cải Trang Tapion Event' AND TYPE=5
-ON DUPLICATE KEY UPDATE head=VALUES(head),body=VALUES(body),leg=VALUES(leg),bag=VALUES(bag);
+    -- Tuyet doi khong sua item shop.
+    IF EXISTS (
+        SELECT 1 FROM item_shop
+        WHERE temp_id IN (v_m5,v_m10,v_m15,v_m20)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT='Mot trong 4 item event dang nam trong shop. Dung fix de tranh anh huong shop.';
+    END IF;
 
-INSERT INTO cai_trang(id_temp,head,body,leg,bag)
-SELECT id,36,37,38,-1 FROM item_template
-WHERE NAME='Cải Trang Vua Vegeta Event' AND TYPE=5
-ON DUPLICATE KEY UPDATE head=VALUES(head),body=VALUES(body),leg=VALUES(leg),bag=VALUES(bag);
+    -- Kiem tra 4 bo part an toan.
+    IF NOT EXISTS (SELECT 1 FROM part WHERE id=1330 AND TYPE=0)
+       OR NOT EXISTS (SELECT 1 FROM part WHERE id=1331 AND TYPE=1)
+       OR NOT EXISTS (SELECT 1 FROM part WHERE id=1332 AND TYPE=2) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Thieu part Chi Chi 1330/1331/1332';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM part WHERE id=511 AND TYPE=0)
+       OR NOT EXISTS (SELECT 1 FROM part WHERE id=512 AND TYPE=1)
+       OR NOT EXISTS (SELECT 1 FROM part WHERE id=513 AND TYPE=2) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Thieu part Champa 511/512/513';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM part WHERE id=645 AND TYPE=0)
+       OR NOT EXISTS (SELECT 1 FROM part WHERE id=646 AND TYPE=1)
+       OR NOT EXISTS (SELECT 1 FROM part WHERE id=647 AND TYPE=2) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Thieu part Cadic 645/646/647';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM part WHERE id=508 AND TYPE=0)
+       OR NOT EXISTS (SELECT 1 FROM part WHERE id=509 AND TYPE=1)
+       OR NOT EXISTS (SELECT 1 FROM part WHERE id=510 AND TYPE=2) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Thieu part Bill 508/509/510';
+    END IF;
 
--- 4) Gắn lại đúng 4 item EVENT vào catalog.
--- Không dùng lại item shop.
-UPDATE referral_costume_catalog c
-JOIN item_template i ON i.NAME='Cải Trang Whis Event' AND i.TYPE=5
-SET c.item_template_id=i.id,
-    c.costume_name='Whis Event',
-    c.duration_days=7,
-    c.options_json='[[77,20],[103,20],[50,20],[14,4],[101,10],[30,0]]'
-WHERE c.milestone=5;
+    -- Khong duoc trung ngoai hinh voi item cai_trang khac.
+    IF EXISTS (
+        SELECT 1 FROM cai_trang
+        WHERE head=1330 AND body=1331 AND leg=1332 AND id_temp<>v_m5
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Bo Chi Chi da bi item cai trang khac su dung';
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM cai_trang
+        WHERE head=511 AND body=512 AND leg=513 AND id_temp<>v_m10
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Bo Champa da bi item cai trang khac su dung';
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM cai_trang
+        WHERE head=645 AND body=646 AND leg=647 AND id_temp<>v_m15
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Bo Cadic da bi item cai trang khac su dung';
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM cai_trang
+        WHERE head=508 AND body=509 AND leg=510 AND id_temp<>v_m20
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Bo Bill da bi item cai trang khac su dung';
+    END IF;
 
-UPDATE referral_costume_catalog c
-JOIN item_template i ON i.NAME='Cải Trang Champa Event' AND i.TYPE=5
-SET c.item_template_id=i.id,
-    c.costume_name='Champa Event',
-    c.duration_days=7,
-    c.options_json='[[77,23],[103,23],[50,23],[14,6],[101,13],[8,5],[30,0]]'
-WHERE c.milestone=10;
+    -- Sua template nhưng GIU NGUYEN ID.
+    UPDATE item_template
+    SET NAME='Cải Trang Chi Chi Event',
+        description='Cải trang độc quyền sự kiện giới thiệu',
+        icon_id=12141,part=-1
+    WHERE id=v_m5 AND TYPE=5;
 
-UPDATE referral_costume_catalog c
-JOIN item_template i ON i.NAME='Cải Trang Tapion Event' AND i.TYPE=5
-SET c.item_template_id=i.id,
-    c.costume_name='Tapion Event',
-    c.duration_days=NULL,
-    c.options_json='[[77,25],[103,25],[50,25],[14,8],[101,17],[8,8],[30,0]]'
-WHERE c.milestone=15;
+    UPDATE item_template
+    SET NAME='Cải Trang Champa Event',
+        description='Cải trang độc quyền sự kiện giới thiệu',
+        icon_id=4879,part=-1
+    WHERE id=v_m10 AND TYPE=5;
 
-UPDATE referral_costume_catalog c
-JOIN item_template i ON i.NAME='Cải Trang Vua Vegeta Event' AND i.TYPE=5
-SET c.item_template_id=i.id,
-    c.costume_name='Vua Vegeta Event',
-    c.duration_days=NULL,
-    c.options_json='[[77,27],[103,27],[50,27],[14,10],[101,20],[8,10],[30,0]]'
-WHERE c.milestone=20;
+    UPDATE item_template
+    SET NAME='Cải Trang Cađíc Event',
+        description='Cải trang độc quyền sự kiện giới thiệu',
+        icon_id=6027,part=-1
+    WHERE id=v_m15 AND TYPE=5;
 
--- 5) Kiểm tra xung đột ID và mapping.
--- Kết quả đúng:
---   * 4 id khác nhau
---   * TYPE=5
---   * mỗi id_temp chỉ có 1 mapping
---   * catalog 5/10/15/20 trỏ đúng 4 item event
-SELECT
-    i.id,
-    i.NAME,
-    i.TYPE,
-    i.icon_id,
-    c.head,
-    c.body,
-    c.leg,
-    c.bag
+    UPDATE item_template
+    SET NAME='Cải Trang Bill Event',
+        description='Cải trang độc quyền sự kiện giới thiệu',
+        icon_id=4847,part=-1
+    WHERE id=v_m20 AND TYPE=5;
+
+    INSERT INTO cai_trang(id_temp,head,body,leg,bag)
+    VALUES
+        (v_m5,1330,1331,1332,-1),
+        (v_m10,511,512,513,-1),
+        (v_m15,645,646,647,-1),
+        (v_m20,508,509,510,-1)
+    ON DUPLICATE KEY UPDATE
+        head=VALUES(head),body=VALUES(body),leg=VALUES(leg),bag=VALUES(bag);
+
+    UPDATE referral_costume_catalog
+    SET item_template_id=v_m5,costume_name='Chi Chi Event',duration_days=7,
+        options_json='[[77,20],[103,20],[50,20],[14,4],[101,10],[30,0]]'
+    WHERE milestone=5;
+
+    UPDATE referral_costume_catalog
+    SET item_template_id=v_m10,costume_name='Champa Event',duration_days=7,
+        options_json='[[77,23],[103,23],[50,23],[14,6],[101,13],[8,5],[30,0]]'
+    WHERE milestone=10;
+
+    UPDATE referral_costume_catalog
+    SET item_template_id=v_m15,costume_name='Cađíc Event',duration_days=NULL,
+        options_json='[[77,25],[103,25],[50,25],[14,8],[101,17],[8,8],[30,0]]'
+    WHERE milestone=15;
+
+    UPDATE referral_costume_catalog
+    SET item_template_id=v_m20,costume_name='Bill Event',duration_days=NULL,
+        options_json='[[77,27],[103,27],[50,27],[14,10],[101,20],[8,10],[30,0]]'
+    WHERE milestone=20;
+END$$
+DELIMITER ;
+
+CALL nro_fix_referral_costume_animation_20261028();
+DROP PROCEDURE nro_fix_referral_costume_animation_20261028;
+
+-- Kiem tra sau fix.
+SELECT i.id,i.NAME,i.TYPE,i.icon_id,c.head,c.body,c.leg,c.bag
 FROM item_template i
-LEFT JOIN cai_trang c ON c.id_temp=i.id
+JOIN cai_trang c ON c.id_temp=i.id
 WHERE i.NAME IN (
-  'Cải Trang Whis Event',
-  'Cải Trang Champa Event',
-  'Cải Trang Tapion Event',
-  'Cải Trang Vua Vegeta Event'
+    'Cải Trang Chi Chi Event',
+    'Cải Trang Champa Event',
+    'Cải Trang Cađíc Event',
+    'Cải Trang Bill Event'
 )
 ORDER BY i.id;
 
@@ -139,13 +203,7 @@ SELECT item_template_id,COUNT(*) AS so_moc_dung_chung_id
 FROM referral_costume_catalog
 WHERE milestone IN (5,10,15,20)
 GROUP BY item_template_id
-HAVING COUNT(*) > 1;
+HAVING COUNT(*)>1;
 
--- Nếu SELECT cuối trả 0 dòng => 4 mốc không dùng trùng item ID.
---
--- Sau import:
--- 1) git pull origin main
--- 2) build lại Java
--- 3) TẮT HẲN Server và chạy lại để nạp item_template/cai_trang mới.
--- 4) Không cần xóa referral_costume_claims:
---    Java mới sẽ tự cho nhận lại nếu claim cũ là item ID khác với catalog hiện tại.
+-- SELECT cuoi phai tra 0 dong.
+-- Sau import: TAT HAN Server Java -> build/chay lai -> dang nhap lai client.
