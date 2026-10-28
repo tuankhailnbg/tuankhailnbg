@@ -98,11 +98,24 @@ public class NpcFactory {
             npc = switch (tempId) {
                 case ConstNpc.EVENT ->
                     new Npc(mapId, status, cx, cy, tempId, avartar) {
+                        private static final int EVENT_MAIN_MENU = 20261029;
                         private static final int REFERRAL_MENU = 20261028;
+                        private static final int TOP_RACE_MENU = 20261030;
+
                         @Override
                         public void openBaseMenu(Player player) {
-                            if (!canOpenNpc(player) || this.mapId != 5) return;
-                            // Mở thẳng menu giới thiệu, không còn bước chọn sự kiện/nhập mã.
+                            if (!canOpenNpc(player) || this.mapId != 5) {
+                                return;
+                            }
+                            nro.services.ReferralService.gI().closeRewardPanel(player);
+                            createOtherMenu(player, EVENT_MAIN_MENU,
+                                    "|1|SỰ KIỆN\n|7|Hãy chọn sự kiện bạn muốn tham gia",
+                                    "Giới thiệu\nbạn bè",
+                                    "Đua Top",
+                                    "Đóng");
+                        }
+
+                        private void openReferralMenu(Player player) {
                             nro.services.ReferralService.gI().closeRewardPanel(player);
                             String details = "|1|GIỚI THIỆU BẠN BÈ\n"
                                     + nro.services.ReferralService.gI().status(player);
@@ -110,30 +123,85 @@ public class NpcFactory {
                                 createOtherMenu(player, REFERRAL_MENU, details,
                                         "Bảng xếp\nhạng giới thiệu",
                                         "Nhận quà\ngiới thiệu",
-                                        "Cấp điểm\n(Admin)", "Đóng");
+                                        "Cấp điểm\n(Admin)",
+                                        "Quay lại");
                             } else {
                                 createOtherMenu(player, REFERRAL_MENU, details,
                                         "Bảng xếp\nhạng giới thiệu",
                                         "Nhận quà\ngiới thiệu",
-                                        "Đóng");
+                                        "Quay lại");
                             }
+                        }
+
+                        private void openTopRaceMenu(Player player) {
+                            createOtherMenu(player, TOP_RACE_MENU,
+                                    TopRaceManager.gI().getStatusText(),
+                                    "Top\nSức Mạnh",
+                                    "Top\nNhiệm Vụ",
+                                    "Top\nĐệ Tử",
+                                    "Top\nNạp",
+                                    "Nhận thưởng",
+                                    "Quay lại");
                         }
 
                         @Override
                         public void confirmMenu(Player player, int select) {
-                            if (!canOpenNpc(player) || this.mapId != 5) return;
-                            if (player.iDMark.getIndexMenu() == REFERRAL_MENU) {
+                            if (!canOpenNpc(player) || this.mapId != 5) {
+                                return;
+                            }
+
+                            int menu = player.iDMark.getIndexMenu();
+
+                            if (menu == EVENT_MAIN_MENU) {
                                 switch (select) {
-                                    case 0 -> {
-                                        nro.services.ReferralService.gI().closeRewardPanel(player);
-                                        nro.services.ReferralService.gI().sendLeaderboard(player);
-                                    }
-                                    case 1 -> nro.services.ReferralService.gI().sendRewardPanel(player);
-                                    case 2 -> {
-                                        nro.services.ReferralService.gI().closeRewardPanel(player);
-                                        if (player.isAdmin()) Input.gI().createFormAdminReferralPoints(player);
-                                    }
+                                    case 0 -> openReferralMenu(player);
+                                    case 1 -> openTopRaceMenu(player);
                                     default -> nro.services.ReferralService.gI().closeRewardPanel(player);
+                                }
+                                return;
+                            }
+
+                            if (menu == REFERRAL_MENU) {
+                                if (player.isAdmin()) {
+                                    switch (select) {
+                                        case 0 -> {
+                                            nro.services.ReferralService.gI().closeRewardPanel(player);
+                                            nro.services.ReferralService.gI().sendLeaderboard(player);
+                                        }
+                                        case 1 -> nro.services.ReferralService.gI().sendRewardPanel(player);
+                                        case 2 -> {
+                                            nro.services.ReferralService.gI().closeRewardPanel(player);
+                                            Input.gI().createFormAdminReferralPoints(player);
+                                        }
+                                        default -> {
+                                            nro.services.ReferralService.gI().closeRewardPanel(player);
+                                            openBaseMenu(player);
+                                        }
+                                    }
+                                } else {
+                                    switch (select) {
+                                        case 0 -> {
+                                            nro.services.ReferralService.gI().closeRewardPanel(player);
+                                            nro.services.ReferralService.gI().sendLeaderboard(player);
+                                        }
+                                        case 1 -> nro.services.ReferralService.gI().sendRewardPanel(player);
+                                        default -> {
+                                            nro.services.ReferralService.gI().closeRewardPanel(player);
+                                            openBaseMenu(player);
+                                        }
+                                    }
+                                }
+                                return;
+                            }
+
+                            if (menu == TOP_RACE_MENU) {
+                                switch (select) {
+                                    case 0 -> TopRaceService.gI().showRanking(player, TopRaceManager.POWER);
+                                    case 1 -> TopRaceService.gI().showRanking(player, TopRaceManager.TASK);
+                                    case 2 -> TopRaceService.gI().showRanking(player, TopRaceManager.PET);
+                                    case 3 -> TopRaceService.gI().showRanking(player, TopRaceManager.NAP);
+                                    case 4 -> TopRaceService.gI().claim(player);
+                                    default -> openBaseMenu(player);
                                 }
                             }
                         }
