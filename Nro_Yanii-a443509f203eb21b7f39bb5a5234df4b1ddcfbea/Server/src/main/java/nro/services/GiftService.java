@@ -37,6 +37,15 @@ public class GiftService {
     }
 
     public void use(Player player, String code) {
+        // Mã thử 4 cải trang sự kiện chỉ dành cho Admin để tránh phát tán đồ mạnh.
+        if (code != null && code.trim().equalsIgnoreCase("nrotest4ct2026")
+                && (player == null || player.getSession() == null || !player.isAdmin())) {
+            if (player != null) {
+                Service.getInstance().sendThongBaoOK(player,
+                        "Giftcode thử cải trang chỉ dành cho tài khoản Admin.");
+            }
+            return;
+        }
         int lent = code.length();
         if (code.equals("") || lent < 5 || lent > 30) {
             Service.getInstance().sendThongBaoOK(player, "Mã quà tặng có chiều dài từ 5 đến 30 ký tự.");
