@@ -62,6 +62,12 @@ public class ShopDAO {
                 tab.shop = shop;
                 tab.id = rs.getInt(1);
                 tab.name = rs.getString(3).replaceAll("<>", "\n");
+
+                // Bỏ hoàn toàn tab "Shop Biến hình" của Santa.
+                if (tab.id == 44) {
+                    continue;
+                }
+
                 loadItemShop(con, tab);
                 shop.tabShops.add(tab);
             }
@@ -104,6 +110,14 @@ public class ShopDAO {
                 applySantaSpecialCostumeConfig(itemShop);
                 tabShop.itemShops.add(itemShop);
             }
+
+            // Santa - tab Đặc biệt (tab 17): mở bán lại Giáp tập luyện cấp 1 và 2.
+            // Cấp 3 (ID 536) đang có sẵn trong DB với giá 1 tỷ vàng.
+            if (tabShop.id == 17) {
+                addSantaTrainArmorIfMissing(tabShop, 534, 10_000_000);
+                addSantaTrainArmorIfMissing(tabShop, 535, 100_000_000);
+            }
+
             try {
                 if (rs != null) {
                     rs.close();
@@ -123,6 +137,38 @@ public class ShopDAO {
      * Cấu hình cố định các cải trang ở cửa hàng đặc biệt của Santa.
      * Override lúc load để VPS chỉ cần pull/build, không phải sửa DB thủ công.
      */
+    private static void addSantaTrainArmorIfMissing(TabShop tabShop, int itemId, int goldPrice) {
+        for (ItemShop itemShop : tabShop.itemShops) {
+            if (itemShop != null && itemShop.temp != null && itemShop.temp.id == itemId) {
+                // Nếu DB đã có lại item thì chỉ đảm bảo nó bán đúng giá và có option thời gian.
+                itemShop.gold = goldPrice;
+                itemShop.gem = 0;
+                itemShop.itemExchange = -1;
+                if (itemShop.options.stream().noneMatch(io -> io != null
+                        && io.optionTemplate != null && io.optionTemplate.id == 9)) {
+                    itemShop.options.add(new ItemOption(9, 0));
+                }
+                return;
+            }
+        }
+
+        ItemShop trainArmor = new ItemShop();
+        trainArmor.tabShop = tabShop;
+        trainArmor.id = -itemId;
+        trainArmor.temp = ItemService.gI().getTemplate(itemId);
+        if (trainArmor.temp == null) {
+            return;
+        }
+        trainArmor.gold = goldPrice;
+        trainArmor.gem = 0;
+        trainArmor.isNew = false;
+        trainArmor.itemExchange = -1;
+        trainArmor.costSpec = 0;
+        trainArmor.iconSpec = 0;
+        trainArmor.options.add(new ItemOption(9, 0));
+        tabShop.itemShops.add(trainArmor);
+    }
+
     private static void applySantaSpecialCostumeConfig(ItemShop itemShop) {
         if (itemShop == null || itemShop.temp == null
                 || itemShop.tabShop == null || itemShop.tabShop.id != 13) {
