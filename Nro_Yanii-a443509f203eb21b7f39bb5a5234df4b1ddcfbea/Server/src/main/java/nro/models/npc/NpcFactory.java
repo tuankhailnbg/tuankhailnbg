@@ -2143,6 +2143,7 @@ public class NpcFactory {
                                         switch (player.combineNew.typeCombine) {
                                             case CombineServiceNew.EP_SAO_TRANG_BI:
                                             case CombineServiceNew.PHA_LE_HOA_TRANG_BI:
+                                            case CombineServiceNew.CUONG_HOA_LO_SAO_PHA_LE:
                                             case CombineServiceNew.DOI_VE_HUY_DIET:
                                             case CombineServiceNew.DAP_SET_KICH_HOAT:
                                             case CombineServiceNew.DAP_SET_KICH_HOAT_CAO_CAP:
