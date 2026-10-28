@@ -60,9 +60,15 @@ def static_contract():
         check(f"({milestone},NULL,'{name}',{flag}," in catalog,
               f"catalog includes {name}, duration {flag}")
     check("item.template.type != 5" in source, "costume claim rejects non-costume item templates")
-    check("linkExistingCostume(c, milestone)" in source
-          and "c.item_template_id IS NULL" in source and "i.TYPE=5" in source,
-          "interrupted costume import safely relinks existing known TYPE=5 items")
+    check("validateCatalogCostume(c, milestone)" in source
+          and "Switched milestone" not in source
+          and "case 10 -> 2117" not in source,
+          "Java keeps referral catalog item IDs instead of replacing them with shop costumes")
+    check("rc.item_template_id=cat.item_template_id" in source,
+          "only the currently configured costume counts as already claimed")
+    check("staleClaim = true" in source
+          and "UPDATE referral_costume_claims" in source,
+          "old costume claim rows are refreshed when the event costume changes")
     check("Cải trang CHƯA được nhận:" in source,
           "special-milestone claim reports pending costume after receiving gold bars")
     check("getItemOptionTemplate(id) == null" in source,
