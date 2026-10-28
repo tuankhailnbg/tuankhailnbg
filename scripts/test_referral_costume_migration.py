@@ -205,6 +205,34 @@ def test_database():
             check(cur.fetchone()[0] == 4,
                   "all four milestone rewards use distinct item IDs")
 
+            cur.execute("""INSERT INTO item_template
+                (id,TYPE,gender,NAME,description,icon_id,part,is_up_to_up,power_require)
+                VALUES(457,27,3,'Thỏi vàng-25M','Bán TV để Nhận Vàng\\r\\nNro Yanii',4028,-1,0,1500000)
+                ON DUPLICATE KEY UPDATE description=VALUES(description)""")
+            cur.execute("""INSERT INTO task_main_template(id,NAME,detail)
+                VALUES(32,'-----Nro Yanii-----','-----Nro Yanii-----')
+                ON DUPLICATE KEY UPDATE NAME=VALUES(NAME),detail=VALUES(detail)""")
+            cur.execute("DELETE FROM task_sub_template WHERE task_main_id=32")
+            cur.execute("""INSERT INTO task_sub_template(task_main_id,NAME,max_count,notify,npc_id,map)
+                VALUES(32,'-----Nro Yanii-----',-1,'',-1,-1)""")
+
+            execute_file(cur, CLEAN_TEXT)
+
+            cur.execute("SELECT description FROM item_template WHERE id=457")
+            check(cur.fetchone()[0] == "Bán TV để Nhận Vàng",
+                  "Thỏi Vàng description no longer shows Nro Yanii")
+            cur.execute("""SELECT COUNT(*) FROM item_template
+                WHERE NAME LIKE '%Nro Yanii%' OR description LIKE '%Nro Yanii%'""")
+            check(cur.fetchone()[0] == 0,
+                  "item templates contain no Nro Yanii display text")
+            cur.execute("""SELECT COUNT(*) FROM task_main_template
+                WHERE NAME LIKE '%Nro Yanii%' OR detail LIKE '%Nro Yanii%'""")
+            check(cur.fetchone()[0] == 0,
+                  "task main templates contain no Nro Yanii display text")
+            cur.execute("SELECT COUNT(*) FROM task_sub_template WHERE NAME LIKE '%Nro Yanii%'")
+            check(cur.fetchone()[0] == 0,
+                  "task sub templates contain no Nro Yanii display text")
+
     print("All current referral costume migration tests passed.")
 
 if __name__ == "__main__":
