@@ -59,7 +59,8 @@ public final class ReferralService {
 
     private Connection connect() throws SQLException {
         // Dùng connection riêng (không dùng connection chia sẻ giữa các luồng).
-        return DBService.gI().getConnection();
+        try { return DBService.gI().getConnection(); }
+        catch (Exception ex) { throw new SQLException("Không thể lấy DB connection", ex); }
     }
 
     public String status(Player p) {
