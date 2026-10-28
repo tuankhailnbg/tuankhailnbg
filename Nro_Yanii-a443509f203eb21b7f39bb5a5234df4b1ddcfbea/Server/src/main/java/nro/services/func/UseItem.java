@@ -1931,6 +1931,10 @@ public class UseItem {
     private void learnSkill(Player pl, Item item) {
         Message msg;
         try {
+            if (item.template.id >= 1326 && item.template.id <= 1340) {
+                Service.getInstance().sendThongBao(pl, "Kỹ năng Biến hình đã được gỡ khỏi server");
+                return;
+            }
             if (item.template.gender == pl.gender || item.template.gender == 3) {
                 String[] subName = item.template.name.split("");
                 byte level = Byte.parseByte(subName[subName.length - 1]);
