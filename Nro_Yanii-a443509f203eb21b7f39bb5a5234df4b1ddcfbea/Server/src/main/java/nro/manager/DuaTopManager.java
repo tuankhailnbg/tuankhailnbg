@@ -9,6 +9,7 @@ import nro.models.item.Item;
 import nro.models.item.ItemOption;
 import nro.models.player.Player;
 import nro.server.Client;
+import nro.server.ServerManager;
 import nro.server.io.Message;
 import nro.services.InventoryService;
 import nro.services.ItemService;
@@ -328,6 +329,8 @@ public final class DuaTopManager {
     }
 
     private void finalizeEvent(EventInfo event) throws Exception {
+        // Chot theo du lieu moi nhat cua nguoi dang online, tranh lech do chu ky autosave.
+        ServerManager.gI().saveAll(false);
         try (Connection con = DBService.gI().getConnection()) {
             con.setAutoCommit(false);
             try {
