@@ -369,7 +369,7 @@ public class ShopService {
                 return 0L;
             }
             int boxSize = player.inventory.itemsBox.size();
-            long factor = Math.max(0, boxSize - 19);
+            long factor = Math.max(1, boxSize - 19);
             return factor * 25_000_000L;
         }
         return Math.max(0L, (long) is.gold);
@@ -384,7 +384,7 @@ public class ShopService {
                 return 0;
             }
             int bagSize = player.inventory.itemsBag.size();
-            long factor = Math.max(0, bagSize - 19);
+            long factor = Math.max(1, bagSize - 19);
             long gemPrice = factor * 50L;
             if (gemPrice > Integer.MAX_VALUE) {
                 return Integer.MAX_VALUE;
@@ -421,6 +421,7 @@ public class ShopService {
         int reopenNpc = -1;
         int reopenSelect = -1;
         boolean sendItemBags = false;
+        boolean sendItemBox = false;
 
         synchronized (player.inventory) {
             // 1. Dynamic limit checks
@@ -644,11 +645,29 @@ public class ShopService {
                                                             : ItemService.gI().createItemFromItemShop(is);
                                                     int maxBagQuantity = (is.temp.id == 361) ? 9999 : 99;
                                                     if (InventoryService.gI().addItemBag(player, itemDefault, maxBagQuantity)) {
+                                                        boolean storageUpgrade = is.temp.id == 517 || is.temp.id == 518;
+                                                        if (storageUpgrade) {
+                                                            try {
+                                                                // Keep payment + slot change durable before informing the client.
+                                                                PlayerDAO.saveStorageUpgradeOrThrow(player);
+                                                            } catch (java.sql.SQLException ex) {
+                                                                // Revert only the new empty slot. The common rollback below refunds currencies.
+                                                                if (is.temp.id == 517) {
+                                                                    player.inventory.itemsBag.remove(player.inventory.itemsBag.size() - 1);
+                                                                } else {
+                                                                    player.inventory.itemsBox.remove(player.inventory.itemsBox.size() - 1);
+                                                                }
+                                                                Log.error(ShopService.class, ex);
+                                                                thongBaoMsg = "Không lưu được mở rộng ô, giao dịch đã được hoàn tiền";
+                                                                break;
+                                                            }
+                                                        }
                                                         sendItemBags = true;
                                                         thongBaoMsg = "Mua thành công " + is.temp.name;
-                                                        if (is.temp.id == 517 || is.temp.id == 518) {
+                                                        if (storageUpgrade) {
+                                                            sendItemBox = (is.temp.id == 518);
                                                             needsReopen = true;
-                                                            reopenNpc = 39;
+                                                            reopenNpc = ConstNpc.SANTA;
                                                             reopenSelect = 1;
                                                         }
                                                         success = true;
@@ -677,8 +696,8 @@ public class ShopService {
                                                 if (incBuyLimit) {
                                                     player.buyLimit[itemShopID - 1074]--;
                                                 }
-                                                if (is.temp.id != 517 && is.temp.id != 518 && is.temp.id != 988) {
-                                                    thongBaoMsg = "Hành trang không đủ chỗ trống, giao dịch thất bại";
+                                                if (thongBaoMsg == null) {
+                                                    thongBaoMsg = "Giao dịch thất bại, đã hoàn tiền";
                                                 }
                                             }
                                         }
@@ -695,6 +714,9 @@ public class ShopService {
         if (sendItemBags) {
             InventoryService.gI().sendItemBags(player);
         }
+        if (sendItemBox) {
+            InventoryService.gI().sendItemBox(player);
+        }
         if (thongBaoMsg != null) {
             if (sendOKDialog) {
                 Service.getInstance().sendThongBaoOK(player, thongBaoMsg);
@@ -703,7 +725,11 @@ public class ShopService {
             }
         }
         if (needsReopen) {
-            if (isCharmShop(reopenNpc)) {
+            if (reopenNpc == ConstNpc.SANTA && reopenSelect == 1) {
+                // Send fresh dynamic prices without requiring another NPC click.
+                Shop santaStorage = getShop(player, ConstNpc.SANTA, 2, player.gender);
+                openShopType0(player, santaStorage, ConstNpc.SHOP_SANTA_2);
+            } else if (isCharmShop(reopenNpc)) {
                 openShopBua(player, player.iDMark.getShopId(), reopenSelect);
             } else {
                 reopenShop(player, reopenNpc, reopenSelect);

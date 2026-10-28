@@ -43,7 +43,7 @@ public class PartManager {
     public void load() {
         try {
             Gson gson = new Gson();
-            PreparedStatement ps = DBService.gI().getConnectionForGame().prepareStatement("SELECT * FROM part");
+            PreparedStatement ps = DBService.gI().getConnectionForGame().prepareStatement("SELECT * FROM part ORDER BY id ASC");
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 short id = rs.getShort("id");

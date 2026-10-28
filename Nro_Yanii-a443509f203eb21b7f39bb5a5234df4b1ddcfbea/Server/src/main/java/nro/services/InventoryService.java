@@ -1175,7 +1175,9 @@ public class InventoryService {
             msg.writer().writeByte(player.inventory.itemsBag.size());
             for (int i = 0; i < player.inventory.itemsBag.size(); i++) {
                 Item item = player.inventory.itemsBag.get(i);
-                if (!item.isNotNullItem()) {
+                if (item == null || !item.isNotNullItem()) {
+                    // Client expects exactly one item ID per inventory slot.
+                    msg.writer().writeShort(-1);
                     continue;
                 }
                 msg.writer().writeShort(item.template.id);

@@ -1208,6 +1208,69 @@ public class PlayerDAO {
         }
     }
 
+    /**
+     * Immediately persist a purchased bag/box expansion and its currency change.
+     * Executed under synchronized(player.inventory) by ShopService.
+     * Failures propagate so the purchase can be rolled back in memory and refunded.
+     */
+    public static void saveStorageUpgradeOrThrow(Player player) throws SQLException {
+        if (player == null || player.inventory == null) {
+            throw new SQLException("Cannot persist storage upgrade: missing player inventory");
+        }
+        JSONArray money = new JSONArray();
+        money.add(player.inventory.gold);
+        money.add(player.inventory.gem);
+        money.add(player.inventory.ruby);
+        money.add(player.inventory.goldLimit);
+
+        String sql = "UPDATE player SET data_inventory = ?, items_bag = ?, items_box = ? WHERE id = ?";
+        try (Connection con = DBService.gI().getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, money.toJSONString());
+            ps.setString(2, serializeStorageSlots(player.inventory.itemsBag));
+            ps.setString(3, serializeStorageSlots(player.inventory.itemsBox));
+            ps.setLong(4, player.id);
+            int affected = ps.executeUpdate();
+            if (affected != 1) {
+                throw new SQLException("Storage upgrade updated " + affected + " player rows");
+            }
+        } catch (SQLException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SQLException("Error persisting purchased storage upgrade", e);
+        }
+    }
+
+    private static String serializeStorageSlots(java.util.List<Item> items) {
+        JSONArray result = new JSONArray();
+        for (Item item : items) {
+            JSONObject slot = new JSONObject();
+            JSONArray options = new JSONArray();
+            if (item != null && item.isNotNullItem()) {
+                slot.put("temp_id", item.template.id);
+                slot.put("quantity", item.quantity);
+                slot.put("create_time", item.createTime);
+                if (item.itemOptions != null) {
+                    for (ItemOption option : item.itemOptions) {
+                        if (option != null && option.optionTemplate != null) {
+                            JSONArray pair = new JSONArray();
+                            pair.add(option.optionTemplate.id);
+                            pair.add(option.param);
+                            options.add(pair);
+                        }
+                    }
+                }
+            } else {
+                slot.put("temp_id", -1);
+                slot.put("quantity", 0);
+                slot.put("create_time", 0);
+            }
+            slot.put("option", options);
+            result.add(slot);
+        }
+        return result.toJSONString();
+    }
+
     public static void saveName(Player player) {
         PreparedStatement ps = null;
         try (Connection con = DBService.gI().getConnectionForSaveData();) {
