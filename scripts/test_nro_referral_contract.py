@@ -77,7 +77,7 @@ def static_contract():
         (5, 1304, 7, "Goku SSJ4"),
         (10, 1305, 7, "Vegeta SSJ4"),
         (15, 1306, None, "Omega"),
-        (20, 2045, None, "Cumber"),
+        (20, 2129, None, "Fu"),
     ]:
         flag = str(days) if days is not None else "NULL"
         check(f"({milestone},{item_id},'{name}',{flag}," in catalog,
@@ -85,7 +85,7 @@ def static_contract():
     check("item.template.type != 5" in source, "costume claim rejects non-costume item templates")
     check("linkExistingCostume(c, milestone)" in source
           and "case 5 -> 1304" in source and "case 10 -> 1305" in source
-          and "case 15 -> 1306" in source and "case 20 -> 2045" in source,
+          and "case 15 -> 1306" in source and "case 20 -> 2129" in source,
           "fallback relinks milestones only to the current non-shop costume IDs")
     check("Cải trang CHƯA được nhận:" in source,
           "special-milestone claim reports pending costume after receiving gold bars")
