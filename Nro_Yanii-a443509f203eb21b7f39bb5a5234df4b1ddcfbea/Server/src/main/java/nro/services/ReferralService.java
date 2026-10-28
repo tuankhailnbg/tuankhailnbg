@@ -126,29 +126,32 @@ public final class ReferralService {
 
                 st.executeUpdate("INSERT IGNORE INTO referral_costume_catalog "
                         + "(milestone,item_template_id,costume_name,duration_days,options_json) VALUES "
-                        + "(5,NULL,'Goku SSJ3',7,'[[77,20],[103,20],[50,20],[14,4],[101,10],[30,0]]'),"
-                        + "(10,NULL,'Vegito Blue',7,'[[77,23],[103,23],[50,23],[14,6],[101,13],[8,5],[30,0]]'),"
-                        + "(15,NULL,'Gogeta Blue',NULL,'[[77,25],[103,25],[50,25],[14,8],[101,17],[8,8],[30,0]]'),"
-                        + "(20,NULL,'Zeno',NULL,'[[77,27],[103,27],[50,27],[14,10],[101,20],[8,10],[30,0]]')");
+                        + "(5,1304,'Goku SSJ4',7,'[[77,20],[103,20],[50,20],[14,4],[101,10],[30,0]]'),"
+                        + "(10,1305,'Vegeta SSJ4',7,'[[77,23],[103,23],[50,23],[14,6],[101,13],[8,5],[30,0]]'),"
+                        + "(15,1306,'Omega',NULL,'[[77,25],[103,25],[50,25],[14,8],[101,17],[8,8],[30,0]]'),"
+                        + "(20,2045,'Cumber',NULL,'[[77,27],[103,27],[50,27],[14,10],[101,20],[8,10],[30,0]]')");
 
-                // Dùng item ID đã có sẵn trong client để tránh client không resolve được
-                // template mới 2154-2157 (triệu chứng: icon trống, bấm item bị lag/đơ).
+                // Tự sửa các mapping cũ/legacy về bộ cải trang không nằm trong shop.
                 st.executeUpdate("UPDATE referral_costume_catalog c JOIN item_template i "
-                        + "ON i.id=904 AND i.TYPE=5 "
-                        + "SET c.item_template_id=904 WHERE c.milestone=5 "
-                        + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))");
+                        + "ON i.id=1304 AND i.TYPE=5 "
+                        + "SET c.item_template_id=1304,c.costume_name='Goku SSJ4',c.duration_days=7 "
+                        + "WHERE c.milestone=5 AND (c.item_template_id IS NULL "
+                        + "OR c.item_template_id IN (904,2154))");
                 st.executeUpdate("UPDATE referral_costume_catalog c JOIN item_template i "
-                        + "ON i.id=2117 AND i.TYPE=5 "
-                        + "SET c.item_template_id=2117 WHERE c.milestone=10 "
-                        + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))");
+                        + "ON i.id=1305 AND i.TYPE=5 "
+                        + "SET c.item_template_id=1305,c.costume_name='Vegeta SSJ4',c.duration_days=7 "
+                        + "WHERE c.milestone=10 AND (c.item_template_id IS NULL "
+                        + "OR c.item_template_id IN (2117,2155))");
                 st.executeUpdate("UPDATE referral_costume_catalog c JOIN item_template i "
-                        + "ON i.id=2142 AND i.TYPE=5 "
-                        + "SET c.item_template_id=2142 WHERE c.milestone=15 "
-                        + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))");
+                        + "ON i.id=1306 AND i.TYPE=5 "
+                        + "SET c.item_template_id=1306,c.costume_name='Omega',c.duration_days=NULL "
+                        + "WHERE c.milestone=15 AND (c.item_template_id IS NULL "
+                        + "OR c.item_template_id IN (2142,2156))");
                 st.executeUpdate("UPDATE referral_costume_catalog c JOIN item_template i "
-                        + "ON i.id=1276 AND i.TYPE=5 "
-                        + "SET c.item_template_id=1276 WHERE c.milestone=20 "
-                        + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))");
+                        + "ON i.id=2045 AND i.TYPE=5 "
+                        + "SET c.item_template_id=2045,c.costume_name='Cumber',c.duration_days=NULL "
+                        + "WHERE c.milestone=20 AND (c.item_template_id IS NULL "
+                        + "OR c.item_template_id IN (1276,2129,2157))");
             }
             SCHEMA_READY = true;
         }
@@ -174,7 +177,7 @@ public final class ReferralService {
         if (p == null || p.getSession() == null) return "Chưa đăng nhập";
         try (Connection c = connect()) {
             int points = pointsOf(c, p.id);
-            return "Điểm giới thiệu: " + points;
+            return "Điểm của bạn: " + points;
         } catch (SQLException ex) {
             return diagnostic(p, "đọc điểm giới thiệu", ex);
         }
@@ -350,10 +353,10 @@ public final class ReferralService {
             for(int n=1;n<=MAX_MILESTONE;n++){
                 int bars=100+(n-1)*25;
                 boolean hasCostume=n==5||n==10||n==15||n==20;
-                String costume=n==5?"Goku SSJ3 (7 ngày)":
-                               n==10?"Vegito Blue (7 ngày)":
-                               n==15?"Gogeta Blue (vĩnh viễn)":
-                               n==20?"Zeno (vĩnh viễn)":"";
+                String costume=n==5?"Goku SSJ4 (7 ngày)":
+                               n==10?"Vegeta SSJ4 (7 ngày)":
+                               n==15?"Omega (vĩnh viễn)":
+                               n==20?"Cumber (vĩnh viễn)":"";
                 // Một mốc đặc biệt chỉ hoàn tất khi cả Thỏi Vàng và cải trang đều đã nhận.
                 boolean claimed=gotBars.contains(n) &&
                      (!hasCostume||gotCostumes.contains(n));
@@ -485,16 +488,29 @@ public final class ReferralService {
     }
 
     /**
-     * Luôn ưu tiên item ID đã tồn tại trong client gốc. Các ID 2154-2157 từng
-     * được tạo chỉ ở database server nên một số client không có template tương ứng,
-     * khiến icon trống và có thể đơ khi bấm/mặc.
+     * Chỉ tự liên kết khi catalog đang trống hoặc còn dùng đúng ID cũ của mốc.
+     * Bộ hiện tại đều là item TYPE=5 có sẵn trong client và không nằm trong item_shop.
      */
     private void linkExistingCostume(Connection c, int milestone) throws SQLException {
         int expectedId = switch (milestone) {
-            case 5 -> 904;   // model Black Goku SSJ White
-            case 10 -> 2117; // model Goku Ultra
-            case 15 -> 2142; // model Gogeta SSJ4
-            case 20 -> 1276; // model Zamasu Tối Thượng
+            case 5 -> 1304; // Goku SSJ4
+            case 10 -> 1305; // Vegeta SSJ4
+            case 15 -> 1306; // Omega
+            case 20 -> 2045; // Cumber
+            default -> -1;
+        };
+        int legacyId = switch (milestone) {
+            case 5 -> 904;
+            case 10 -> 2117;
+            case 15 -> 2142;
+            case 20 -> 1276;
+            default -> -1;
+        };
+        int legacyCustomId = switch (milestone) {
+            case 5 -> 2154;
+            case 10 -> 2155;
+            case 15 -> 2156;
+            case 20 -> 2157;
             default -> -1;
         };
         if (expectedId < 0) return;
@@ -503,14 +519,17 @@ public final class ReferralService {
                 + "ON i.id=? AND i.TYPE=5 "
                 + "SET c.item_template_id=? "
                 + "WHERE c.milestone=? "
-                + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))")) {
+                + "AND (c.item_template_id IS NULL OR c.item_template_id=? "
+                + "OR c.item_template_id=?)")) {
             st.setInt(1, expectedId);
             st.setInt(2, expectedId);
             st.setInt(3, milestone);
+            st.setInt(4, legacyId);
+            st.setInt(5, legacyCustomId);
             int linked = st.executeUpdate();
             if (linked > 0) {
-                System.out.println("[REFERRAL] Switched milestone " + milestone
-                        + " to client-compatible costume ID " + expectedId);
+                System.out.println("[REFERRAL] Linked milestone " + milestone
+                        + " to non-shop costume ID " + expectedId);
             }
         }
     }

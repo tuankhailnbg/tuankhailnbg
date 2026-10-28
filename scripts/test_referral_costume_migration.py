@@ -11,12 +11,13 @@ ROOT = Path(__file__).resolve().parents[1]
 EVENT = ROOT / "database/migrations/20261028_referral_event_kame.sql"
 MANUAL = ROOT / "database/migrations/20261028_referral_manual_points.sql"
 NONSHOP = ROOT / "database/migrations/20261028_referral_nonshop_costumes.sql"
+CLEAN_TEXT = ROOT / "database/migrations/20261028_cleanup_nro_yanii_text.sql"
 
 EXPECTED = [
     (5, 1304, 7, "Goku SSJ4"),
     (10, 1305, 7, "Vegeta SSJ4"),
     (15, 1306, None, "Omega"),
-    (20, 2129, None, "Fu"),
+    (20, 2045, None, "Cumber"),
 ]
 
 def check(cond, msg):
@@ -112,6 +113,21 @@ def test_database():
                 create_time TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
 
+            cur.execute("""CREATE TABLE IF NOT EXISTS task_main_template (
+                id INT PRIMARY KEY,
+                NAME VARCHAR(255) NOT NULL,
+                detail VARCHAR(255) NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+
+            cur.execute("""CREATE TABLE IF NOT EXISTS task_sub_template (
+                task_main_id INT NOT NULL,
+                NAME VARCHAR(255) NOT NULL,
+                max_count INT NOT NULL DEFAULT -1,
+                notify VARCHAR(255) NOT NULL DEFAULT '',
+                npc_id INT NOT NULL DEFAULT -1,
+                map INT NOT NULL DEFAULT -1
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+
             execute_file(cur, EVENT)
             execute_file(cur, MANUAL)
 
@@ -119,7 +135,7 @@ def test_database():
                 (1304,5,3,"Cải trang Goku SSJ4","Nro Yanii",20371,-1,0,0),
                 (1305,5,3,"Cải trang Vegeta SSJ4","Nro Yanii",20403,-1,0,0),
                 (1306,5,3,"Cải trang Omega","Nro Yanii",20339,-1,0,0),
-                (2129,5,3,"Cải Trang Fu","Nro Yanii",32116,-1,0,0),
+                (2045,5,3,"Cải trang Cumber","Cải trang thành Cumber",11379,-1,0,0),
             ]
             cur.executemany("""INSERT INTO item_template
                 (id,TYPE,gender,NAME,description,icon_id,part,is_up_to_up,power_require)
@@ -134,7 +150,7 @@ def test_database():
                 (1304,1345,1346,1347,-1),
                 (1305,1348,1349,1350,-1),
                 (1306,1342,1343,1344,-1),
-                (2129,1425,1426,1427,-1),
+                (2045,1387,1388,1389,-1),
             ]
             cur.executemany("""INSERT INTO cai_trang(id_temp,head,body,leg,bag)
                 VALUES(%s,%s,%s,%s,%s)
@@ -146,7 +162,7 @@ def test_database():
                 (1345,1346,1347,20371),
                 (1348,1349,1350,20403),
                 (1342,1343,1344,20339),
-                (1425,1426,1427,32116),
+                (1387,1388,1389,11379),
             ]:
                 head_data = json.dumps([[icon,0,0],[icon+1,0,0],[icon+2,0,0]])
                 body_data = json.dumps([[30000+n,0,0] for n in range(17)])
@@ -175,7 +191,7 @@ def test_database():
             check(cur.fetchall() == tuple(EXPECTED),
                   "catalog uses the four current non-shop costumes")
 
-            cur.execute("SELECT COUNT(*) FROM item_shop WHERE temp_id IN (1304,1305,1306,2129)")
+            cur.execute("SELECT COUNT(*) FROM item_shop WHERE temp_id IN (1304,1305,1306,2045)")
             check(cur.fetchone()[0] == 0,
                   "current referral costumes are not present in item_shop")
 
@@ -188,6 +204,34 @@ def test_database():
                 FROM referral_costume_catalog WHERE milestone IN (5,10,15,20)""")
             check(cur.fetchone()[0] == 4,
                   "all four milestone rewards use distinct item IDs")
+
+            cur.execute("""INSERT INTO item_template
+                (id,TYPE,gender,NAME,description,icon_id,part,is_up_to_up,power_require)
+                VALUES(457,27,3,'Thỏi vàng-25M','Bán TV để Nhận Vàng\\r\\nNro Yanii',4028,-1,0,1500000)
+                ON DUPLICATE KEY UPDATE description=VALUES(description)""")
+            cur.execute("""INSERT INTO task_main_template(id,NAME,detail)
+                VALUES(32,'-----Nro Yanii-----','-----Nro Yanii-----')
+                ON DUPLICATE KEY UPDATE NAME=VALUES(NAME),detail=VALUES(detail)""")
+            cur.execute("DELETE FROM task_sub_template WHERE task_main_id=32")
+            cur.execute("""INSERT INTO task_sub_template(task_main_id,NAME,max_count,notify,npc_id,map)
+                VALUES(32,'-----Nro Yanii-----',-1,'',-1,-1)""")
+
+            execute_file(cur, CLEAN_TEXT)
+
+            cur.execute("SELECT description FROM item_template WHERE id=457")
+            check(cur.fetchone()[0] == "Bán TV để Nhận Vàng",
+                  "Thỏi Vàng description no longer shows Nro Yanii")
+            cur.execute("""SELECT COUNT(*) FROM item_template
+                WHERE NAME LIKE '%Nro Yanii%' OR description LIKE '%Nro Yanii%'""")
+            check(cur.fetchone()[0] == 0,
+                  "item templates contain no Nro Yanii display text")
+            cur.execute("""SELECT COUNT(*) FROM task_main_template
+                WHERE NAME LIKE '%Nro Yanii%' OR detail LIKE '%Nro Yanii%'""")
+            check(cur.fetchone()[0] == 0,
+                  "task main templates contain no Nro Yanii display text")
+            cur.execute("SELECT COUNT(*) FROM task_sub_template WHERE NAME LIKE '%Nro Yanii%'")
+            check(cur.fetchone()[0] == 0,
+                  "task sub templates contain no Nro Yanii display text")
 
     print("All current referral costume migration tests passed.")
 

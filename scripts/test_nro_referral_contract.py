@@ -24,10 +24,16 @@ def static_contract():
     check("private static final int MAX_MILESTONE = 20" in source, "exactly 20 referral milestones")
     check("100+(milestone-1)*25" in source and "100+(n-1)*25" in source, "gold reward formula is 100 + 25*(n-1)")
     check(sum(100+25*i for i in range(20)) == 6750, "total 20-milestone payout is 6750 bars")
-    check('case ConstNpc.EVENT ->' in npc and '"Đua top"' in npc, "NPC has two main event options")
-    check('sendLeaderboard(player)' in npc and 'sendRewardPanel(player)' in npc, "referral submenu opens top and reward panel")
-    check('createFormReferralCode' not in npc and '"Nhập mã\\ngiới thiệu"' not in npc,
-          "event NPC no longer offers referral code entry")
+    check('case ConstNpc.EVENT ->' in npc and '"Đua top"' not in npc
+          and '"NPC SỰ KIỆN\\nChọn sự kiện muốn tham gia"' not in npc,
+          "event NPC opens the referral menu directly without extra event text")
+    check('"|1|GIỚI THIỆU BẠN BÈ\\n"' in npc and '"Điểm của bạn: " + points' in source,
+          "referral panel body only shows title and player points")
+    check('sendLeaderboard(player)' in npc and 'sendRewardPanel(player)' in npc,
+          "referral menu still opens leaderboard and reward panel")
+    check('createFormReferralCode' not in npc and '"Nhập mã\\ngiới thiệu"' not in npc
+          and 'Nhập mã giới thiệu' not in user_input,
+          "event NPC and input system no longer offer referral code entry")
     player_source = (GAME / "models" / "player" / "Player.java").read_text(encoding="utf-8")
     check('promptOnFirstLogin' not in source and 'ReferralService.gI().tick(this)' not in player_source,
           "new accounts are not prompted for referral codes")
@@ -37,7 +43,9 @@ def static_contract():
     event_npc = npc.split('case ConstNpc.EVENT ->', 1)[1].split('case ConstNpc.OBITO ->', 1)[0]
     check('case 2 ->' in event_npc and 'case 3 ->' not in event_npc
           and 'if (player.isAdmin()) Input.gI().createFormAdminReferralPoints(player);' in event_npc,
-          "admin grant moves to submenu index 2 with server permission check")
+          "admin grant remains submenu index 2 with server permission check")
+    check('"-----Nro Yanii-----"' not in user_input,
+          "runtime input forms no longer show Nro Yanii branding")
     check('for(int n=1;n<=MAX_MILESTONE;n++)' in source, "reward panel generates all 20 rows")
     check("case ADMIN_REFERRAL_POINTS:" in user_input and 'player.isAdmin()' in user_input,
           "admin-only referral score input")
@@ -65,14 +73,20 @@ def static_contract():
     check("referral_claims(inviter_player_id,milestone,gold_bars,status)" in source,
           "gold bar ledger deduplicates claims")
     check('"Cấp điểm\\ngiới thiệu"' in manager, "admin chat menu offers points grant")
-    for milestone, days, name in [(5, 7, "Goku SSJ3"), (10, 7, "Vegito Blue"), (15, None, "Gogeta Blue"), (20, None, "Zeno")]:
+    for milestone, item_id, days, name in [
+        (5, 1304, 7, "Goku SSJ4"),
+        (10, 1305, 7, "Vegeta SSJ4"),
+        (15, 1306, None, "Omega"),
+        (20, 2045, None, "Cumber"),
+    ]:
         flag = str(days) if days is not None else "NULL"
-        check(f"({milestone},NULL,'{name}',{flag}," in catalog,
-              f"catalog includes {name}, duration {flag}")
+        check(f"({milestone},{item_id},'{name}',{flag}," in catalog,
+              f"catalog includes non-shop {name} ID {item_id}, duration {flag}")
     check("item.template.type != 5" in source, "costume claim rejects non-costume item templates")
     check("linkExistingCostume(c, milestone)" in source
-          and "c.item_template_id IS NULL" in source and "i.TYPE=5" in source,
-          "interrupted costume import safely relinks existing known TYPE=5 items")
+          and "case 5 -> 1304" in source and "case 10 -> 1305" in source
+          and "case 15 -> 1306" in source and "case 20 -> 2045" in source,
+          "fallback relinks milestones only to the current non-shop costume IDs")
     check("Cải trang CHƯA được nhận:" in source,
           "special-milestone claim reports pending costume after receiving gold bars")
     check("getItemOptionTemplate(id) == null" in source,
