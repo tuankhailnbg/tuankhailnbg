@@ -26,6 +26,8 @@ def static_contract():
     check(sum(100+25*i for i in range(20)) == 6750, "total 20-milestone payout is 6750 bars")
     check('case ConstNpc.EVENT ->' in npc and '"Đua top"' in npc, "NPC has two main event options")
     check('sendLeaderboard(player)' in npc and 'sendRewardPanel(player)' in npc, "referral submenu opens top and reward panel")
+    check('createFormReferralCode(player)' in npc and '"Nhập mã\\ngiới thiệu"' in npc,
+          "referral code form can be reopened explicitly from event NPC")
     check('for(int n=1;n<=MAX_MILESTONE;n++)' in source, "reward panel generates all 20 rows")
     check("case ADMIN_REFERRAL_POINTS:" in user_input and 'player.isAdmin()' in user_input,
           "admin-only referral score input")
@@ -33,6 +35,13 @@ def static_contract():
           "manual grants are audit logged")
     check("SELECT points FROM referral_points WHERE player_id=?" in source,
           "claims depend on admin-managed score")
+    check("CREATE TABLE IF NOT EXISTS referral_points" in source
+          and "CREATE TABLE IF NOT EXISTS referral_claims" in source
+          and "SCHEMA_READY" in source,
+          "core referral tables bootstrap when deployment skipped SQL migration")
+    check("expiresAt < System.currentTimeMillis()" in source
+          and "REWARD_PANELS.remove(p.id, expiresAt)" in source,
+          "stale referral achievement routing expires safely")
     check("private static final Map<Long, Activity>" not in source and "active_seconds=active_seconds+" not in source,
           "no automatic score gain from referral progress")
     check("case Cmd.ACHIEVEMENT:" in controller and "onRewardSelection" in controller,
