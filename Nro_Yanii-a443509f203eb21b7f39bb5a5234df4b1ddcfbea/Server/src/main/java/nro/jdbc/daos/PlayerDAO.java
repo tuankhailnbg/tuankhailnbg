@@ -1224,7 +1224,7 @@ public class PlayerDAO {
         money.add(player.inventory.goldLimit);
 
         String sql = "UPDATE player SET data_inventory = ?, items_bag = ?, items_box = ? WHERE id = ?";
-        try (Connection con = DBService.gI().getConnectionForSaveData();
+        try (Connection con = DBService.gI().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, money.toJSONString());
             ps.setString(2, serializeStorageSlots(player.inventory.itemsBag));
