@@ -113,6 +113,21 @@ def test_database():
                 create_time TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
 
+            cur.execute("""CREATE TABLE IF NOT EXISTS task_main_template (
+                id INT PRIMARY KEY,
+                NAME VARCHAR(255) NOT NULL,
+                detail VARCHAR(255) NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+
+            cur.execute("""CREATE TABLE IF NOT EXISTS task_sub_template (
+                task_main_id INT NOT NULL,
+                NAME VARCHAR(255) NOT NULL,
+                max_count INT NOT NULL DEFAULT -1,
+                notify VARCHAR(255) NOT NULL DEFAULT '',
+                npc_id INT NOT NULL DEFAULT -1,
+                map INT NOT NULL DEFAULT -1
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+
             execute_file(cur, EVENT)
             execute_file(cur, MANUAL)
 
