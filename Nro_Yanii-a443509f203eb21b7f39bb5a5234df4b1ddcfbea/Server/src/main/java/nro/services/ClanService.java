@@ -20,6 +20,8 @@ import nro.utils.Util;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
+import java.text.Normalizer;
+import java.util.Locale;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
@@ -71,64 +73,57 @@ public class ClanService {
         return i;
     }
 
+    /**
+     * Tra cứu bằng ID thật, không dùng chỉ số của danh sách làm ID.
+     * Danh sách bang có thể bị thiếu ID sau khi giải tán và không luôn được sắp xếp.
+     */
     public Clan getClanById(int id) throws Exception {
-        return getClanById(0, Manager.getNumClan(), id);
-    }
-
-    private Clan getClanById(int l, int r, int id) throws Exception {
-        if (l <= r) {
-            int m = (l + r) / 2;
-            Clan clan = null;
-            if (isNullClan(m)) {
-                return null;
-            }
-            clan = Manager.CLANS.get(m);
-            if (clan.id == id) {
-                return clan;
-            } else if (clan.id > id) {
-                r = m - 1;
-            } else {
-                l = m + 1;
-            }
-            return getClanById(l, r, id);
-        } else {
-            throw new Exception("Không tìm thấy clan id: " + id);
-        }
-    }
-
-    public static boolean isNullClan(int clanid) {
-        return Manager.CLANS.get(clanid) == null;
-    }
-
-    public List<Clan> getClans(String name) {
-        List<Clan> listClan = new ArrayList();
-        if (Manager.CLANS.size() <= 20) {
+        synchronized (Manager.CLANS) {
             for (Clan clan : Manager.CLANS) {
-                if (clan.name.contains(name)) {
-                    listClan.add(clan);
-                }
-            }
-        } else {
-            int n = Util.nextInt(0, Manager.CLANS.size() - 20);
-            for (int i = n; i < Manager.CLANS.size(); i++) {
-                Clan clan = Manager.CLANS.get(i);
-                if (clan.name.contains(name)) {
-                    listClan.add(clan);
-                }
-                if (listClan.size() >= 20) {
-                    break;
+                if (clan != null && clan.id == id) {
+                    return clan;
                 }
             }
         }
+        throw new Exception("Không tìm thấy clan id: " + id);
+    }
 
-        // for (Clan clan : Manager.CLANS) {
-        // if (clan.name.contains(name)) {
-        // listClan.add(clan);
-        // }
-        // if (listClan.size() >= 20) {
-        // break;
-        // }
-        // }
+    // Giữ phương thức này tương thích với những chỗ sử dụng chỉ số danh sách.
+    public static boolean isNullClan(int index) {
+        synchronized (Manager.CLANS) {
+            return index < 0 || index >= Manager.CLANS.size() || Manager.CLANS.get(index) == null;
+        }
+    }
+
+    // Cho phép tìm tên bang không phân biệt chữ hoa/chữ thường và dấu tiếng Việt.
+    private static String normalizeClanName(String value) {
+        if (value == null) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(value.trim().toLowerCase(Locale.ROOT), Normalizer.Form.NFD);
+        return normalized.replaceAll("\\p{M}+", "").replace('đ', 'd');
+    }
+
+    /**
+     * Tìm trên toàn bộ bang hội trước khi giới hạn kết quả.
+     * Trả tối đa 20 bang (ưu tiên bang mới) để giữ đúng giao thức client.
+     */
+    public List<Clan> getClans(String name) {
+        List<Clan> listClan = new ArrayList<>();
+        String keyword = normalizeClanName(name);
+        synchronized (Manager.CLANS) {
+            for (int index = Manager.CLANS.size() - 1; index >= 0 && listClan.size() < 20; index--) {
+                Clan clan = Manager.CLANS.get(index);
+                // Bỏ qua bang đã giải tán hoặc dữ liệu bang không hợp lệ.
+                if (clan == null || clan.name == null || clan.name.trim().isEmpty()
+                        || clan.members == null || clan.members.isEmpty()) {
+                    continue;
+                }
+                if (normalizeClanName(clan.name).contains(keyword)) {
+                    listClan.add(clan);
+                }
+            }
+        }
         return listClan;
     }
 
@@ -583,28 +578,49 @@ public class ClanService {
         sendMyClan(player);
     }
 
-    // danh sách clan
+    // Danh sách bang hội / kết quả tìm bang (gói -47).
     public void sendListClan(Player player, String name) {
-        Message msg;
+        if (player == null) {
+            return;
+        }
+        Message msg = null;
         try {
             List<Clan> clans = getClans(name);
             msg = new Message(-47);
             msg.writer().writeByte(clans.size());
             for (Clan clan : clans) {
+                ClanMember leader = clan.getLeader();
                 msg.writer().writeInt(clan.id);
                 msg.writer().writeUTF(clan.name);
-                msg.writer().writeUTF(clan.slogan);
+                msg.writer().writeUTF(clan.slogan == null ? "" : clan.slogan);
                 msg.writer().writeByte(clan.imgId);
                 msg.writer().writeUTF(String.valueOf(clan.powerPoint));
-                msg.writer().writeUTF(clan.getLeader().name);
+                msg.writer().writeUTF(leader != null && leader.name != null ? leader.name : "Bang chủ");
                 msg.writer().writeByte(clan.getCurrMembers());
                 msg.writer().writeByte(clan.maxMember);
                 msg.writer().writeInt(clan.createTime);
             }
             player.sendMessage(msg);
-            msg.cleanup();
         } catch (Exception e) {
-
+            Log.error(ClanService.class, e, "Lỗi gửi danh sách hoặc tìm kiếm bang hội");
+            // Vẫn phản hồi gói -47 để client không bị kẹt ở màn hình chờ.
+            Message emptyList = null;
+            try {
+                emptyList = new Message(-47);
+                emptyList.writer().writeByte(0);
+                player.sendMessage(emptyList);
+            } catch (Exception sendError) {
+                Log.error(ClanService.class, sendError, "Lỗi gửi danh sách bang hội rỗng");
+            } finally {
+                if (emptyList != null) {
+                    emptyList.cleanup();
+                }
+            }
+            Service.getInstance().sendThongBao(player, "Không thể tải danh sách bang hội, vui lòng thử lại.");
+        } finally {
+            if (msg != null) {
+                msg.cleanup();
+            }
         }
     }
 
@@ -957,45 +973,34 @@ public class ClanService {
     }
 
     private void removeClan(int clId) {
-        PreparedStatement ps = null;
-        PreparedStatement ps2 = null;
-        try (Connection con = DBService.gI().getConnectionForClan();) {
-            ps = con.prepareStatement("DELETE FROM clan_sv"
-                    + Manager.SERVER + " where id = " + clId);
-            ps.executeUpdate();
-            ps.close();
-
-            ps2 = con.prepareStatement("update player set clan_id_sv"
-                    + Manager.SERVER + " = -1 where clan_id_sv" + Manager.SERVER + " = " + clId);
-            ps2.executeUpdate();
-            ps2.close();
-        } catch (Exception ex) {
-            removeClan(clId);
-            return;
-        } finally {
-            try {
-                ps.close();
-                ps2.close();
-            } catch (Exception e) {
+        try (Connection con = DBService.gI().getConnectionForClan();
+             PreparedStatement deleteClan = con.prepareStatement(
+                     "DELETE FROM clan_sv" + Manager.SERVER + " WHERE id = ?");
+             PreparedStatement clearPlayers = con.prepareStatement(
+                     "UPDATE player SET clan_id_sv" + Manager.SERVER
+                     + " = -1 WHERE clan_id_sv" + Manager.SERVER + " = ?")) {
+            deleteClan.setInt(1, clId);
+            deleteClan.executeUpdate();
+            clearPlayers.setInt(1, clId);
+            clearPlayers.executeUpdate();
+            // Không giữ bang đã giải tán trong danh sách tìm kiếm.
+            synchronized (Manager.CLANS) {
+                Manager.CLANS.removeIf(clan -> clan != null && clan.id == clId);
             }
+        } catch (Exception ex) {
+            // Không tự gọi lại vô hạn khi database mất kết nối.
+            Log.error(ClanService.class, ex, "Lỗi xóa bang hội ID " + clId);
         }
     }
 
     private void removeClanPlayer(int plId) {
-        PreparedStatement ps = null;
-        try (Connection con = DBService.gI().getConnectionForClan();) {
-            ps = con.prepareStatement("update player set clan_id_sv"
-                    + Manager.SERVER + " = -1 where id = " + plId);
+        try (Connection con = DBService.gI().getConnectionForClan();
+             PreparedStatement ps = con.prepareStatement(
+                     "UPDATE player SET clan_id_sv" + Manager.SERVER + " = -1 WHERE id = ?")) {
+            ps.setInt(1, plId);
             ps.executeUpdate();
-            ps.close();
         } catch (Exception ex) {
-            removeClanPlayer(plId);
-            return;
-        } finally {
-            try {
-                ps.close();
-            } catch (Exception e) {
-            }
+            Log.error(ClanService.class, ex, "Lỗi rời bang của nhân vật ID " + plId);
         }
     }
 
