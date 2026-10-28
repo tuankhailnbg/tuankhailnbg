@@ -23,9 +23,11 @@ BEGIN
       SET MESSAGE_TEXT='item_template ID khong lien tuc: chua the cai cai trang';
   END IF;
   IF EXISTS(
-    SELECT 1 FROM item_template WHERE id BETWEEN 2154 AND 2157
-      AND NAME NOT IN ('Cải Trang Goku SSJ3 - GT','Cải Trang Vegito Blue - GT',
-                       'Cải Trang Gogeta Blue - GT','Cải Trang Zeno - GT')
+    SELECT 1 FROM item_template
+    WHERE (id=2154 AND NAME<>'Cải Trang Goku SSJ3 - GT')
+       OR (id=2155 AND NAME<>'Cải Trang Vegito Blue - GT')
+       OR (id=2156 AND NAME<>'Cải Trang Gogeta Blue - GT')
+       OR (id=2157 AND NAME<>'Cải Trang Zeno - GT')
   ) THEN
     SIGNAL SQLSTATE '45000'
       SET MESSAGE_TEXT='ID 2154-2157 da co vat pham khac, KHONG ghi de';
