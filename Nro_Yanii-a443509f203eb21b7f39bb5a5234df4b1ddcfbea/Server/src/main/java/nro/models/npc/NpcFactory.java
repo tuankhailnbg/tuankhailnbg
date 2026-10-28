@@ -3723,8 +3723,13 @@ public class NpcFactory {
                         public void openBaseMenu(Player player) {
                             if (canOpenNpc(player)) {
                                 if (this.mapId == 113) {
-                                    this.createOtherMenu(player, ConstNpc.BASE_MENU, "Sieu Hang Test By Louis Goku",
-                                            "BXH");
+                                    this.createOtherMenu(player, ConstNpc.BASE_MENU,
+                                            TopRaceManager.gI().getStatusText(),
+                                            "Top\nSức Mạnh",
+                                            "Top\nNhiệm Vụ",
+                                            "Top\nĐệ Tử",
+                                            "Top\nNạp",
+                                            "Nhận thưởng");
                                 } else {
                                     super.openBaseMenu(player);
                                 }
@@ -3738,7 +3743,19 @@ public class NpcFactory {
                                     if (player.iDMark.isBaseMenu()) {
                                         switch (select) {
                                             case 0:
-                                                Service.getInstance().showTopPower(player);
+                                                TopRaceService.gI().showRanking(player, TopRaceManager.POWER);
+                                                break;
+                                            case 1:
+                                                TopRaceService.gI().showRanking(player, TopRaceManager.TASK);
+                                                break;
+                                            case 2:
+                                                TopRaceService.gI().showRanking(player, TopRaceManager.PET);
+                                                break;
+                                            case 3:
+                                                TopRaceService.gI().showRanking(player, TopRaceManager.NAP);
+                                                break;
+                                            case 4:
+                                                TopRaceService.gI().claim(player);
                                                 break;
                                         }
                                     }
