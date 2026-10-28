@@ -69,6 +69,41 @@ UPDATE referral_costume_catalog SET item_template_id=<ID_ZENO> WHERE milestone=2
 Các placeholder `<ID_...>` cần thay bằng ID **đã tồn tại thực tế**; **không chạy nguyên xi** bốn lệnh mẫu. Service kiểm tra `item_template.type=5` trước khi tạo vật phẩm.
  Khi có đúng item ID và client asset, cập nhật bảng cấu hình để hệ thống phát chỉ số tương ứng và hạn 7 ngày dùng item option 93. Bảng `referral_costume_claims` giữ lịch sử phát. Không tự gán ID ngẫu nhiên khi chưa đối chiếu SQL/assets.
 
+## 5b. Bản test 4 cải trang (ID mới + Giftcode)
+
+Migration mới: `database/migrations/20261028_referral_costumes_test.sql`. Phải chạy **sau hai migration referral** (event + manual points).
+
+| Mốc | Item ID mới | Hình xem trước mượn từ mẫu có sẵn | Trạng thái |
+|---|---:|---|---|
+| 5 | 2154 | Goku Black SSJ White + icon SSJ3 White | Placeholder, **không phải Goku SSJ3 chính xác** |
+| 10 | 2155 | Goku Ultra | Placeholder, **không phải Vegito Blue chính xác** |
+| 15 | 2156 | Gogeta SSJ4 | Placeholder, **không phải Gogeta Blue chính xác** |
+| 20 | 2157 | Zamasu Tối Thượng | Placeholder, **không phải Zeno chính xác** |
+
+Đã có 4 bản ghi `item_template` TYPE=5, 4 bản ghi `cai_trang`, và gắn `referral_costume_catalog.item_template_id` để tự phát thêm cải trang khi người chơi nhận mốc đã đủ điểm. Các part/icon mượn lại từ dữ liệu game, phục vụ kiểm tra ô đồ, option và logic mặc cải trang, **chưa phải đồ họa bốn nhân vật thật**. Khi cung cấp sprite `head/body/leg/icon` đúng, chỉ cần thay trong bảng và cập nhật tài nguyên client.
+
+### Giftcode test (chỉ tài khoản Admin)
+
+```text
+nrotest4ct2026
+```
+
+Mở **Mã quà tặng** trong game rồi nhập code trên. Giftcode tạo **4 cải trang ID 2154–2157** với đúng option đã chốt, gồm HSD 7 ngày tại mốc 5 và 10 (option 93), và vĩnh viễn tại mốc 15,20. Mã dùng tối đa **một lần trên mỗi nhân vật**; Java kiểm tra `isAdmin()` trước khi cho dùng mã test. **Cần 4 ô trống hành trang.**
+
+Lưu ý: mỗi mốc sự kiện cấp cải trang riêng, giftcode chỉ để test hình và chỉ số. Nhận bằng giftcode **không trừ điểm**, cũng không đánh dấu mốc 5/10/15/20 đã nhận. Nếu muốn nhận bản cải trang chuẩn từ mốc sau khi đã thử, nhân vật có thể có hai bản.
+
+**An toàn trước cài:** database hiện tại phải có ID template liên tục 0..2153; migration từ chối đè vật phẩm khác tại 2154–2157. Nếu VPS đã thêm item ID trên 2153, **đối chiếu và điều chỉnh ID trước khi chạy**, vì source ItemService truy cập danh sách item theo ID. Source đã đổi truy vấn load item thành `ORDER BY id ASC`.
+
+Kiểm tra SQL sau cài:
+
+```sql
+SELECT id,NAME,TYPE,icon_id FROM item_template WHERE id BETWEEN 2154 AND 2157 ORDER BY id;
+SELECT id_temp,head,body,leg FROM cai_trang WHERE id_temp BETWEEN 2154 AND 2157 ORDER BY id_temp;
+SELECT code,type,status,items FROM gift_codes WHERE code='nrotest4ct2026';
+SELECT milestone,item_template_id,duration_days FROM referral_costume_catalog ORDER BY milestone;
+```
+
+---
 ## 6. Cài trên VPS Windows (SAO LƯU trước)
 
 1. Backup MariaDB database `ngocrong` và thư mục Server/Login đang chạy.
@@ -76,6 +111,7 @@ Các placeholder `<ID_...>` cần thay bằng ID **đã tồn tại thực tế*
 3. Chạy migration lần lượt:
    - `database/migrations/20261028_referral_event_kame.sql`
    - `database/migrations/20261028_referral_manual_points.sql`
+   - `database/migrations/20261028_referral_costumes_test.sql`
 4. Trong Server chạy PowerShell: `& "C:\tools\maven\bin\mvn.cmd" clean package -DskipTests`.
 5. Nếu `BUILD SUCCESS`, triển khai JAR thử nghiệm và dùng BAT khởi động Login/Server bình thường.
 6. Test với ít nhất 2 tài khoản (1 admin): admin nhập cấp 1 điểm cho nhân vật A → bảng top xuất hiện A; A mở bảng nhận mốc 1, bấm nhận 100 Thỏi Vàng → thử bấm lại không được cộng lần hai.
