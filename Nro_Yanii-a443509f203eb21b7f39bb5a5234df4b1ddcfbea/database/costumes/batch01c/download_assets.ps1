@@ -123,5 +123,34 @@ $map=@'
 26173,32644
 26174,32645
 '@ | ConvertFrom-Csv -Header OldId,NewId
-foreach($z in 1..4){$dir=Join-Path $ServerFolder "resources/normal/image/$z/icon";New-Item -ItemType Directory -Force -Path $dir | Out-Null;foreach($i in $map){$dest=Join-Path $dir "$($i.NewId).png";if(Test-Path $dest){throw "Already exists: $dest"}; $url="$source/x$z/$($i.OldId).png";Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing -TimeoutSec 30; $bytes=[IO.File]::ReadAllBytes($dest);if($bytes.Length -lt 8 -or [Text.Encoding]::ASCII.GetString($bytes,1,3) -ne 'PNG'){throw "Invalid PNG: $url"}};Write-Host "Finished x$z"}
-Write-Host 'All images downloaded. Back up DB then import install.sql. Restart server.'
+$downloaded = 0
+$reused = 0
+foreach($z in 1..4){
+  $dir = Join-Path $ServerFolder "resources/normal/image/$z/icon"
+  New-Item -ItemType Directory -Force -Path $dir | Out-Null
+  foreach($i in $map){
+    $dest = Join-Path $dir "$($i.NewId).png"
+    $tmp = "$dest.download"
+    $url = "$source/x$z/$($i.OldId).png"
+    try {
+      Invoke-WebRequest -Uri $url -OutFile $tmp -UseBasicParsing -TimeoutSec 45
+      $bytes = [IO.File]::ReadAllBytes($tmp)
+      if($bytes.Length -lt 8 -or [Text.Encoding]::ASCII.GetString($bytes,1,3) -ne 'PNG'){
+        throw "Invalid PNG: $url"
+      }
+      if(Test-Path $dest) {
+        if((Get-FileHash $tmp -Algorithm SHA256).Hash -ne (Get-FileHash $dest -Algorithm SHA256).Hash){
+          throw "Image ID collision with different content: $dest"
+        }
+        $reused++
+      } else {
+        Move-Item -LiteralPath $tmp -Destination $dest
+        $downloaded++
+      }
+    } finally {
+      if(Test-Path $tmp) { Remove-Item -LiteralPath $tmp -Force }
+    }
+  }
+  Write-Host "Verified x$z: $($map.Count) PNGs"
+}
+Write-Host "Asset verification passed. New=$downloaded ExistingValid=$reused"
