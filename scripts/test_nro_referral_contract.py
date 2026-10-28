@@ -21,6 +21,8 @@ def static_contract():
     user_input = (GAME / "services" / "func" / "Input.java").read_text(encoding="utf-8")
     inventory = (GAME / "services" / "InventoryService.java").read_text(encoding="utf-8")
     catalog = (ROOT / "database" / "migrations" / "20261028_referral_event_kame.sql").read_text(encoding="utf-8")
+    safe_costumes = (ROOT / "database" / "migrations" / "20261028_referral_4_new_event_costumes_safe.sql").read_text(encoding="utf-8")
+    repair_costumes = (ROOT / "database" / "migrations" / "20261028_fix_referral_event_costume_mapping.sql").read_text(encoding="utf-8")
     check("private static final int MAX_MILESTONE = 20" in source, "exactly 20 referral milestones")
     check("100+(milestone-1)*25" in source and "100+(n-1)*25" in source, "gold reward formula is 100 + 25*(n-1)")
     check(sum(100+25*i for i in range(20)) == 6750, "total 20-milestone payout is 6750 bars")
@@ -73,6 +75,20 @@ def static_contract():
           "special-milestone claim reports pending costume after receiving gold bars")
     check("getItemOptionTemplate(id) == null" in source,
           "costume options are checked against loaded server templates")
+    check("validateCostumeAppearance(itemId)" in source
+          and "validateAnimatedPart" in source
+          and "imageId != 2955" in source,
+          "server blocks event costumes with missing player animation frames")
+    for triple in ["1330,1331,1332", "511,512,513", "645,646,647", "508,509,510"]:
+        check(triple in safe_costumes.replace(" ", ""),
+              f"safe migration contains approved animation set {triple}")
+    for bad in ["505,506,507", "481,482,483", "36,37,38"]:
+        check(bad not in safe_costumes.replace(" ", "").split("--KHONGDUNG")[0],
+              f"unsafe animation set {bad} is not installed by safe migration")
+    check("item_shop" in safe_costumes and "temp_id IN" in safe_costumes,
+          "new event IDs are checked against shop use")
+    check("id_temp<>v_m5" in repair_costumes and "id_temp<>v_m20" in repair_costumes,
+          "repair migration refuses appearance collisions with other costumes")
     credit_form = user_input.split("public void createFormAdminCredit(Player pl) {",1)[1].split("\n    }",1)[0]
     check(credit_form.count("new SubInput(") == 2,
           "admin credit form shows only recipient and amount")
