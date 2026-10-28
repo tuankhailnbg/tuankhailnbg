@@ -317,7 +317,11 @@ public final class DuaTopManager {
         try (Connection con = DBService.gI().getConnection();
              PreparedStatement ps = con.prepareStatement(
                      "INSERT IGNORE INTO dua_top_recharge_baseline(event_id,account_id,tongnap_start) "
-                             + "SELECT ?,id,GREATEST(COALESCE(tongnap,0),0) FROM account")) {
+                             + "SELECT e.id,a.id,"
+                             + "CASE WHEN a.create_time>=e.start_time "
+                             + "THEN LEAST(GREATEST(COALESCE(a.tongnap,0),0),1000) "
+                             + "ELSE GREATEST(COALESCE(a.tongnap,0),0) END "
+                             + "FROM account a JOIN dua_top_event e ON e.id=?")) {
             ps.setInt(1, eventId);
             ps.executeUpdate();
         }
