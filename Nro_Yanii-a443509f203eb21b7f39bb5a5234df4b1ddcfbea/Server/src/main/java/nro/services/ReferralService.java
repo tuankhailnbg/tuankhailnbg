@@ -12,6 +12,7 @@ import nro.consts.Cmd;
 import nro.models.Part;
 import nro.models.PartManager;
 import nro.server.Client;
+import nro.server.Manager;
 import nro.server.io.Message;
 import java.util.List;
 import java.util.HashSet;
@@ -588,8 +589,11 @@ public final class ReferralService {
                     var template = ItemService.gI().getTemplate(id);
                     if (template == null || template.type != 5)
                         return "Server chưa nạp cải trang ID " + id + ". Hãy restart Server sau khi import SQL.";
+                    validateCostumeAppearance(id);
                 } catch (RuntimeException ex) {
                     return "Server chưa nạp cải trang ID " + id + ". Hãy restart Server sau khi import SQL.";
+                } catch (SQLException ex) {
+                    return ex.getMessage();
                 }
             }
         }
@@ -618,6 +622,57 @@ public final class ReferralService {
                 }
             }
         }
+    }
+
+    /**
+     * Chặn phát các cải trang có mapping part bị thiếu frame. Player renderer dùng
+     * head/body/leg cho nhiều trạng thái đứng/chạy/đánh; các bộ NPC chỉ có 1 frame
+     * sẽ làm nhân vật mất thân/chân hoặc hiển thị méo.
+     */
+    private void validateCostumeAppearance(int itemId) throws SQLException {
+        nro.models.item.CaiTrang costume = Manager.getCaiTrangByItemId(itemId);
+        if (costume == null || costume.getID() == null || costume.getID().length < 3) {
+            throw new SQLException("Cải trang ID " + itemId + " chưa có mapping head/body/leg hợp lệ.");
+        }
+        int[] ids = costume.getID();
+        Part head = PartManager.getInstance().find(ids[0]);
+        Part body = PartManager.getInstance().find(ids[1]);
+        Part leg = PartManager.getInstance().find(ids[2]);
+
+        validateAnimatedPart(itemId, "head", head, 0, 3, 2);
+        validateAnimatedPart(itemId, "body", body, 1, 17, 15);
+        validateAnimatedPart(itemId, "leg", leg, 2, 14, 12);
+    }
+
+    private void validateAnimatedPart(int itemId, String label, Part part,
+            int expectedType, int minFrames, int minVisibleFrames) throws SQLException {
+        if (part == null) {
+            throw new SQLException("Cải trang ID " + itemId + " thiếu part " + label + ".");
+        }
+        if (part.getType() != expectedType) {
+            throw new SQLException("Cải trang ID " + itemId + " có " + label
+                    + " sai TYPE: " + part.getType() + ".");
+        }
+        int[][] frames = part.getPartData();
+        if (frames == null || frames.length < minFrames) {
+            throw new SQLException("Cải trang ID " + itemId + " có " + label
+                    + " thiếu frame chuyển động.");
+        }
+        int visible = 0;
+        for (int[] frame : frames) {
+            if (frame != null && frame.length > 0 && isRealPartImage(frame[0])) {
+                visible++;
+            }
+        }
+        if (visible < minVisibleFrames) {
+            throw new SQLException("Ngoại hình cải trang ID " + itemId + " không đủ frame "
+                    + label + " (" + visible + "/" + frames.length + "), không phát để tránh lỗi hiển thị.");
+        }
+    }
+
+    private boolean isRealPartImage(int imageId) {
+        return imageId > 0 && imageId != 2955
+                && imageId != 3000 && imageId != 3001 && imageId != 3002;
     }
 
     private int claimCostumes(Player p, Connection c, int selectedMilestone) throws SQLException {
@@ -663,6 +718,7 @@ public final class ReferralService {
                 System.err.println("[REFERRAL] Costume item " + itemId + " not loaded. Restart after importing SQL.");
                 continue;
             }
+            validateCostumeAppearance(itemId);
             Item item = ItemService.gI().createNewItem((short) itemId, 1);
             if (item == null || item.template == null || item.template.type != 5) {
                 // Không phát nhầm vật phẩm khác loại cải trang (5).
