@@ -472,7 +472,7 @@ public final class DuaTopManager {
                     Object optionData = dataObject.get("option");
                     JSONArray options = optionData instanceof JSONArray
                             ? (JSONArray) optionData
-                            : (JSONArray) JSONValue.parse(String.valueOf(optionData).replaceAll("\\"", ""));
+                            : (JSONArray) JSONValue.parse(String.valueOf(optionData).replace("\\\"", ""));
                     if (options != null) {
                         for (Object optionObj : options) {
                             JSONArray opt = optionObj instanceof JSONArray
