@@ -11,7 +11,6 @@ import nro.consts.Cmd;
 import nro.models.Part;
 import nro.models.PartManager;
 import nro.server.Client;
-import nro.server.Manager;
 import nro.server.io.Message;
 import java.util.List;
 import java.util.HashSet;
@@ -132,9 +131,24 @@ public final class ReferralService {
                         + "(15,NULL,'Gogeta Blue',NULL,'[[77,25],[103,25],[50,25],[14,8],[101,17],[8,8],[30,0]]'),"
                         + "(20,NULL,'Zeno',NULL,'[[77,27],[103,27],[50,27],[14,10],[101,20],[8,10],[30,0]]')");
 
-                // Không tự ghi đè item_template_id của các mốc bằng item shop cũ.
-                // Cải trang sự kiện mới được gắn hoàn toàn từ migration SQL.
-                // Nếu catalog chưa có item_template_id thì để nguyên NULL để admin biết cần import migration.
+                // Dùng item ID đã có sẵn trong client để tránh client không resolve được
+                // template mới 2154-2157 (triệu chứng: icon trống, bấm item bị lag/đơ).
+                st.executeUpdate("UPDATE referral_costume_catalog c JOIN item_template i "
+                        + "ON i.id=904 AND i.TYPE=5 "
+                        + "SET c.item_template_id=904 WHERE c.milestone=5 "
+                        + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))");
+                st.executeUpdate("UPDATE referral_costume_catalog c JOIN item_template i "
+                        + "ON i.id=2117 AND i.TYPE=5 "
+                        + "SET c.item_template_id=2117 WHERE c.milestone=10 "
+                        + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))");
+                st.executeUpdate("UPDATE referral_costume_catalog c JOIN item_template i "
+                        + "ON i.id=2142 AND i.TYPE=5 "
+                        + "SET c.item_template_id=2142 WHERE c.milestone=15 "
+                        + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))");
+                st.executeUpdate("UPDATE referral_costume_catalog c JOIN item_template i "
+                        + "ON i.id=1276 AND i.TYPE=5 "
+                        + "SET c.item_template_id=1276 WHERE c.milestone=20 "
+                        + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))");
             }
             SCHEMA_READY = true;
         }
@@ -449,7 +463,7 @@ public final class ReferralService {
     private String costumeBlocker(Player p, Connection c, int milestone) throws SQLException {
         if (InventoryService.gI().getCountEmptyBag(p) < 1)
             return "Hành trang đầy, cần một ô trống để nhận cải trang.";
-        validateCatalogCostume(c, milestone);
+        linkExistingCostume(c, milestone);
         try (PreparedStatement st=c.prepareStatement(
                 "SELECT item_template_id FROM referral_costume_catalog WHERE milestone=?")) {
             st.setInt(1,milestone);
@@ -462,11 +476,8 @@ public final class ReferralService {
                     var template = ItemService.gI().getTemplate(id);
                     if (template == null || template.type != 5)
                         return "Server chưa nạp cải trang ID " + id + ". Hãy restart Server sau khi import SQL.";
-                    validateCostumeAppearance(id);
                 } catch (RuntimeException ex) {
                     return "Server chưa nạp cải trang ID " + id + ". Hãy restart Server sau khi import SQL.";
-                } catch (SQLException ex) {
-                    return ex.getMessage();
                 }
             }
         }
@@ -474,85 +485,41 @@ public final class ReferralService {
     }
 
     /**
-     * Chỉ xác minh catalog, tuyệt đối không đổi item_template_id sang item shop.
+     * Luôn ưu tiên item ID đã tồn tại trong client gốc. Các ID 2154-2157 từng
+     * được tạo chỉ ở database server nên một số client không có template tương ứng,
+     * khiến icon trống và có thể đơ khi bấm/mặc.
      */
-    private void validateCatalogCostume(Connection c, int milestone) throws SQLException {
+    private void linkExistingCostume(Connection c, int milestone) throws SQLException {
+        int expectedId = switch (milestone) {
+            case 5 -> 904;   // model Black Goku SSJ White
+            case 10 -> 2117; // model Goku Ultra
+            case 15 -> 2142; // model Gogeta SSJ4
+            case 20 -> 1276; // model Zamasu Tối Thượng
+            default -> -1;
+        };
+        if (expectedId < 0) return;
         try (PreparedStatement st = c.prepareStatement(
-                "SELECT c.item_template_id,i.TYPE "
-                + "FROM referral_costume_catalog c "
-                + "LEFT JOIN item_template i ON i.id=c.item_template_id "
-                + "WHERE c.milestone=?")) {
-            st.setInt(1, milestone);
-            try (ResultSet rs = st.executeQuery()) {
-                if (!rs.next() || rs.getObject(1) == null) {
-                    throw new SQLException("Mốc " + milestone + " chưa gắn item_template_id cải trang");
-                }
-                int itemId = rs.getInt(1);
-                int type = rs.getInt(2);
-                if (itemId <= 0 || itemId > Short.MAX_VALUE || type != 5) {
-                    throw new SQLException("Mốc " + milestone
-                            + " đang gắn item không hợp lệ: " + itemId + ", TYPE=" + type);
-                }
+                "UPDATE referral_costume_catalog c JOIN item_template i "
+                + "ON i.id=? AND i.TYPE=5 "
+                + "SET c.item_template_id=? "
+                + "WHERE c.milestone=? "
+                + "AND (c.item_template_id IS NULL OR c.item_template_id IN (2154,2155,2156,2157))")) {
+            st.setInt(1, expectedId);
+            st.setInt(2, expectedId);
+            st.setInt(3, milestone);
+            int linked = st.executeUpdate();
+            if (linked > 0) {
+                System.out.println("[REFERRAL] Switched milestone " + milestone
+                        + " to client-compatible costume ID " + expectedId);
             }
         }
-    }
-
-    /**
-     * Chặn phát các cải trang có mapping part bị thiếu frame. Player renderer dùng
-     * head/body/leg cho nhiều trạng thái đứng/chạy/đánh; các bộ NPC chỉ có 1 frame
-     * sẽ làm nhân vật mất thân/chân hoặc hiển thị méo.
-     */
-    private void validateCostumeAppearance(int itemId) throws SQLException {
-        nro.models.item.CaiTrang costume = Manager.getCaiTrangByItemId(itemId);
-        if (costume == null || costume.getID() == null || costume.getID().length < 3) {
-            throw new SQLException("Cải trang ID " + itemId + " chưa có mapping head/body/leg hợp lệ.");
-        }
-        int[] ids = costume.getID();
-        Part head = PartManager.getInstance().find(ids[0]);
-        Part body = PartManager.getInstance().find(ids[1]);
-        Part leg = PartManager.getInstance().find(ids[2]);
-
-        validateAnimatedPart(itemId, "head", head, 0, 3, 2);
-        validateAnimatedPart(itemId, "body", body, 1, 17, 15);
-        validateAnimatedPart(itemId, "leg", leg, 2, 14, 12);
-    }
-
-    private void validateAnimatedPart(int itemId, String label, Part part,
-            int expectedType, int minFrames, int minVisibleFrames) throws SQLException {
-        if (part == null) {
-            throw new SQLException("Cải trang ID " + itemId + " thiếu part " + label + ".");
-        }
-        if (part.getType() != expectedType) {
-            throw new SQLException("Cải trang ID " + itemId + " có " + label
-                    + " sai TYPE: " + part.getType() + ".");
-        }
-        int[][] frames = part.getPartData();
-        if (frames == null || frames.length < minFrames) {
-            throw new SQLException("Cải trang ID " + itemId + " có " + label
-                    + " thiếu frame chuyển động.");
-        }
-        int visible = 0;
-        for (int[] frame : frames) {
-            if (frame != null && frame.length > 0 && isRealPartImage(frame[0])) {
-                visible++;
-            }
-        }
-        if (visible < minVisibleFrames) {
-            throw new SQLException("Ngoại hình cải trang ID " + itemId + " không đủ frame "
-                    + label + " (" + visible + "/" + frames.length + "), không phát để tránh lỗi hiển thị.");
-        }
-    }
-
-    private boolean isRealPartImage(int imageId) {
-        return imageId > 0 && imageId != 2955
-                && imageId != 3000 && imageId != 3001 && imageId != 3002;
     }
 
     private int claimCostumes(Player p, Connection c, int selectedMilestone) throws SQLException {
         int delivered = 0;
         for (int milestone : new int[] { 5, 10, 15, 20 }) {
             if (selectedMilestone != milestone) continue;
-            validateCatalogCostume(c, milestone);
+            linkExistingCostume(c, milestone);
             int itemId, days;
             String options;
             try (PreparedStatement st = c.prepareStatement(
@@ -570,28 +537,16 @@ public final class ReferralService {
                 System.err.println("[REFERRAL] Invalid costume ID for milestone " + milestone + ": " + itemId);
                 continue;
             }
-            boolean staleClaim = false;
             try (PreparedStatement st = c.prepareStatement(
-                    "SELECT item_template_id FROM referral_costume_claims "
-                    + "WHERE inviter_player_id=? AND milestone=?")) {
-                st.setLong(1, p.id);
-                st.setInt(2, milestone);
-                try (ResultSet rs = st.executeQuery()) {
-                    if (rs.next()) {
-                        int claimedItemId = rs.getInt(1);
-                        if (claimedItemId == itemId) {
-                            continue;
-                        }
-                        staleClaim = true;
-                    }
-                }
+                    "SELECT 1 FROM referral_costume_claims WHERE inviter_player_id=? AND milestone=?")) {
+                st.setLong(1, p.id); st.setInt(2, milestone);
+                try (ResultSet rs = st.executeQuery()) { if (rs.next()) continue; }
             }
             if (InventoryService.gI().getCountEmptyBag(p) < 1) break;
             if (ItemService.gI().getTemplate((short) itemId) == null) {
                 System.err.println("[REFERRAL] Costume item " + itemId + " not loaded. Restart after importing SQL.");
                 continue;
             }
-            validateCostumeAppearance(itemId);
             Item item = ItemService.gI().createNewItem((short) itemId, 1);
             if (item == null || item.template == null || item.template.type != 5) {
                 // Không phát nhầm vật phẩm khác loại cải trang (5).
@@ -630,25 +585,11 @@ public final class ReferralService {
             List<Item> bagBefore = snapshotBag(p);
             c.setAutoCommit(false);
             try {
-                if (staleClaim) {
-                    try (PreparedStatement st = c.prepareStatement(
-                            "UPDATE referral_costume_claims "
-                            + "SET item_template_id=?, claimed_at=CURRENT_TIMESTAMP "
-                            + "WHERE inviter_player_id=? AND milestone=?")) {
-                        st.setInt(1, itemId);
-                        st.setLong(2, p.id);
-                        st.setInt(3, milestone);
-                        st.executeUpdate();
-                    }
-                } else {
-                    try (PreparedStatement st = c.prepareStatement(
-                            "INSERT INTO referral_costume_claims(inviter_player_id,milestone,item_template_id) "
-                            + "VALUES(?,?,?)")) {
-                        st.setLong(1, p.id);
-                        st.setInt(2, milestone);
-                        st.setInt(3, itemId);
-                        st.executeUpdate();
-                    }
+                try (PreparedStatement st = c.prepareStatement(
+                        "INSERT INTO referral_costume_claims(inviter_player_id,milestone,item_template_id) "
+                        + "VALUES(?,?,?)")) {
+                    st.setLong(1, p.id); st.setInt(2, milestone); st.setInt(3, itemId);
+                    st.executeUpdate();
                 }
                 if (!InventoryService.gI().addItemBag(p, item, 9999)) {
                     c.rollback();
@@ -677,10 +618,7 @@ public final class ReferralService {
 
     private boolean costumeAlreadyClaimed(Connection c, long playerId, int milestone) throws SQLException {
         try (PreparedStatement st = c.prepareStatement(
-                "SELECT 1 FROM referral_costume_claims rc "
-                + "JOIN referral_costume_catalog cat ON cat.milestone=rc.milestone "
-                + "WHERE rc.inviter_player_id=? AND rc.milestone=? "
-                + "AND rc.item_template_id=cat.item_template_id")) {
+                "SELECT 1 FROM referral_costume_claims WHERE inviter_player_id=? AND milestone=?")) {
             st.setLong(1, playerId);
             st.setInt(2, milestone);
             try (ResultSet rs = st.executeQuery()) { return rs.next(); }

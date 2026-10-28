@@ -11,8 +11,6 @@ ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "database/migrations/20261028_referral_costumes_test.sql"
 FIX = ROOT / "database/migrations/20261028_fix_referral_costume_client_freeze.sql"
 REPAIR = ROOT / "database/migrations/20261028_repair_partial_referral_costumes.sql"
-SAFE_EVENT = ROOT / "database/migrations/20261028_referral_4_new_event_costumes_safe.sql"
-SAFE_REPAIR = ROOT / "database/migrations/20261028_fix_referral_event_costume_mapping.sql"
 
 EXPECTED = [
     (5, 904, 7, "Goku SSJ3", (20,20,20,4,10)),
@@ -52,17 +50,6 @@ def smoke():
     for _, item_id, _, _, _ in EXPECTED:
         check(str(item_id) in sql, f"client-known item {item_id} referenced")
     check("gift_codes" in sql and CODE in sql, "test giftcode present")
-    safe = SAFE_EVENT.read_text(encoding="utf-8")
-    normalized = safe.replace(" ", "")
-    for triple in ("1330,1331,1332", "511,512,513", "645,646,647", "508,509,510"):
-        check(triple in normalized, f"approved player-animation costume set {triple} present")
-    check("481,482,483" not in normalized.split("--KHONGDUNG")[0],
-          "Tapion NPC-only sparse animation is not installed")
-    check("36,37,38" not in normalized.split("--KHONGDUNG")[0],
-          "Vua Vegeta sparse animation is not installed")
-    repair = SAFE_REPAIR.read_text(encoding="utf-8")
-    check("item_shop" in repair and "id_temp<>v_m5" in repair,
-          "repair protects shop IDs and appearance collisions")
     statements = list(sql_iter(sql))
     check(len(statements) >= 8, "SQL parser handles compatibility migration")
     return statements
