@@ -1,28 +1,43 @@
-# Cải trang + sửa mở rộng hành trang/rương (28/10/2026)
+# NRO Yanii — cải trang + mở rộng hành trang/rương đồ (28/10/2026)
 
-**Đã sửa trên branch `feature/costumes-batch-01`, chưa có kết nối DB trực tiếp tới VPS.**
+## Trạng thái đã xác nhận
 
-## Đã chuẩn bị
+- **Mã nguồn:** đã merge vào `main` qua PR #25, commit `f56567bbd4b19c6fcae1ea3a78e42afc7a1c70bb`.
+- **Build Java 21/Maven:** GitHub Actions thành công cho mã nguồn đã kiểm tra.
+- **SQL & ảnh:** đã đối chiếu 18 item (2154–2171), 54 part (2042–2095), 18 `cai_trang`, 18 `head_avatar`; 434 ID ảnh × 4 mức = 1.736 PNG nguồn tồn tại.
+- **VPS:** chưa thể kết nối trực tiếp để nhập DB, chạy Server hoặc test client. Vì vậy **chưa thể xác nhận 18 cải trang mặc được trong game** và **chưa thể xác nhận mua ô thành công trên VPS**.
 
-- `install_18_costumes_and_repair_storage.sql`: duy nhất một transaction cho 18 item 2154–2171, 54 part 2042–2095, 18 avatar, 18 mapping; sửa item_shop Santa tab 37 cho template 517/518.
-- `batch01a`, `batch01b`, `batch01c`: 434 sprite ID, 4 mức x1–x4 = 1.736 PNG; không ghi đè khác SHA256; có thể chạy lại khi tải dở.
-- `DEPLOY_WINDOWS_VPS.cmd`: backup DB trước, tải & kiểm tra ảnh, rồi mới nhập một migration SQL.
-- `Server/src/main/java/nro/services/func/ShopService.java`: gửi cập nhật rương ngay khi mua item 518; cập nhật hành trang item 517; mở lại cửa hàng Santa với giá động; code vẫn khóa inventory khi thanh toán.
-- `Server/src/main/java/nro/data/DataGame.java`: cache versions hiện là `vsData=7`, `vsItem=8` trên branch.
+## Nội dung sửa
 
-## Triển khai ở Windows VPS
+- `InventoryService.sendItemBags`: mỗi ô trống phải ghi ID `-1`, không được `continue` bỏ trống payload.
+- `ShopService`: mua 517 (túi) và 518 (rương) tăng một ô tối đa 60, giá tăng theo số ô hiện có, cập nhật packet túi/rương và shop, hoàn lại tiền nếu lưu thất bại.
+- `PlayerDAO.saveStorageUpgradeOrThrow`: lưu `data_inventory`, `items_bag`, `items_box` ngay khi mua; dùng **kết nối riêng từ pool**, không đóng kết nối lưu dùng chung.
+- `Manager` và `PartManager`: truy vấn ORDER BY id ASC; `DataGame`: tăng version cache `vsData=7`, `vsItem=8`.
+- 18 cải trang chỉ gồm phần hình, không thêm option/chỉ số và chưa đưa vào shop.
 
-1. Pull branch `feature/costumes-batch-01` vào bản source Server trên VPS (không tải riêng SQL rồi bỏ qua Java).
-2. Dừng Server trước khi nhập database. Đảm bảo `mariadb.exe` và `mariadb-dump.exe` có trong PATH và user DB `nro_app` đủ quyền backup + CREATE PROCEDURE + SELECT/INSERT/UPDATE.
-3. Mở thư mục `database/costumes`, chạy `DEPLOY_WINDOWS_VPS.cmd`. Không nhập lại batch01a/b/c sau khi đã chạy SQL tổng. Nếu SQL báo DB đã thay đổi hoặc ID trùng, dừng; không xóa dữ liệu người chơi để ép import.
-4. Chạy Maven clean package rồi restart **Login + Server**, thoát client và đăng nhập lại.
-5. Kiểm tra item 2154–2171 từng bộ; cho người chơi thử mua ID 517 và 518 với 20, 21, 59, 60 ô. Kiểm tra số ngọc/vàng, tăng ô, hiển thị rương/hành trang, đăng xuất/đăng nhập lại.
+## Một cách triển khai an toàn trên VPS Windows
 
-## Kết quả mong đợi
+**Khuyến nghị:** chỉ chọn một bộ cài. Dùng `install_18_costumes_vps.ps1` trong thư mục này; **không nhập lại** các file SQL batch sau khi đã cài.
 
-- ID 517: hành trang 20→21 ô, tốn 50 ngọc; 21→22 ô, tốn 100 ngọc; không cho vượt 60.
-- ID 518: rương 20→21 ô, tốn 25.000.000 vàng; 21→22 ô, tốn 50.000.000 vàng; không cho vượt 60.
-- Mua xong client nhận ngay packet hành trang `-36`, và khi mua rương có thêm packet rương `-35`. Cửa hàng Santa hiện giá tiếp theo.
-- Không thêm chỉ số mới cho cải trang và không đăng bán cải trang mới.
+Yêu cầu: mã nguồn `main` mới nhất đã nằm trên VPS; thư mục `Server` có `resources/normal/image`; MariaDB CLI/dump đã cài, tài khoản DB có quyền SELECT/INSERT/UPDATE và sao lưu.
 
-**Giới hạn:** Không có kết nối trực tiếp đến VPS/MariaDB hoặc phiên client, nên chưa xác nhận import thành công, Maven build thành công hay client thực tế. Cấu trúc SQL và tài nguyên đã được đối chiếu trên source; kiểm thử runtime vẫn cần thực hiện trên VPS.
+Lệnh chạy bằng PowerShell, tại thư mục `database/costumes`:
+
+```powershell
+$env:NRO_DB_PASSWORD = Read-Host "Mat khau MariaDB cua nro_app"
+powershell -ExecutionPolicy Bypass -File .\install_18_costumes_vps.ps1 -ServerFolder "D:\DUONG_DAN_THAT\Server"
+Remove-Item Env:NRO_DB_PASSWORD
+```
+
+- Script kiểm tra ID, tạo backup DB, kiểm tra không trùng ID ảnh, tải PNG theo x1–x4, nhập SQL batch A/B/C, kiểm tra số dòng.
+- Mặc định kết nối `127.0.0.1:3306`, DB `ngocrong`, user `nro_app` (có tham số để thay).
+- Nếu có ID mới trên VPS, script từ chối nhập thay vì ghi đè; cần kiểm tra schema/dữ liệu mới trước.
+- Script không restart server. Sau import phải build Maven trong `Server`, khởi động lại Server và đăng nhập lại game để cập nhật cache.
+
+**Không chạy** `database/migrations/add_costumes_batch_01.sql` như migration bổ sung: đây là script cũ có lệnh DELETE, không dành cho cài đặt hiện tại.
+
+## Kiểm tra thực tế còn thiếu
+
+Thử mua ID 517 và 518 với 20, 21, 59, 60 ô: giá và số tiền trừ, số ô thêm, mở lại shop, chuyển đồ vào ô mới, đăng xuất/đăng nhập lại; xác nhận không tăng quá 60. Thử mặc 18 cải trang trong các trạng thái đứng, đi, bay, đánh, avatar và icon.
+
+Kết quả build **không thay thế** kiểm thử trực tiếp trên VPS/client.
