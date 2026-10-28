@@ -101,6 +101,8 @@ public class NpcFactory {
                         @Override
                         public void openBaseMenu(Player player) {
                             if (canOpenNpc(player) && this.mapId == 5) {
+                                // Rời bảng nhận mốc cũ để không giữ Cmd.ACHIEVEMENT sai ngữ cảnh.
+                                nro.services.ReferralService.gI().closeRewardPanel(player);
                                 createOtherMenu(player, ConstNpc.BASE_MENU,
                                         "|1|NPC SỰ KIỆN\nChọn sự kiện muốn tham gia",
                                         "Sự kiện\ngiới thiệu", "Đua top");
@@ -118,11 +120,13 @@ public class NpcFactory {
                                             createOtherMenu(player, REFERRAL_MENU, details,
                                                     "Bảng xếp\nhạng giới thiệu",
                                                     "Nhận quà\ngiới thiệu",
+                                                    "Nhập mã\ngiới thiệu",
                                                     "Cấp điểm\n(Admin)", "Đóng");
                                         } else {
                                             createOtherMenu(player, REFERRAL_MENU, details,
                                                     "Bảng xếp\nhạng giới thiệu",
-                                                    "Nhận quà\ngiới thiệu", "Đóng");
+                                                    "Nhận quà\ngiới thiệu",
+                                                    "Nhập mã\ngiới thiệu", "Đóng");
                                         }
                                     }
                                     case 1 -> Service.gI().sendThongBaoOK(player,
@@ -131,12 +135,20 @@ public class NpcFactory {
                                 }
                             } else if (player.iDMark.getIndexMenu() == REFERRAL_MENU) {
                                 switch (select) {
-                                    case 0 -> nro.services.ReferralService.gI().sendLeaderboard(player);
+                                    case 0 -> {
+                                        nro.services.ReferralService.gI().closeRewardPanel(player);
+                                        nro.services.ReferralService.gI().sendLeaderboard(player);
+                                    }
                                     case 1 -> nro.services.ReferralService.gI().sendRewardPanel(player);
                                     case 2 -> {
+                                        nro.services.ReferralService.gI().closeRewardPanel(player);
+                                        Input.gI().createFormReferralCode(player);
+                                    }
+                                    case 3 -> {
+                                        nro.services.ReferralService.gI().closeRewardPanel(player);
                                         if (player.isAdmin()) Input.gI().createFormAdminReferralPoints(player);
                                     }
-                                    default -> { }
+                                    default -> nro.services.ReferralService.gI().closeRewardPanel(player);
                                 }
                             }
                         }
