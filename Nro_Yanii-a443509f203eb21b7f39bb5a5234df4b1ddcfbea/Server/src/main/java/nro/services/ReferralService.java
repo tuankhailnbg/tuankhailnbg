@@ -310,11 +310,9 @@ public final class ReferralService {
     }
 
     public boolean isRewardPanel(Player p) {
-        if(p==null) return false;
-        Long expiry=REWARD_PANELS.get(p.id);
-        if(expiry==null)return false;
-        if(System.currentTimeMillis()>expiry){REWARD_PANELS.remove(p.id);return false;}
-        return true;
+        // Giữ chế độ này cho tới khi mở lại thành tựu Bò Mộng.
+        // Không tự chuyển một click của bảng giới thiệu cũ thành click nhận Ruby.
+        return p!=null && REWARD_PANELS.containsKey(p.id);
     }
 
     public void sendRewardPanel(Player p){
