@@ -526,9 +526,7 @@ public class Input {
     public void createFormAdminCredit(Player pl) {
         createForm(pl, ADMIN_CREDIT_FORM, "CỘNG SỐ DƯ NẠP TIỀN",
                 new SubInput("Tên hoặc ID người nhận", ANY),
-                new SubInput("Số tiền nạp (VNĐ)", NUMERIC),
-                new SubInput("Mã giao dịch (trống = tự tạo)", ANY),
-                new SubInput("Ghi chú / Lý do", ANY));
+                new SubInput("Số tiền cần cộng (VNĐ)", NUMERIC));
     }
 
     public void createFormChangePassword(Player pl) {
