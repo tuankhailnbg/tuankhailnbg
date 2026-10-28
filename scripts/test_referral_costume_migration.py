@@ -121,6 +121,14 @@ def test_database():
                 opts={p["id"]:p["param"] for p in item["options"]}
                 check((opts.get(93)==7) if d==7 else (93 not in opts),f"giftcode item {i} duration")
                 check(tuple(opts[k] for k in [77,103,50,14,101])==stats,f"giftcode item {i} stats")
+            # Reproduce interrupted VPS import: items exist, but catalog links were never applied.
+            cur.execute("UPDATE referral_costume_catalog SET item_template_id=NULL WHERE milestone IN (5,10,15,20)")
+            repair = (ROOT / "database/migrations/20261028_repair_partial_referral_costumes.sql").read_text(encoding="utf-8")
+            for stmt in sql_iter(repair):
+                cur.execute(stmt)
+            cur.execute("SELECT milestone,item_template_id FROM referral_costume_catalog ORDER BY milestone")
+            check(cur.fetchall() == ((5,2154),(10,2155),(15,2156),(20,2157)),
+                  "partial VPS import repair restores all four catalog links")
             for stmt in statements:
                 cur.execute(stmt)
             cur.execute("SELECT COUNT(*) FROM item_template WHERE id BETWEEN 2154 AND 2157")
