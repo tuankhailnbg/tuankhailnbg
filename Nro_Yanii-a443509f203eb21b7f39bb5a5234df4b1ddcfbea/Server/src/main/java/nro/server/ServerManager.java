@@ -36,6 +36,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import nro.manager.TopManager;
+import nro.manager.TopRaceManager;
 import nro.models.map.DaiHoiVoThuat.DaiHoiVoThuatService;
 import nro.models.map.VoDaiSinhTu.VoDaiSinhTuManager;
 import nro.models.map.phoban.KhiGas;
@@ -340,6 +341,11 @@ public class ServerManager {
 //            TopKillWhisManager.getInstance().load();
 //            TopBanDoKhoBau.getInstance().load();
         }, 0, 600000, TimeUnit.MILLISECONDS);
+
+        ScheduledExecutorService autoTopRace = Executors.newScheduledThreadPool(1);
+        autoTopRace.scheduleWithFixedDelay(() -> {
+            TopRaceManager.gI().tick();
+        }, 0, 1, TimeUnit.MINUTES);
 
     }
 }
