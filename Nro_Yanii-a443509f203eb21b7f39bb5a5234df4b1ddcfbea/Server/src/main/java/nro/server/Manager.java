@@ -598,6 +598,48 @@ public class Manager {
                 itemTemp.part = rs.getShort("part");
                 itemTemp.isUpToUp = rs.getBoolean("is_up_to_up");
                 itemTemp.strRequire = rs.getInt("power_require");
+
+                // Chuẩn hóa các template bị thiếu/sai ngay lúc khởi động, trước khi
+                // client nhận và cache danh sách item template.
+                switch (itemTemp.id) {
+                    case 1285:
+                    case 1287:
+                    case 1289:
+                        // Sách Tuyệt Kĩ 1 dùng chung cho Trái Đất / Namek / Xayda.
+                        // Giữ nguyên icon riêng của từng ID để tương thích client cũ.
+                        itemTemp.type = 35;
+                        itemTemp.gender = 3;
+                        itemTemp.name = "Sách tuyệt kỹ 1";
+                        itemTemp.description = "Sách tuyệt kỹ dùng chung cho cả 3 hành tinh";
+                        break;
+                    case 1423:
+                        // Template chuẩn NRO: Hematite.
+                        itemTemp.type = 27;
+                        itemTemp.gender = 3;
+                        itemTemp.name = "Hematite";
+                        itemTemp.description = "Nguyên liệu. Gặp bà Hạt Mít để sử dụng";
+                        itemTemp.iconID = 11759;
+                        itemTemp.part = -1;
+                        itemTemp.isUpToUp = false;
+                        itemTemp.strRequire = 0;
+                        itemTemp.level = 1;
+                        break;
+                    case 1438:
+                        // Template chuẩn NRO: Dùi đục.
+                        itemTemp.type = 27;
+                        itemTemp.gender = 3;
+                        itemTemp.name = "Dùi đục";
+                        itemTemp.description = "Vật phẩm hỗ trợ. Gặp bà Hạt Mít để sử dụng";
+                        itemTemp.iconID = 12139;
+                        itemTemp.part = -1;
+                        itemTemp.isUpToUp = false;
+                        itemTemp.strRequire = 0;
+                        itemTemp.level = 1;
+                        break;
+                    default:
+                        break;
+                }
+
                 ITEM_TEMPLATES.add(itemTemp);
             }
             rs.close();
