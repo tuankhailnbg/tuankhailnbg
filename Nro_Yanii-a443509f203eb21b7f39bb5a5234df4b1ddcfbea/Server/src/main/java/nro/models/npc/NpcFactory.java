@@ -100,7 +100,7 @@ public class NpcFactory {
                         private static final int REFERRAL_MENU = 20261028;
                         @Override
                         public void openBaseMenu(Player player) {
-                            if (canOpenNpc(player)) {
+                            if (canOpenNpc(player) && this.mapId == 5) {
                                 createOtherMenu(player, ConstNpc.BASE_MENU,
                                         "|1|NPC SỰ KIỆN\nChọn sự kiện muốn tham gia",
                                         "Sự kiện\ngiới thiệu", "Đua top");
@@ -108,7 +108,7 @@ public class NpcFactory {
                         }
                         @Override
                         public void confirmMenu(Player player, int select) {
-                            if (!canOpenNpc(player)) return;
+                            if (!canOpenNpc(player) || this.mapId != 5) return;
                             if (player.iDMark.isBaseMenu()) {
                                 switch (select) {
                                     case 0 -> {
