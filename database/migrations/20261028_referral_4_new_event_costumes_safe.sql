@@ -18,10 +18,10 @@
 --   Vua Vegeta : head 36,  body 37,  leg 38
 --
 -- Icon su dung deu la icon da co trong DB/client:
---   Whis       : 9979  (icon Avatar Thien Su)
---   Champa     : 12793 (icon Kid Bill)
---   Tapion     : 20160 (icon Trunks)
---   Vua Vegeta : 20403 (icon Vegeta SSJ4)
+--   Whis       : 4843  (ảnh đầu trực tiếp của head part 505)
+--   Champa     : 4879  (ảnh đầu trực tiếp của head part 511)
+--   Tapion     : 4665  (ảnh đầu trực tiếp của head part 481)
+--   Vua Vegeta : 549   (ảnh đầu trực tiếp của head part 36)
 --
 -- NGUON THAM KHAO PUBLIC:
 --   https://github.com/baodubaiiii/NgocRongOnline_Data
@@ -115,25 +115,9 @@ BEGIN
         SET MESSAGE_TEXT = 'ID item moi vuot gioi han short 32767 cua server Java.';
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM item_template WHERE icon_id = 9979) THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Client/DB thieu icon 9979 cho Whis';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM item_template WHERE icon_id = 12793) THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Client/DB thieu icon 12793 cho Champa';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM item_template WHERE icon_id = 20160) THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Client/DB thieu icon 20160 cho Tapion';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM item_template WHERE icon_id = 20403) THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Client/DB thieu icon 20403 cho Vua Vegeta';
-    END IF;
+    -- Icon được lấy trực tiếp từ frame đầu của head part tương ứng.
+    -- Vì vậy chỉ cần xác minh head/body/leg tồn tại; không yêu cầu icon đã được
+    -- một item_template cũ tham chiếu trước đó.
 
     IF NOT EXISTS (SELECT 1 FROM part WHERE id=505 AND TYPE=0)
        OR NOT EXISTS (SELECT 1 FROM part WHERE id=506 AND TYPE=1)
@@ -187,16 +171,16 @@ BEGIN
         (id, TYPE, gender, NAME, description, icon_id, part, is_up_to_up, power_require)
     VALUES
         (v_whis,   5, 3, 'Cải Trang Whis Event',
-         'Cải trang độc quyền sự kiện giới thiệu', 9979, -1, 0, 0),
+         'Cải trang độc quyền sự kiện giới thiệu', 4843, -1, 0, 0),
 
         (v_champa, 5, 3, 'Cải Trang Champa Event',
-         'Cải trang độc quyền sự kiện giới thiệu', 12793, -1, 0, 0),
+         'Cải trang độc quyền sự kiện giới thiệu', 4879, -1, 0, 0),
 
         (v_tapion, 5, 3, 'Cải Trang Tapion Event',
-         'Cải trang độc quyền sự kiện giới thiệu', 20160, -1, 0, 0),
+         'Cải trang độc quyền sự kiện giới thiệu', 4665, -1, 0, 0),
 
         (v_vegeta, 5, 3, 'Cải Trang Vua Vegeta Event',
-         'Cải trang độc quyền sự kiện giới thiệu', 20403, -1, 0, 0);
+         'Cải trang độc quyền sự kiện giới thiệu', 549, -1, 0, 0);
 
     INSERT INTO cai_trang (id_temp, head, body, leg, bag)
     VALUES
