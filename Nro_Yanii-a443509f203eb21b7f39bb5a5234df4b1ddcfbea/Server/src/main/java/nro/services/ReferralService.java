@@ -365,75 +365,78 @@ public final class ReferralService {
         }catch(Exception e){Service.gI().sendThongBao(p,"Không mở được bảng nhận quà giới thiệu.");}
     }
 
-    /** Mỗi mốc n nhận 100+(n-1)*25 thỏi, từ 1 tới 20. */
-    public String claim(Player player) {
-        if (player == null || player.getSession() == null) return "Bạn chưa đăng nhập.";
-        if (!PlayerDAO.tryAcquireSaving(player)) {
-            return "Máy chủ đang lưu nhân vật, hãy thử nhận quà sau vài giây.";
-        }
+    /** Xử lý một dòng trên bảng thành tựu; mỗi mốc chỉ nhận một lần. */
+    public void onRewardSelection(Player player, byte selected) {
+        if (!isRewardPanel(player)) return;
+        int milestone=Byte.toUnsignedInt(selected)+1;
+        if(milestone<1||milestone>MAX_MILESTONE)return;
+        String result=claimMilestone(player,milestone);
+        Service.gI().sendThongBaoOK(player,result);
+        sendRewardPanel(player);
+    }
+
+    public String claimMilestone(Player player, int milestone) {
+        if(player==null || player.getSession()==null || milestone<1||milestone>MAX_MILESTONE)
+            return "Mốc nhận quà không hợp lệ.";
+        if(!PlayerDAO.tryAcquireSaving(player))
+            return "Nhân vật đang được lưu, hãy thử lại.";
         try {
-        synchronized (player.inventory) {
-            try (Connection c = connect()) {
-                int total = 0;
-                try (PreparedStatement st = c.prepareStatement(
-                        "SELECT points FROM referral_points WHERE player_id=?")) {
-                    st.setLong(1, player.id);
-                    try (ResultSet rs = st.executeQuery()) { if (rs.next()) total = Math.min(MAX_MILESTONE, rs.getInt(1)); }
-                }
-                if (total == 0) return "Chưa có người được giới thiệu đủ điều kiện.";
-                int gained = 0, taken = 0;
-                for (int m = 1; m <= total; m++) {
-                    if (alreadyClaimed(c, player.id, m)) continue;
-                    if (InventoryService.gI().getCountEmptyBag(player) <= 0) {
-                        return (taken == 0 ? "" : "Đã nhận " + gained + " Thỏi Vàng. ")
-                                + "Hành trang đầy, hãy chừa ô trống rồi nhận tiếp.";
+            synchronized(player.inventory) {
+                try(Connection c=connect()){
+                    int points=pointsOf(c,player.id);
+                    if(points<milestone)return "Chưa đạt mốc "+milestone+". Hiện có "+points+" điểm.";
+                    boolean paid=alreadyClaimed(c,player.id,milestone);
+                    int bars=100+(milestone-1)*25;
+                    if(!paid){
+                        if(InventoryService.gI().getCountEmptyBag(player)<1)
+                            return "Hành trang cần còn ít nhất 1 ô trống để nhận quà.";
+                        List<Item> backup=snapshotBag(player);
+                        c.setAutoCommit(false);
+                        try {
+                            try(PreparedStatement st=c.prepareStatement(
+                                    "INSERT INTO referral_claims(inviter_player_id,milestone,gold_bars,status) "
+                                    +"VALUES(?,?,?,0)")){
+                                st.setLong(1,player.id);st.setInt(2,milestone);st.setInt(3,bars);
+                                st.executeUpdate();
+                            }
+                            if(ItemService.gI().getTemplate((short)BAR_ID)==null)
+                                throw new SQLException("Thỏi vàng ID 457 chưa tồn tại.");
+                            Item reward=ItemService.gI().createNewItem((short)BAR_ID,bars);
+                            if(!InventoryService.gI().addItemBag(player,reward,9999))
+                                throw new SQLException("Không thể thêm Thỏi Vàng vào túi");
+                            try(PreparedStatement st=c.prepareStatement(
+                                    "UPDATE player SET items_bag=? WHERE id=?")){
+                                st.setString(1,InventoryService.gI().itemsBagToString(player));
+                                st.setLong(2,player.id);
+                                if(st.executeUpdate()!=1)throw new SQLException("Không lưu được túi");
+                            }
+                            try(PreparedStatement st=c.prepareStatement(
+                                    "UPDATE referral_claims SET status=1,claimed_at=NOW() "
+                                    +"WHERE inviter_player_id=? AND milestone=?")){
+                                st.setLong(1,player.id);st.setInt(2,milestone);
+                                st.executeUpdate();
+                            }
+                            c.commit();
+                        } catch(Exception ex) {
+                            c.rollback();restoreBag(player,backup);
+                            InventoryService.gI().sendItemBags(player);
+                            return "Không thể nhận mốc "+milestone+". Hãy thử lại sau.";
+                        } finally {c.setAutoCommit(true);}
                     }
-                    int bars = 100 + (m - 1) * 25;
-                    List<Item> bagBefore = snapshotBag(player);
-                    c.setAutoCommit(false);
-                    try {
-                        try (PreparedStatement st = c.prepareStatement(
-                                "INSERT INTO referral_claims(inviter_player_id,milestone,gold_bars,status) VALUES(?,?,?,0)")) {
-                            st.setLong(1, player.id);
-                            st.setInt(2, m);
-                            st.setInt(3, bars);
-                            st.executeUpdate();
-                        }
-                        Item item = ItemService.gI().createNewItem((short) BAR_ID, bars);
-                        if (item == null || item.template == null || !InventoryService.gI().addItemBag(player, item, 9999)) {
-                            c.rollback();
-                            restoreBag(player, bagBefore);
-                            return "Không thể thêm Thỏi Vàng vào hành trang.";
-                        }
-                        // Lưu vào DB cùng giao dịch claim, tránh mất vật phẩm khi logout ngay.
-                        try (PreparedStatement st = c.prepareStatement("UPDATE player SET items_bag=? WHERE id=?")) {
-                            st.setString(1, InventoryService.gI().itemsBagToString(player));
-                            st.setLong(2, player.id);
-                            if (st.executeUpdate() != 1) throw new SQLException("Không lưu được hành trang");
-                        }
-                        try (PreparedStatement st = c.prepareStatement(
-                                "UPDATE referral_claims SET status=1,claimed_at=NOW() WHERE inviter_player_id=? AND milestone=?")) {
-                            st.setLong(1, player.id);
-                            st.setInt(2, m);
-                            st.executeUpdate();
-                        }
-                        c.commit(); gained += bars; taken++;
-                    } catch (SQLException ex) {
-                        c.rollback();
-                        restoreBag(player, bagBefore);
+                    int costumes=0;
+                    try {costumes=claimCostumes(player,c,milestone);}
+                    catch(SQLException ex) {
                         InventoryService.gI().sendItemBags(player);
-                        return "Không thể nhận quà mốc " + m + ", hãy thử lại.";
-                    } finally { c.setAutoCommit(true); }
-                }
-                int costumes = claimCostumes(player, c, total);
-                InventoryService.gI().sendItemBags(player);
-                String result = taken == 0 ? "Bạn đã nhận tất cả mốc Thỏi Vàng hiện có."
-                        : "Đã nhận " + gained + " Thỏi Vàng từ " + taken + " mốc giới thiệu!";
-                if (costumes > 0) result += " Đồng thời nhận " + costumes + " cải trang sự kiện!";
-                return result;
-            } catch (SQLException ex) { return "Lỗi cơ sở dữ liệu khi nhận quà."; }
-        }
-        } finally { PlayerDAO.releaseSaving(player); }
+                        return (paid?"Đã nhận Thỏi Vàng":"Đã nhận "+bars+" Thỏi Vàng")
+                            +", nhưng chưa thể lưu cải trang. Hãy thử lại sau.";
+                    }
+                    InventoryService.gI().sendItemBags(player);
+                    if(paid&&costumes==0)return "Mốc "+milestone+" đã nhận Thỏi Vàng trước đó.";
+                    return (paid?"":"Đã nhận "+bars+" Thỏi Vàng ở mốc "+milestone+". ")
+                            +(costumes>0?"Đã nhận thêm "+costumes+" cải trang.":"");
+                }catch(SQLException ex){return "Lỗi cơ sở dữ liệu khi nhận quà.";}
+            }
+        }finally {PlayerDAO.releaseSaving(player);}
     }
 
     /**
