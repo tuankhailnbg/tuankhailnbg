@@ -9,6 +9,7 @@ on:
       - "database/migrations/20261028_referral*.sql"
       - ".github/workflows/nro-referral-ci.yml"
       - "scripts/test_nro_referral_contract.py"
+      - "scripts/test_referral_costume_migration.py"
 
 jobs:
   build-server:
@@ -26,7 +27,9 @@ jobs:
         working-directory: Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea/Server
         run: mvn -B -ntp -DskipTests package
       - name: Contract tests
-        run: python3 scripts/test_nro_referral_contract.py
+        run: |
+          python3 scripts/test_nro_referral_contract.py
+          python3 scripts/test_referral_costume_migration.py
 
   sql-migration:
     name: MariaDB 10.11 migration smoke
@@ -55,4 +58,6 @@ jobs:
         env:
           NRO_SQL_HOST: 127.0.0.1
           NRO_SQL_PASSWORD: ci-not-production
-        run: python3 scripts/test_nro_referral_contract.py --db
+        run: |
+          python3 scripts/test_nro_referral_contract.py --db
+          python3 scripts/test_referral_costume_migration.py --db
