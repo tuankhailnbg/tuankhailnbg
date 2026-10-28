@@ -5,6 +5,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Locale;
+import java.util.List;
+import java.util.ArrayList;
+import nro.jdbc.daos.PlayerDAO;
 import java.util.Map;
 import java.util.Set;
 import nro.services.func.Input;
@@ -232,6 +235,10 @@ public final class ReferralService {
     /** Mỗi mốc n nhận 100+(n-1)*25 thỏi, từ 1 tới 20. */
     public String claim(Player player) {
         if (player == null || player.getSession() == null) return "Bạn chưa đăng nhập.";
+        if (!PlayerDAO.tryAcquireSaving(player)) {
+            return "Máy chủ đang lưu nhân vật, hãy thử nhận quà sau vài giây.";
+        }
+        try {
         synchronized (player.inventory) {
             try (Connection c = connect()) {
                 int total = 0;
@@ -249,6 +256,7 @@ public final class ReferralService {
                                 + "Hành trang đầy, hãy chừa ô trống rồi nhận tiếp.";
                     }
                     int bars = 100 + (m - 1) * 25;
+                    List<Item> bagBefore = snapshotBag(player);
                     c.setAutoCommit(false);
                     try {
                         try (PreparedStatement st = c.prepareStatement(
@@ -261,6 +269,7 @@ public final class ReferralService {
                         Item item = ItemService.gI().createNewItem((short) BAR_ID, bars);
                         if (item == null || item.template == null || !InventoryService.gI().addItemBag(player, item, 9999)) {
                             c.rollback();
+                            restoreBag(player, bagBefore);
                             return "Không thể thêm Thỏi Vàng vào hành trang.";
                         }
                         // Lưu vào DB cùng giao dịch claim, tránh mất vật phẩm khi logout ngay.
@@ -278,7 +287,9 @@ public final class ReferralService {
                         c.commit(); gained += bars; taken++;
                     } catch (SQLException ex) {
                         c.rollback();
-                        return "Không thể nhận quà mốc " + m + ", hãy thử lại. Nếu vật phẩm đã vào túi hãy báo admin.";
+                        restoreBag(player, bagBefore);
+                        InventoryService.gI().sendItemBags(player);
+                        return "Không thể nhận quà mốc " + m + ", hãy thử lại.";
                     } finally { c.setAutoCommit(true); }
                 }
                 int costumes = claimCostumes(player, c, total);
@@ -289,6 +300,7 @@ public final class ReferralService {
                 return result;
             } catch (SQLException ex) { return "Lỗi cơ sở dữ liệu khi nhận quà."; }
         }
+        } finally { PlayerDAO.releaseSaving(player); }
     }
 
     /**
@@ -340,6 +352,7 @@ public final class ReferralService {
                 if (op.optionTemplate.id == 30) { nonTrade = true; break; }
             }
             if (!nonTrade) item.itemOptions.add(new ItemOption(30, 0));
+            List<Item> bagBefore = snapshotBag(p);
             c.setAutoCommit(false);
             try {
                 try (PreparedStatement st = c.prepareStatement(
@@ -362,10 +375,24 @@ public final class ReferralService {
                 delivered++;
             } catch (SQLException ex) {
                 c.rollback();
+                restoreBag(p, bagBefore);
                 throw ex;
             } finally { c.setAutoCommit(true); }
         }
         return delivered;
+    }
+
+    private List<Item> snapshotBag(Player p) {
+        List<Item> copy = new ArrayList<>(p.inventory.itemsBag.size());
+        for (Item current : p.inventory.itemsBag) {
+            copy.add(current == null ? ItemService.gI().createItemNull() : ItemService.gI().copyItem(current));
+        }
+        return copy;
+    }
+
+    private void restoreBag(Player p, List<Item> original) {
+        p.inventory.itemsBag.clear();
+        p.inventory.itemsBag.addAll(original);
     }
 
     private boolean alreadyClaimed(Connection c, long id, int milestone) throws SQLException {
