@@ -559,17 +559,15 @@ public final class ReferralService {
                     }
                     int costumes=0;
                     try {costumes=claimCostumes(player,c,milestone);}
-                    catch(SQLException ex) {
+                    catch(Exception ex) {
                         InventoryService.gI().sendItemBags(player);
-                        return (paid?"Đã nhận Thỏi Vàng":"Đã nhận "+bars+" Thỏi Vàng")
-                            +", nhưng chưa thể lưu cải trang. Hãy thử lại sau.";
+                        return diagnostic(player, "nhận cải trang mốc " + milestone, ex);
                     }
                     InventoryService.gI().sendItemBags(player);
                     if (paid&&costumes==0) {
                         if (isSpecialMilestone(milestone) && !costumeAlreadyClaimed(c,player.id,milestone)) {
                             return "Đã nhận Thỏi Vàng mốc " + milestone
-                                  + ". Cải trang đang chờ cấu hình ID hoặc chờ chỗ trống trong túi; "
-                                  + "bạn có thể nhận bổ sung sau.";
+                                  + ". " + costumeBlocker(player,c,milestone);
                         }
                         return "Bạn đã nhận đủ quà mốc " + milestone + ".";
                     }
@@ -584,6 +582,22 @@ public final class ReferralService {
      * Chỉ phát cải trang khi admin đã gán ID item thật trong referral_costume_catalog.
      * Nếu chưa có sprite/item_template, quà vẫn chờ, không đánh dấu đã nhận.
      */
+    private String costumeBlocker(Player p, Connection c, int milestone) throws SQLException {
+        if (InventoryService.gI().getCountEmptyBag(p) < 1) return "Hành trang đầy, cần một ô trống để nhận cải trang.";
+        try (PreparedStatement st=c.prepareStatement(
+                "SELECT item_template_id FROM referral_costume_catalog WHERE milestone=?")) {
+            st.setInt(1,milestone);
+            try (ResultSet rs=st.executeQuery()) {
+                if (!rs.next() || rs.getObject(1)==null) return "Chưa gắn ID cải trang vào referral_costume_catalog.";
+                int id=rs.getInt(1);
+                if(id <= 0 || id > Short.MAX_VALUE) return "ID cải trang không hợp lệ: " + id;
+                Item item=ItemService.gI().createNewItem((short)id,1);
+                if(item==null || item.template==null || item.template.type!=5) return "Server chưa nạp cải trang ID " + id + ". Hãy restart sau khi import SQL.";
+            }
+        }
+        return "Chưa phát được cải trang. Admin kiểm tra log [REFERRAL] trên server.";
+    }
+
     private int claimCostumes(Player p, Connection c, int selectedMilestone) throws SQLException {
         int delivered = 0;
         for (int milestone : new int[] { 5, 10, 15, 20 }) {
@@ -601,17 +615,24 @@ public final class ReferralService {
                     options = rs.getString(3);
                 }
             }
-            if (itemId <= 0 || itemId > Short.MAX_VALUE) continue;
+            if (itemId <= 0 || itemId > Short.MAX_VALUE) {
+                System.err.println("[REFERRAL] Invalid costume ID for milestone " + milestone + ": " + itemId);
+                continue;
+            }
             try (PreparedStatement st = c.prepareStatement(
                     "SELECT 1 FROM referral_costume_claims WHERE inviter_player_id=? AND milestone=?")) {
                 st.setLong(1, p.id); st.setInt(2, milestone);
                 try (ResultSet rs = st.executeQuery()) { if (rs.next()) continue; }
             }
             if (InventoryService.gI().getCountEmptyBag(p) < 1) break;
-            if (ItemService.gI().getTemplate((short) itemId) == null) continue;
+            if (ItemService.gI().getTemplate((short) itemId) == null) {
+                System.err.println("[REFERRAL] Costume item " + itemId + " not loaded. Restart after importing SQL.");
+                continue;
+            }
             Item item = ItemService.gI().createNewItem((short) itemId, 1);
             if (item == null || item.template == null || item.template.type != 5) {
                 // Không phát nhầm vật phẩm khác loại cải trang (5).
+                System.err.println("[REFERRAL] Costume template " + itemId + " missing or not TYPE=5.");
                 continue;
             }
             item.itemOptions.clear();
@@ -624,8 +645,13 @@ public final class ReferralService {
                     int param = ((Number) pair.get(1)).intValue();
                     item.itemOptions.add(new ItemOption(id, param));
                 }
-            } catch (Exception ex) { continue; }
+            } catch (Exception ex) {
+                System.err.println("[REFERRAL] Invalid costume options for milestone " + milestone);
+                ex.printStackTrace(System.err);
+                continue;
+            }
             if (days > 0) item.itemOptions.add(new ItemOption(93, days));
+            item.createTime = System.currentTimeMillis();
             // Bắt buộc không giao dịch.
             boolean nonTrade = false;
             for (ItemOption op : item.itemOptions) {
