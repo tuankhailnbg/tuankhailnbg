@@ -748,7 +748,10 @@ public final class ReferralService {
 
     private boolean costumeAlreadyClaimed(Connection c, long playerId, int milestone) throws SQLException {
         try (PreparedStatement st = c.prepareStatement(
-                "SELECT 1 FROM referral_costume_claims WHERE inviter_player_id=? AND milestone=?")) {
+                "SELECT 1 FROM referral_costume_claims rc "
+                + "JOIN referral_costume_catalog cat ON cat.milestone=rc.milestone "
+                + "WHERE rc.inviter_player_id=? AND rc.milestone=? "
+                + "AND rc.item_template_id=cat.item_template_id")) {
             st.setLong(1, playerId);
             st.setInt(2, milestone);
             try (ResultSet rs = st.executeQuery()) { return rs.next(); }
