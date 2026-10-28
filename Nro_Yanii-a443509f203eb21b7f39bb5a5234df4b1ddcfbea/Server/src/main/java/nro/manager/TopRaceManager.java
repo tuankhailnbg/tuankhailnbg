@@ -438,13 +438,9 @@ public class TopRaceManager {
     }
 
     public synchronized String claimRewards(Player player) {
-        Season season = getLatestFinalizedSeason();
-        if (season == null) {
-            return "Chưa có mùa đua Top nào được chốt.";
-        }
-
         class Pending {
             long resultId;
+            int seasonId;
             String type;
             int rank;
             long score;
@@ -453,14 +449,16 @@ public class TopRaceManager {
         List<Pending> pendings = new ArrayList<>();
         try (Connection con = DBService.gI().getConnection();
                 PreparedStatement ps = con.prepareStatement(
-                        "SELECT id,race_type,rank_no,score FROM top_race_result "
-                                + "WHERE season_id=? AND player_id=? AND reward_status=0 ORDER BY race_type")) {
-            ps.setInt(1, season.id);
-            ps.setInt(2, (int) player.id);
+                        "SELECT r.id,r.season_id,r.race_type,r.rank_no,r.score "
+                                + "FROM top_race_result r JOIN top_race_season s ON s.id=r.season_id "
+                                + "WHERE r.player_id=? AND r.reward_status=0 AND s.status='FINALIZED' "
+                                + "ORDER BY r.season_id ASC,r.race_type ASC")) {
+            ps.setInt(1, (int) player.id);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Pending p = new Pending();
                     p.resultId = rs.getLong("id");
+                    p.seasonId = rs.getInt("season_id");
                     p.type = rs.getString("race_type");
                     p.rank = rs.getInt("rank_no");
                     p.score = rs.getLong("score");
@@ -469,11 +467,11 @@ public class TopRaceManager {
             }
         } catch (Exception e) {
             Log.error(TopRaceManager.class, e);
-            return "Không đọc được phần thưởng đua Top.";
+            return "Không đọc được phần thưởng đua Top. Hãy kiểm tra đã import SQL sự kiện chưa.";
         }
 
         if (pendings.isEmpty()) {
-            return "Bạn không có phần thưởng chưa nhận ở mùa gần nhất.";
+            return "Bạn không có phần thưởng đua Top chưa nhận.";
         }
 
         int claimed = 0;
