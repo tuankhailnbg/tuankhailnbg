@@ -2058,7 +2058,8 @@ public class NpcFactory {
                                             case 0:
                                                 createOtherMenu(player, ConstNpc.CHUC_NANG_SAO_PHA_LE,
                                                         "Ta có thể giúp gì cho ngươi?", "Ép sao\ntrang bị",
-                                                        "Pha lê\nhóa\ntrang bị");
+                                                        "Pha lê\nhóa\ntrang bị",
+                                                        "Cường hóa\nlỗ sao\npha lê");
                                                 return;
                                             /*
                                              * createOtherMenu(player, ConstNpc.CHUC_NANG_SAO_PHA_LE,
@@ -2090,21 +2091,9 @@ public class NpcFactory {
                                                         "Ngươi muốn pha lê hóa trang bị bằng cách nào?", "Bằng ngọc",
                                                         "Từ chối");
                                                 break;
-                                            case 2: // NANG CAP SAO PHA LE
-                                                CombineServiceNew.gI().openTabCombine(player,
-                                                        CombineServiceNew.NANG_CAP_SAO_PHA_LE);
-                                                break;
-                                            case 3:
-                                                CombineServiceNew.gI().openTabCombine(player,
-                                                        CombineServiceNew.DANH_BONG_SAO_PHA_LE);
-                                                break;
-                                            case 4:
+                                            case 2:
                                                 CombineServiceNew.gI().openTabCombine(player,
                                                         CombineServiceNew.CUONG_HOA_LO_SAO_PHA_LE);
-                                                break;
-                                            case 5:
-                                                CombineServiceNew.gI().openTabCombine(player,
-                                                        CombineServiceNew.TAO_DA_HEMATILE);
                                                 break;
                                         }
                                     } else if (player.iDMark.getIndexMenu() == ConstNpc.MENU_CHUYEN_HOA_SKH) {

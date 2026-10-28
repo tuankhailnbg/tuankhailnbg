@@ -1,6 +1,7 @@
 package nro.jdbc.daos;
 
 import nro.models.item.ItemOption;
+import nro.models.item.ItemTemplate;
 import nro.models.shop.ItemShop;
 import nro.models.shop.Shop;
 import nro.models.shop.TabShop;
@@ -111,6 +112,11 @@ public class ShopDAO {
                 tabShop.itemShops.add(itemShop);
             }
 
+            // Chi Chi - Shop hot: phục hồi vật liệu SPL và sửa Sách Tuyệt Kĩ 1 dùng chung.
+            if (tabShop.id == 30) {
+                configureChiChiHotShop(tabShop);
+            }
+
             // Santa - tab Đặc biệt (tab 17): mở bán lại Giáp tập luyện cấp 1 và 2.
             // Cấp 3 (ID 536) đang có sẵn trong DB với giá 1 tỷ vàng.
             if (tabShop.id == 17) {
@@ -137,6 +143,69 @@ public class ShopDAO {
      * Cấu hình cố định các cải trang ở cửa hàng đặc biệt của Santa.
      * Override lúc load để VPS chỉ cần pull/build, không phải sửa DB thủ công.
      */
+    private static void configureChiChiHotShop(TabShop tabShop) {
+        int[] universalBookIds = {1285, 1287, 1289};
+        for (int bookId : universalBookIds) {
+            ItemTemplate book = ItemService.gI().getTemplate(bookId);
+            if (book != null) {
+                book.gender = 3;
+            }
+        }
+
+        ItemTemplate hematite = ItemService.gI().getTemplate(1423);
+        if (hematite != null) {
+            hematite.type = 27;
+            hematite.gender = 3;
+            hematite.name = "Hematite";
+            hematite.description = "Nguyên liệu. Gặp Bà Hạt Mít để sử dụng";
+            hematite.level = 1;
+            hematite.iconID = 11759;
+            hematite.part = -1;
+            hematite.isUpToUp = false;
+            hematite.strRequire = 0;
+        }
+
+        ItemTemplate duiDuc = ItemService.gI().getTemplate(1438);
+        if (duiDuc == null) {
+            return;
+        }
+        duiDuc.type = 27;
+        duiDuc.gender = 3;
+        duiDuc.name = "Dùi đục";
+        duiDuc.description = "Dùng để cường hóa, mở khóa lỗ Sao Pha Lê từ ô thứ 8";
+        duiDuc.level = 1;
+        duiDuc.iconID = 12139;
+        duiDuc.part = -1;
+        duiDuc.isUpToUp = false;
+        duiDuc.strRequire = 0;
+
+        for (ItemShop itemShop : tabShop.itemShops) {
+            if (itemShop != null && itemShop.temp != null && itemShop.temp.id == 1438) {
+                itemShop.gold = 0;
+                itemShop.gem = 0;
+                itemShop.itemExchange = 457;
+                itemShop.costSpec = 500;
+                ItemTemplate goldBar = ItemService.gI().getTemplate(457);
+                itemShop.iconSpec = goldBar != null ? goldBar.iconID : 0;
+                itemShop.isNew = true;
+                return;
+            }
+        }
+
+        ItemShop itemShop = new ItemShop();
+        itemShop.tabShop = tabShop;
+        itemShop.id = -1438;
+        itemShop.temp = duiDuc;
+        itemShop.gold = 0;
+        itemShop.gem = 0;
+        itemShop.isNew = true;
+        itemShop.itemExchange = 457;
+        itemShop.costSpec = 500;
+        ItemTemplate goldBar = ItemService.gI().getTemplate(457);
+        itemShop.iconSpec = goldBar != null ? goldBar.iconID : 0;
+        tabShop.itemShops.add(itemShop);
+    }
+
     private static void addSantaTrainArmorIfMissing(TabShop tabShop, int itemId, int goldPrice) {
         for (ItemShop itemShop : tabShop.itemShops) {
             if (itemShop != null && itemShop.temp != null && itemShop.temp.id == itemId) {

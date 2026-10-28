@@ -43,7 +43,7 @@ public class CombineServiceNew {
 
     private static final int TIME_COMBINE = 500;
 
-    private static final byte MAX_STAR_ITEM = 8;
+    private static final byte MAX_STAR_ITEM = 10;
     private static final byte MAX_LEVEL_ITEM = 7;
 
     private static final byte OPEN_TAB_COMBINE = 0;
@@ -212,11 +212,12 @@ public class CombineServiceNew {
                                 starEmpty = io.param;
                             }
                         }
-                        if (star < starEmpty) {
+                        int unlockedStarEmpty = getUnlockedCrystalSocketCount(trangBi);
+                        if (star < unlockedStarEmpty) {
                             player.combineNew.gemCombine = getGemEpSao(star);
                             String npcSay = trangBi.template.name + "\n|2|";
                             for (ItemOption io : trangBi.itemOptions) {
-                                if (io.optionTemplate.id != 102) {
+                                if (io.optionTemplate.id != 102 && io.optionTemplate.id != 228) {
                                     npcSay += io.getOptionString() + "\n";
                                 }
                             }
@@ -233,8 +234,15 @@ public class CombineServiceNew {
                                     "Nâng cấp\ncần " + player.combineNew.gemCombine + " ngọc");
 
                         } else {
-                            this.baHatMit.createOtherMenu(player, ConstNpc.IGNORE_MENU,
-                                    "Cần 1 trang bị có lỗ sao pha lê và 1 loại đá pha lê để ép vào", "Đóng");
+                            if (star < starEmpty && starEmpty >= 8) {
+                                this.baHatMit.createOtherMenu(player, ConstNpc.IGNORE_MENU,
+                                        "Ô Sao Pha Lê thứ " + (star + 1)
+                                                + " đang bị khóa. Hãy cường hóa lỗ sao bằng Hematite và Dùi đục trước khi khảm.",
+                                        "Đóng");
+                            } else {
+                                this.baHatMit.createOtherMenu(player, ConstNpc.IGNORE_MENU,
+                                        "Cần 1 trang bị có lỗ sao pha lê và 1 loại đá pha lê để ép vào", "Đóng");
+                            }
                         }
                     } else {
                         this.baHatMit.createOtherMenu(player, ConstNpc.IGNORE_MENU,
@@ -270,8 +278,12 @@ public class CombineServiceNew {
                                     npcSay += "|1|" + io.getOptionString() + "\n";
                                 }
                             }
-                            npcSay += "|2|Tỉ lệ thành công: " + (player.combineNew.ratioCombine + 1) + "%" + "\n";
+                            npcSay += "|2|Tỉ lệ thành công: " + formatCombineRate(player.combineNew.ratioCombine) + "%" + "\n";
                             npcSay += "|2|Cần " + Util.numberToMoney(player.combineNew.goldCombine) + " vàng";
+                            if (star >= 7) {
+                                npcSay += "\n|7|Lỗ Sao Pha Lê thứ " + (star + 1)
+                                        + " sau khi đục thành công sẽ bị khóa và cần cường hóa trước khi khảm.";
+                            }
 
                             baHatMit.createOtherMenu(player, ConstNpc.MENU_START_COMBINE, npcSay,
                                     "Nâng cấp\n1 ngọc\nx100 lần", "Nâng cấp\n1 ngọc\nx10 lần", "Nâng cấp\n1 ngọc",
@@ -287,6 +299,67 @@ public class CombineServiceNew {
                     }
                 } else {
                     this.baHatMit.createOtherMenu(player, ConstNpc.IGNORE_MENU, "Hãy hãy chọn 1 vật phẩm để pha lê hóa",
+                            "Đóng");
+                }
+                break;
+            case CUONG_HOA_LO_SAO_PHA_LE:
+                if (player.combineNew.itemsCombine.size() == 3) {
+                    Item trangBi = null;
+                    Item hematite = null;
+                    Item duiDuc = null;
+                    for (Item selected : player.combineNew.itemsCombine) {
+                        if (isTrangBiPhaLeHoa(selected)) {
+                            trangBi = selected;
+                        } else if (selected.template.id == 1423) {
+                            hematite = selected;
+                        } else if (selected.template.id == 1438) {
+                            duiDuc = selected;
+                        }
+                    }
+
+                    if (trangBi == null || hematite == null || duiDuc == null
+                            || hematite.quantity < 1 || duiDuc.quantity < 1) {
+                        this.baHatMit.createOtherMenu(player, ConstNpc.IGNORE_MENU,
+                                "Cần 1 trang bị có lỗ Sao Pha Lê thứ 8 trở lên chưa cường hóa"
+                                        + "\n1 Đá Hematite"
+                                        + "\n1 Dùi đục",
+                                "Đóng");
+                        break;
+                    }
+
+                    int drilledStar = getItemOptionParam(trangBi, 107);
+                    int enhancedStar = getEnhancedCrystalSocketLevel(trangBi);
+                    int targetStar = Math.max(8, enhancedStar + 1);
+
+                    if (drilledStar < 8 || targetStar > drilledStar || targetStar > MAX_STAR_ITEM) {
+                        this.baHatMit.createOtherMenu(player, ConstNpc.IGNORE_MENU,
+                                "Trang bị không có lỗ Sao Pha Lê đang khóa để cường hóa.", "Đóng");
+                        break;
+                    }
+
+                    int gemCost = getGemCuongHoaLoSao(targetStar);
+                    player.combineNew.gemCombine = gemCost;
+                    player.combineNew.ratioCombine = 50f;
+
+                    String npcSay = "|2|Cường hóa Ô Sao Pha Lê thứ " + targetStar
+                            + "\n|1|" + trangBi.template.name
+                            + "\n|7|Cần 1 Đá Hematite"
+                            + "\n|7|Cần 1 Dùi đục"
+                            + "\n|2|Tỉ lệ thành công: 50%"
+                            + "\n|2|Cần " + gemCost + " ngọc (xanh hoặc hồng)";
+
+                    if (getGemAndRuby(player) < gemCost) {
+                        this.baHatMit.createOtherMenu(player, ConstNpc.IGNORE_MENU, npcSay,
+                                "Còn thiếu\n" + (gemCost - getGemAndRuby(player)) + " ngọc");
+                    } else {
+                        this.baHatMit.createOtherMenu(player, ConstNpc.MENU_START_COMBINE, npcSay,
+                                "Cường hóa", "Từ chối");
+                    }
+                } else {
+                    this.baHatMit.createOtherMenu(player, ConstNpc.IGNORE_MENU,
+                            "Cần 1 trang bị có lỗ Sao Pha Lê thứ 8 trở lên chưa cường hóa"
+                                    + "\n1 Đá Hematite"
+                                    + "\n1 Dùi đục",
                             "Đóng");
                 }
                 break;
@@ -1432,6 +1505,9 @@ public class CombineServiceNew {
                             phaLeHoaTrangBi(player);
                             break;
                     }
+                    break;
+                case CUONG_HOA_LO_SAO_PHA_LE:
+                    cuongHoaLoSaoPhaLe(player);
                     break;
                 case NHAP_NGOC_RONG:
                     nhapNgocRong(player);
@@ -2603,7 +2679,8 @@ public class CombineServiceNew {
                         starEmpty = io.param;
                     }
                 }
-                if (star < starEmpty) {
+                int unlockedStarEmpty = getUnlockedCrystalSocketCount(trangBi);
+                if (star < unlockedStarEmpty) {
                     if (gem > 0 && !player.inventory.trySpendGem(gem)) {
                         Service.getInstance().sendThongBao(player, "Không đủ ngọc để thực hiện");
                         return;
@@ -2630,12 +2707,162 @@ public class CombineServiceNew {
 
                     InventoryService.gI().subQuantityItemsBag(player, daPhaLe, 1);
                     sendEffectSuccessCombine(player);
+                } else if (star < starEmpty && starEmpty >= 8) {
+                    Service.getInstance().sendThongBao(player,
+                            "Ô Sao Pha Lê thứ " + (star + 1)
+                                    + " đang bị khóa. Hãy cường hóa lỗ sao trước khi khảm.");
                 }
                 InventoryService.gI().sendItemBags(player);
                 Service.getInstance().sendMoney(player);
                 reOpenItemCombine(player);
             }
         }
+    }
+
+    private int getItemOptionParam(Item item, int optionId) {
+        if (item == null || item.itemOptions == null) {
+            return 0;
+        }
+        for (ItemOption option : item.itemOptions) {
+            if (option != null && option.optionTemplate != null
+                    && option.optionTemplate.id == optionId) {
+                return option.param;
+            }
+        }
+        return 0;
+    }
+
+    private ItemOption getItemOption(Item item, int optionId) {
+        if (item == null || item.itemOptions == null) {
+            return null;
+        }
+        for (ItemOption option : item.itemOptions) {
+            if (option != null && option.optionTemplate != null
+                    && option.optionTemplate.id == optionId) {
+                return option;
+            }
+        }
+        return null;
+    }
+
+    private int getEnhancedCrystalSocketLevel(Item item) {
+        int enhanced = getItemOptionParam(item, 228);
+        int embedded = getItemOptionParam(item, 102);
+        int unlocked = Math.max(enhanced, embedded);
+        if (unlocked < 8) {
+            return 7;
+        }
+        return Math.min(MAX_STAR_ITEM, unlocked);
+    }
+
+    private int getUnlockedCrystalSocketCount(Item item) {
+        int drilled = getItemOptionParam(item, 107);
+        if (drilled <= 7) {
+            return drilled;
+        }
+        return Math.min(drilled, getEnhancedCrystalSocketLevel(item));
+    }
+
+    private int getGemCuongHoaLoSao(int targetStar) {
+        return targetStar >= 10 ? 100 : 50;
+    }
+
+    private int getGemAndRuby(Player player) {
+        if (player == null || player.inventory == null) {
+            return 0;
+        }
+        long total = (long) player.inventory.gem + player.inventory.ruby;
+        return total > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) total;
+    }
+
+    private boolean spendGemAndRuby(Player player, int amount) {
+        if (player == null || player.inventory == null || amount <= 0
+                || getGemAndRuby(player) < amount) {
+            return false;
+        }
+        int gemSpend = Math.min(player.inventory.gem, amount);
+        int rubySpend = amount - gemSpend;
+        return player.inventory.trySpendGemAndRuby(gemSpend, rubySpend);
+    }
+
+    private String formatCombineRate(float rate) {
+        if (rate == (int) rate) {
+            return String.valueOf((int) rate);
+        }
+        return String.valueOf(rate);
+    }
+
+    private void cuongHoaLoSaoPhaLe(Player player) {
+        if (player.combineNew.itemsCombine.size() != 3) {
+            Service.getInstance().sendThongBao(player,
+                    "Cần 1 trang bị, 1 Đá Hematite và 1 Dùi đục.");
+            return;
+        }
+
+        Item trangBi = null;
+        Item hematite = null;
+        Item duiDuc = null;
+        for (Item selected : player.combineNew.itemsCombine) {
+            if (isTrangBiPhaLeHoa(selected)) {
+                trangBi = selected;
+            } else if (selected.template.id == 1423) {
+                hematite = selected;
+            } else if (selected.template.id == 1438) {
+                duiDuc = selected;
+            }
+        }
+
+        if (trangBi == null || hematite == null || duiDuc == null
+                || hematite.quantity < 1 || duiDuc.quantity < 1) {
+            Service.getInstance().sendThongBao(player,
+                    "Cần 1 trang bị có lỗ Sao Pha Lê thứ 8 trở lên, 1 Đá Hematite và 1 Dùi đục.");
+            return;
+        }
+
+        int drilledStar = getItemOptionParam(trangBi, 107);
+        int enhancedStar = getEnhancedCrystalSocketLevel(trangBi);
+        int targetStar = Math.max(8, enhancedStar + 1);
+
+        if (drilledStar < 8 || targetStar > drilledStar || targetStar > MAX_STAR_ITEM) {
+            Service.getInstance().sendThongBao(player,
+                    "Trang bị không có lỗ Sao Pha Lê đang khóa để cường hóa.");
+            return;
+        }
+
+        int gemCost = getGemCuongHoaLoSao(targetStar);
+        if (getGemAndRuby(player) < gemCost) {
+            Service.getInstance().sendThongBao(player,
+                    "Không đủ " + gemCost + " ngọc để cường hóa.");
+            return;
+        }
+        if (!spendGemAndRuby(player, gemCost)) {
+            Service.getInstance().sendThongBao(player, "Không đủ ngọc để cường hóa.");
+            return;
+        }
+
+        InventoryService.gI().subQuantityItemsBag(player, hematite, 1);
+        InventoryService.gI().subQuantityItemsBag(player, duiDuc, 1);
+
+        if (Util.isTrue(50, 100)) {
+            ItemOption enhancedOption = getItemOption(trangBi, 228);
+            if (enhancedOption == null) {
+                trangBi.itemOptions.add(new ItemOption(228, targetStar));
+            } else {
+                enhancedOption.param = targetStar;
+            }
+            sendEffectSuccessCombine(player);
+            Service.getInstance().sendThongBao(player,
+                    "Cường hóa thành công Ô Sao Pha Lê thứ " + targetStar
+                            + ". Bây giờ có thể khảm Sao Pha Lê vào ô này.");
+        } else {
+            sendEffectFailCombine(player);
+            Service.getInstance().sendThongBao(player,
+                    "Cường hóa Ô Sao Pha Lê thứ " + targetStar + " thất bại.");
+        }
+
+        InventoryService.gI().sendItemBags(player);
+        Service.getInstance().sendMoney(player);
+        reOpenItemCombine(player);
     }
 
     private void phaLeHoaTrangBi(Player player) {
@@ -2673,7 +2900,7 @@ public class CombineServiceNew {
                     Service.getInstance().sendThongBao(player, "Bạn không đủ vàng hoặc ngọc để thực hiện");
                     return;
                 }
-                if (Util.isTrue(player.combineNew.ratioCombine, 400)) {
+                if (Util.isTrue(player.combineNew.ratioCombine, 100)) {
                     if (optionStar == null) {
                         item.itemOptions.add(new ItemOption(107, 1));
                     } else {
@@ -2739,7 +2966,7 @@ public class CombineServiceNew {
                     if (!player.inventory.trySpendGoldAndGem(gold, gem)) {
                         break;
                     }
-                    if (Util.isTrue(player.combineNew.ratioCombine, 400)) {
+                    if (Util.isTrue(player.combineNew.ratioCombine, 100)) {
                         if (optionStar == null) {
                             item.itemOptions.add(new ItemOption(107, 1));
                         } else {
@@ -2811,7 +3038,7 @@ public class CombineServiceNew {
                     if (!player.inventory.trySpendGoldAndGem(gold, gem)) {
                         break;
                     }
-                    if (Util.isTrue(player.combineNew.ratioCombine, 400)) {
+                    if (Util.isTrue(player.combineNew.ratioCombine, 100)) {
                         if (optionStar == null) {
                             item.itemOptions.add(new ItemOption(107, 1));
                         } else {
@@ -3296,21 +3523,25 @@ public class CombineServiceNew {
     private int getGoldPhaLeHoa(int star) {
         switch (star) {
             case 0:
-                return 5000000;
+                return 5_000_000;
             case 1:
-                return 10000000;
+                return 10_000_000;
             case 2:
-                return 20000000;
+                return 20_000_000;
             case 3:
-                return 40000000;
+                return 40_000_000;
             case 4:
-                return 60000000;
+                return 60_000_000;
             case 5:
-                return 90000000;
+                return 90_000_000;
             case 6:
-                return 120000000;
+                return 120_000_000;
             case 7:
-                return 200000000;
+                return 200_000_000;
+            case 8:
+                return 300_000_000;
+            case 9:
+                return 500_000_000;
         }
         return 0;
     }
@@ -3318,24 +3549,29 @@ public class CombineServiceNew {
     private float getRatioPhaLeHoa(int star) {
         switch (star) {
             case 0:
-                return 79f;
+                return 80f;
             case 1:
-                return 49f;
+                return 50f;
             case 2:
-                return 19f;
+                return 30f;
             case 3:
-                return 4f;
+                return 20f;
             case 4:
-                return 1f;
+                return 10f;
             case 5:
-                return 1f;
+                return 5f;
             case 6:
-                return 1f;
+                return 3f;
             case 7:
+                return 2f;
+            case 8:
+                return 1f;
+            case 9:
                 return 0.5f;
         }
         return 0;
     }
+
     /// so sao pha le
 
     private int getGemPhaLeHoa(int star) {
@@ -3358,6 +3594,8 @@ public class CombineServiceNew {
                 return 80;
             case 8:
                 return 90;
+            case 9:
+                return 50;
         }
         return 0;
     }
@@ -3377,6 +3615,10 @@ public class CombineServiceNew {
             case 5:
                 return 50;
             case 6:
+                return 100;
+            case 7:
+            case 8:
+            case 9:
                 return 100;
         }
         return 0;
