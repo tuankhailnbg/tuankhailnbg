@@ -1,0 +1,24 @@
+name: NRO Server Java Build
+
+on:
+  push:
+    branches:
+      - feature/costumes-batch-01
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea/Server/pom.xml
+      - name: Compile NRO Server
+        working-directory: Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea/Server
+        run: mvn -B -ntp -DskipTests clean package
