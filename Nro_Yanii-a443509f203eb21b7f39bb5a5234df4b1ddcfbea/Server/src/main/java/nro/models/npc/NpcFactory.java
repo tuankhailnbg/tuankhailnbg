@@ -6,6 +6,7 @@ import nro.dialog.ConfirmDialog;
 import nro.dialog.MenuDialog;
 import nro.jdbc.daos.PlayerDAO;
 import nro.lib.RandomCollection;
+import nro.manager.TopRaceManager;
 import nro.models.boss.Boss;
 import nro.models.boss.BossFactory;
 import nro.models.boss.BossManager;
