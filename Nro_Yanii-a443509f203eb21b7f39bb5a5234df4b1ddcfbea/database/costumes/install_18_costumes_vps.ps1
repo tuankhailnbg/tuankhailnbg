@@ -43,7 +43,7 @@ $backup=Join-Path $PSScriptRoot ('backup_'+(Get-Date -Format 'yyyyMMdd_HHmmss'))
 New-Item -ItemType Directory -Path $backup -Force | Out-Null
 $dbBackup=Join-Path $backup 'ngocrong_before_costumes.sql'
 $dumpError=Join-Path $backup 'dump_error.log'
-$dumpArgs=@($connection,'--single-transaction',$DbName)
+$dumpArgs=$connection + @('--single-transaction',$DbName)
 $d=Start-Process -FilePath $dump -ArgumentList $dumpArgs -NoNewWindow -PassThru -Wait -RedirectStandardOutput $dbBackup -RedirectStandardError $dumpError
 if ($d.ExitCode -ne 0 -or (Get-Item $dbBackup).Length -lt 1024) { throw "Backup failed: $dumpError" }
 Write-Host "Backup created: $dbBackup"
@@ -59,6 +59,7 @@ foreach($zoom in 1..4) {
   if($bytes.Length -lt 8 -or [Text.Encoding]::ASCII.GetString($bytes,1,3) -ne 'PNG') { throw "Invalid PNG: $file" }
  }
 }
+$OutputEncoding=New-Object Text.UTF8Encoding($false)
 [Console]::OutputEncoding=New-Object Text.UTF8Encoding($false)
 foreach($batch in @('batch01a','batch01b','batch01c')) {
  $sqlPath=Join-Path (Join-Path $PSScriptRoot $batch) 'install.sql'
