@@ -175,27 +175,39 @@ public class ShopDAO {
         }
 
         ItemTemplate duiDuc = ItemService.gI().getTemplate(1438);
-        if (duiDuc == null) {
+        if (duiDuc != null) {
+            duiDuc.type = 27;
+            duiDuc.gender = 3;
+            duiDuc.name = "Dùi đục";
+            duiDuc.description = "Vật phẩm hỗ trợ. Gặp Bà Hạt Mít để cường hóa lỗ Sao Pha Lê";
+            duiDuc.level = 1;
+            duiDuc.iconID = 12139;
+            duiDuc.part = -1;
+            duiDuc.isUpToUp = false;
+            duiDuc.strRequire = 0;
+        }
+
+        // Shop hot Chi Chi: Hematite và Dùi đục đều bán 500 Thỏi vàng / 1 vật phẩm.
+        addChiChiHotExchangeItem(tabShop, hematite, 1423, 500);
+        addChiChiHotExchangeItem(tabShop, duiDuc, 1438, 500);
+    }
+
+    private static void addChiChiHotExchangeItem(TabShop tabShop, ItemTemplate template,
+            int itemId, int goldBarCost) {
+        if (tabShop == null || template == null) {
             return;
         }
-        duiDuc.type = 27;
-        duiDuc.gender = 3;
-        duiDuc.name = "Dùi đục";
-        duiDuc.description = "Vật phẩm hỗ trợ. Gặp Bà Hạt Mít để cường hóa lỗ Sao Pha Lê";
-        duiDuc.level = 1;
-        duiDuc.iconID = 12139;
-        duiDuc.part = -1;
-        duiDuc.isUpToUp = false;
-        duiDuc.strRequire = 0;
+
+        ItemTemplate goldBar = ItemService.gI().getTemplate(457);
+        int exchangeIcon = goldBar != null ? goldBar.iconID : 0;
 
         for (ItemShop itemShop : tabShop.itemShops) {
-            if (itemShop != null && itemShop.temp != null && itemShop.temp.id == 1438) {
+            if (itemShop != null && itemShop.temp != null && itemShop.temp.id == itemId) {
                 itemShop.gold = 0;
                 itemShop.gem = 0;
                 itemShop.itemExchange = 457;
-                itemShop.costSpec = 500;
-                ItemTemplate goldBar = ItemService.gI().getTemplate(457);
-                itemShop.iconSpec = goldBar != null ? goldBar.iconID : 0;
+                itemShop.costSpec = goldBarCost;
+                itemShop.iconSpec = exchangeIcon;
                 itemShop.isNew = true;
                 return;
             }
@@ -203,15 +215,14 @@ public class ShopDAO {
 
         ItemShop itemShop = new ItemShop();
         itemShop.tabShop = tabShop;
-        itemShop.id = -1438;
-        itemShop.temp = duiDuc;
+        itemShop.id = -itemId;
+        itemShop.temp = template;
         itemShop.gold = 0;
         itemShop.gem = 0;
         itemShop.isNew = true;
         itemShop.itemExchange = 457;
-        itemShop.costSpec = 500;
-        ItemTemplate goldBar = ItemService.gI().getTemplate(457);
-        itemShop.iconSpec = goldBar != null ? goldBar.iconID : 0;
+        itemShop.costSpec = goldBarCost;
+        itemShop.iconSpec = exchangeIcon;
         tabShop.itemShops.add(itemShop);
     }
 
