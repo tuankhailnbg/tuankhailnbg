@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "database/migrations/20261028_referral_costumes_test.sql"
 FIX = ROOT / "database/migrations/20261028_fix_referral_costume_client_freeze.sql"
 REPAIR = ROOT / "database/migrations/20261028_repair_partial_referral_costumes.sql"
+NONSHOP = ROOT / "database/migrations/20261028_referral_nonshop_costumes.sql"
 
 EXPECTED = [
     (5, 904, 7, "Goku SSJ3", (20,20,20,4,10)),
@@ -20,6 +21,12 @@ EXPECTED = [
 ]
 LEGACY = [2154,2155,2156,2157]
 CODE = "nrotest4ct2026"
+NONSHOP_EXPECTED = [
+    (5,1304,7,"Goku SSJ4"),
+    (10,1305,7,"Vegeta SSJ4"),
+    (15,1306,None,"Omega"),
+    (20,2129,None,"Fu"),
+]
 
 def check(cond, msg):
     assert cond, msg
@@ -182,6 +189,78 @@ def test_database():
             execute_file(cur, FIX)
             cur.execute("SELECT COUNT(*) FROM gift_codes WHERE code=%s",(CODE,))
             check(cur.fetchone()[0]==1,"giftcode migration remains idempotent")
+
+            # ------------------------------------------------------------
+            # Verify the new event selection against a disposable DB:
+            # existing client IDs, no item_shop collision, unique appearance,
+            # matching icon/head and complete player animation frames.
+            # ------------------------------------------------------------
+            cur.execute("""CREATE TABLE IF NOT EXISTS part (
+                id INT PRIMARY KEY, TYPE INT NOT NULL, DATA LONGTEXT NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS item_shop (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                tab_id INT NOT NULL DEFAULT 0,
+                temp_id INT NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+
+            new_items = [
+                (1304,"Cải trang Goku SSJ4",20371),
+                (1305,"Cải trang Vegeta SSJ4",20403),
+                (1306,"Cải trang Omega",20339),
+                (2129,"Cải Trang Fu",32116),
+            ]
+            for item_id,name,icon in new_items:
+                cur.execute("UPDATE item_template SET NAME=%s,icon_id=%s,TYPE=5 WHERE id=%s",
+                            (name,icon,item_id))
+
+            for row in [
+                (1304,1345,1346,1347,-1),
+                (1305,1348,1349,1350,-1),
+                (1306,1342,1343,1344,-1),
+                (2129,1425,1426,1427,-1),
+            ]:
+                cur.execute("""INSERT INTO cai_trang(id_temp,head,body,leg,bag)
+                    VALUES(%s,%s,%s,%s,%s)
+                    ON DUPLICATE KEY UPDATE head=VALUES(head),body=VALUES(body),
+                    leg=VALUES(leg),bag=VALUES(bag)""", row)
+
+            # Each head begins with the same small-image ID as item_template.icon_id.
+            part_rows = []
+            for head,body,leg,icon in [
+                (1345,1346,1347,20371),
+                (1348,1349,1350,20403),
+                (1342,1343,1344,20339),
+                (1425,1426,1427,32116),
+            ]:
+                head_data = json.dumps([[icon,0,0],[icon+1,0,0],[icon+2,0,0]])
+                body_data = json.dumps([[30000+n,0,0] for n in range(17)])
+                leg_data = json.dumps([[31000+n,0,0] for n in range(14)])
+                part_rows.extend([(head,0,head_data),(body,1,body_data),(leg,2,leg_data)])
+            cur.executemany("""INSERT INTO part(id,TYPE,DATA) VALUES(%s,%s,%s)
+                ON DUPLICATE KEY UPDATE TYPE=VALUES(TYPE),DATA=VALUES(DATA)""", part_rows)
+
+            # Stale costume claims from the previous reward set must not block
+            # receiving the replacement costumes. Gold-bar claims are separate.
+            cur.execute("""INSERT INTO referral_costume_claims
+                (inviter_player_id,milestone,item_template_id)
+                VALUES (999,5,904),(999,10,2117),(999,15,2142),(999,20,1276)
+                ON DUPLICATE KEY UPDATE item_template_id=VALUES(item_template_id)""")
+
+            execute_file(cur, NONSHOP)
+
+            cur.execute("""SELECT milestone,item_template_id,duration_days,costume_name
+                FROM referral_costume_catalog ORDER BY milestone""")
+            check(cur.fetchall()==tuple(NONSHOP_EXPECTED),
+                  "new referral rewards use four distinct non-shop costume IDs")
+
+            cur.execute("SELECT COUNT(*) FROM item_shop WHERE temp_id IN (1304,1305,1306,2129)")
+            check(cur.fetchone()[0]==0,"new referral costume IDs are absent from item_shop")
+
+            cur.execute("""SELECT COUNT(*) FROM referral_costume_claims
+                WHERE inviter_player_id=999 AND milestone IN (5,10,15,20)""")
+            check(cur.fetchone()[0]==0,
+                  "stale old-costume claim rows are cleared without touching gold claims")
 
     print("All referral costume client-compatibility tests passed.")
 
