@@ -655,6 +655,14 @@ public class GodGK {
                     for (int i = 0; i < dataArray.size(); i++) {
                         JSONArray skillTemp = (JSONArray) jv.parse(String.valueOf(dataArray.get(i)));
                         int tempId = Integer.parseInt(skillTemp.get(0).toString());
+
+                        // Skill Biến hình (ID 27) đã bị gỡ khỏi server.
+                        // Bỏ qua dữ liệu cũ để sau lần save tiếp theo skill này tự biến mất khỏi DB player.
+                        if (tempId == Skill.BIEN_HINH) {
+                            skillTemp.clear();
+                            continue;
+                        }
+
                         byte point = Byte.parseByte(skillTemp.get(2).toString());
                         Skill skill = null;
                         if (point != 0) {
