@@ -109,6 +109,7 @@ public class ShopDAO {
                 // thay đổi vật phẩm trong shop
                 loadItemShopOption(con, itemShop);
                 applySantaSpecialCostumeConfig(itemShop);
+                applyChiChiShopPriceConfig(itemShop);
                 tabShop.itemShops.add(itemShop);
             }
 
@@ -136,6 +137,40 @@ public class ShopDAO {
             }
         } catch (Exception e) {
             Log.error(ShopDAO.class, e);
+        }
+    }
+
+    /**
+     * Cân bằng giá 3 tab cửa hàng của NPC Chi Chi:
+     * 41 = Shop đeo lưng, 42 = Shop linh thú, 43 = Shop đặc biệt.
+     * Chỉ đổi đúng các mốc giá yêu cầu, không ảnh hưởng shop khác.
+     */
+    private static void applyChiChiShopPriceConfig(ItemShop itemShop) {
+        if (itemShop == null || itemShop.tabShop == null) {
+            return;
+        }
+
+        int tabId = itemShop.tabShop.id;
+        if (tabId != 41 && tabId != 42 && tabId != 43) {
+            return;
+        }
+
+        if (itemShop.itemExchange == 861) { // Hồng ngọc
+            switch (itemShop.costSpec) {
+                case 150_000:
+                    itemShop.costSpec = 50_000;
+                    break;
+                case 100_000:
+                    itemShop.costSpec = 30_000;
+                    break;
+                case 50_000:
+                    itemShop.costSpec = 20_000;
+                    break;
+                default:
+                    break;
+            }
+        } else if (itemShop.itemExchange == 457 && itemShop.costSpec == 10_000) { // Thỏi vàng
+            itemShop.costSpec = 2_500;
         }
     }
 
