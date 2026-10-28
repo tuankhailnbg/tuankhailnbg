@@ -6403,6 +6403,9 @@ public class NpcFactory {
                             case 5:
                                 Input.gI().createFormFindPlayer(player);
                                 break;
+                            case 6:
+                                if (player.isAdmin()) Input.gI().createFormAdminReferralPoints(player);
+                                break;
                         }
                         break;
                     case ConstNpc.MENU_BUFF_DO:
