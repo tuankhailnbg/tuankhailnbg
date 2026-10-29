@@ -494,7 +494,7 @@ public class RewardService {
                         InventoryService.gI().addItemBag(player, HONG_NGOC, 1);
                         InventoryService.gI().sendItemBags(player);
                     }
-                    if (Util.isTrue(1, 10)) {
+                    if (Util.isTrue(1, 1000)) { // 0.1% ty le nhan thoi vang
                         Item THOI_VANG = ItemService.gI().createNewItem((short) ConstItem.THOI_VANG);
                         InventoryService.gI().addItemBag(player, THOI_VANG, 1);
                         InventoryService.gI().sendItemBags(player);
