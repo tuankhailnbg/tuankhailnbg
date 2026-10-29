@@ -488,8 +488,8 @@ public class RewardService {
                 }
 
                 if (mapid >= 169 && mapid <= 171) {
-                    // Up Hồng Ngọc
-                    if (Util.isTrue(1, 10)) {
+                    // Up Hồng Ngọc: 0.2% (1/500)
+                    if (Util.isTrue(1, 500)) {
                         Item HONG_NGOC = ItemService.gI().createNewItem((short) ConstItem.HONG_NGOC);
                         InventoryService.gI().addItemBag(player, HONG_NGOC, 1);
                         InventoryService.gI().sendItemBags(player);
