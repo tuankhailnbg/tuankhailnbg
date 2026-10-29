@@ -21,20 +21,12 @@ public class SuperCumber extends FutureBoss {
 
     @Override
     public void rewards(Player pl) {
-        // do than 1/100
-        int[] tempIds1 = new int[]{565, 560, 562, 564, 566, 561};
-        // Nhan, gang than 1/100
-        int[] tempIds2 = new int[]{565, 560, 562, 564, 566, 561};
-
+        // Giữ Ngọc Rồng 2 Sao 1%; bỏ các nhánh Đồ Thần ngoài Tương Lai/Cold.
         int[] tempIds3 = new int[]{15};
 
         int tempId = -1;
         if (Util.isTrue(1, 100)) {
             tempId = tempIds3[Util.nextInt(0, tempIds3.length - 1)];
-        } else if (Util.isTrue(1, 100)) {
-            tempId = tempIds1[Util.nextInt(0, tempIds1.length - 1)];
-        } else if (Util.isTrue(1, 100)) {
-            tempId = tempIds2[Util.nextInt(0, tempIds2.length - 1)];
         }
         if (Manager.EVENT_SEVER == 4 && tempId == -1) {
             tempId = ConstItem.LIST_ITEM_NLSK_TET_2023[Util.nextInt(0, ConstItem.LIST_ITEM_NLSK_TET_2023.length - 1)];
