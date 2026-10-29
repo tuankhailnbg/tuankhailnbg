@@ -22,19 +22,8 @@ public class Cumber extends FutureBoss {
     
     @Override
     public void rewards(Player pl) {
-        // do than 1/100
-        int[] tempIds1 = new int[]{565, 560, 562, 564, 566, 561};
-        // Nhan, gang than 1/100
-        int[] tempIds2 = new int[]{565, 560, 562, 564, 566, 561};
-
+        // Đồ Thần chỉ được xử lý tập trung cho boss Tương Lai/Cold trong RewardService.
         int tempId = -1;
-        if (Util.isTrue(1, 100)) {
-
-        } else if (Util.isTrue(1, 100)) {
-            tempId = tempIds1[Util.nextInt(0, tempIds1.length - 1)];
-        } else if (Util.isTrue(1, 100)) {
-            tempId = tempIds2[Util.nextInt(0, tempIds2.length - 1)];
-        }
         if (Manager.EVENT_SEVER == 4 && tempId == -1) {
             tempId = ConstItem.LIST_ITEM_NLSK_TET_2023[Util.nextInt(0, ConstItem.LIST_ITEM_NLSK_TET_2023.length - 1)];
         }
