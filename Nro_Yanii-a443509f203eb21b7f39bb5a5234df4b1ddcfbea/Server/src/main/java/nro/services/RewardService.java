@@ -203,10 +203,8 @@ public class RewardService {
         if (boss == null || boss.zone == null || boss.zone.map == null) {
             return;
         }
-        if (killer == null) {
-            if (!boss.zone.getPlayers().isEmpty()) {
-                killer = boss.zone.getPlayers().get(0);
-            }
+        if (killer == null && !boss.zone.getPlayers().isEmpty()) {
+            killer = boss.zone.getPlayers().get(0);
         }
         if (killer != null && killer.isPet) {
             killer = ((Pet) killer).master;
@@ -214,40 +212,64 @@ public class RewardService {
         if (killer == null || killer.isBoss) {
             return;
         }
+
+        int mapId = boss.zone.map.mapId;
+        boolean eligibleHardBoss = isFutureBoss(boss) || isColdMap(mapId);
+        if (!eligibleHardBoss) {
+            return;
+        }
+
         int x = boss.location.x;
         int y = boss.zone.map.yPhysicInTop(x, boss.location.y - 24);
         long maxHp = Math.max(1L, (long) boss.nPoint.hpMax);
 
-        boolean isFuture = isFutureBoss(boss);
-        if (isFuture) {
-            // Boss tương lai vẫn luôn rơi Ngọc Rồng 3 Sao và 1.000.000 vàng.
-            ItemMap nr3s = new ItemMap(boss.zone, 16, 1, x, y, killer.id);
+        // Boss khó ở Tương Lai/Cold: mỗi phần thưởng quay tỷ lệ độc lập.
+        // Ngọc Rồng 3 Sao: 25%
+        if (Util.isTrue(25, 100)) {
+            ItemMap nr3s = new ItemMap(boss.zone, ConstItem.NGOC_RONG_3_SAO, 1, x, y, killer.id);
             Service.getInstance().dropItemMap(boss.zone, nr3s);
-
-            ItemMap gold = new ItemMap(boss.zone, 190, 1000000, x + Util.nextInt(-20, 20), y, killer.id);
-            gold.quantity = 1000000;
-            Service.getInstance().dropItemMap(boss.zone, gold);
-        } else if (maxHp < 500_000_000L) {
-            // Boss thường dưới 500M HP: 30% Ngọc Rồng 3 Sao.
-            if (Util.isTrue(30, 100)) {
-                ItemMap nr3s = new ItemMap(boss.zone, 16, 1, x, y, killer.id);
-                Service.getInstance().dropItemMap(boss.zone, nr3s);
-            }
         }
 
-        // Tất cả boss dùng chung tỷ lệ rơi đồ Thần theo HP.
-        // < 500M: 10% | 500M - <1B: 15% | >= 1B: 20%
-        int thanLinhRate;
-        if (maxHp >= 1_000_000_000L) {
+        // 10 Hồng Ngọc: 20%
+        if (Util.isTrue(20, 100)) {
+            ItemMap hongNgoc = new ItemMap(
+                    boss.zone,
+                    ConstItem.HONG_NGOC,
+                    10,
+                    x + Util.nextInt(-20, 20),
+                    y,
+                    killer.id);
+            Service.getInstance().dropItemMap(boss.zone, hongNgoc);
+        }
+
+        // 5 Thỏi Vàng: 20%. Dùng item Thỏi Vàng đang hoạt động của server (ID 457).
+        if (Util.isTrue(20, 100)) {
+            ItemMap thoiVang = new ItemMap(
+                    boss.zone,
+                    ConstItem.THOI_VANG,
+                    5,
+                    x + Util.nextInt(-20, 20),
+                    y,
+                    killer.id);
+            Service.getInstance().dropItemMap(boss.zone, thoiVang);
+        }
+
+        // Đồ Thần chỉ xét boss khó Tương Lai/Cold, không còn cơ chế áp dụng cho mọi boss.
+        // > 1 tỷ và < 2 tỷ HP: 10%
+        // >= 2 tỷ HP: 20%
+        int thanLinhRate = 0;
+        if (maxHp >= 2_000_000_000L) {
             thanLinhRate = 20;
-        } else if (maxHp >= 500_000_000L) {
-            thanLinhRate = 15;
-        } else {
+        } else if (maxHp > 1_000_000_000L) {
             thanLinhRate = 10;
         }
 
-        if (Util.isTrue(thanLinhRate, 100)) {
-            ItemMap thanLinh = dropOneItemThanLinh(boss.zone, x + Util.nextInt(-30, 30), y, killer);
+        if (thanLinhRate > 0 && Util.isTrue(thanLinhRate, 100)) {
+            ItemMap thanLinh = dropOneItemThanLinh(
+                    boss.zone,
+                    x + Util.nextInt(-30, 30),
+                    y,
+                    killer);
             if (thanLinh != null) {
                 Service.getInstance().dropItemMap(boss.zone, thanLinh);
             }
