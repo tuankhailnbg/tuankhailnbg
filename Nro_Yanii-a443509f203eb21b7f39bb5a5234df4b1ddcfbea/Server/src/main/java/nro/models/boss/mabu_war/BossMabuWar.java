@@ -38,13 +38,10 @@ public class BossMabuWar  extends Boss {
 
     @Override
     public void rewards(Player pl) {
-        // do than 1/20
-        int[] tempIds1 = new int[]{563, 565, 567};
+        // Giữ Nhẫn thời không sai lệch; bỏ Đồ Thần ngoài Tương Lai/Cold.
         int tempId = -1;
         if (Util.isTrue(1, 40)) {
             tempId = 992;
-        } else if (Util.isTrue(1, 40)) {
-            tempId = tempIds1[Util.nextInt(0, tempIds1.length - 1)];
         }
         if (Manager.EVENT_SEVER == 4 && tempId == -1) {
             tempId = ConstItem.LIST_ITEM_NLSK_TET_2023[Util.nextInt(0, ConstItem.LIST_ITEM_NLSK_TET_2023.length - 1)];
