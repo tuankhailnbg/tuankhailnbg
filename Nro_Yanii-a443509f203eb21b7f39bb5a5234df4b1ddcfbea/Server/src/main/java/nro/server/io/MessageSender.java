@@ -58,9 +58,18 @@ public class MessageSender implements Runnable {
         }
     }
 
-    public void doSendMessage(Message msg) {
+    public synchronized void doSendMessage(Message msg) {
         try {
             byte[] data = msg.getData();
+            boolean largeFrame = msg.command == -32 || msg.command == -66 || msg.command == -74
+                    || msg.command == 11 || msg.command == -67 || msg.command == -87 || msg.command == 66;
+            int maxSize = largeFrame ? 0xFFFFFF : 0xFFFF;
+            if (data != null && data.length > maxSize) {
+                // Validate before writing even the command byte. A wrapped length
+                // corrupts every subsequent packet on the connection.
+                Log.error("Refused oversized packet: command=" + msg.command + ", bytes=" + data.length);
+                return;
+            }
             if (session.connected) {
                 byte b = writeKey(msg.command);
                 dos.writeByte(b);
@@ -69,8 +78,7 @@ public class MessageSender implements Runnable {
             }
             if (data != null) {
                 int size = data.length;
-                if (msg.command == -32 || msg.command == -66 || msg.command == -74 || msg.command == 11
-                        || msg.command == -67 || msg.command == -87 || msg.command == 66) {
+                if (largeFrame) {
                     byte b = writeKey((byte) (size));
                     dos.writeByte(b - 128);
                     byte b2 = writeKey((byte) (size >> 8));
