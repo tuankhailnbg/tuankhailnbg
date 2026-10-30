@@ -175,8 +175,9 @@ public class Boss_ThanMeo extends FutureBoss {
                     dame = 199;
                 }
                 if (this.isDie()) {
-                    rewards(plAtt);
-                    notifyPlayeKill(plAtt);
+                    if (rewardOnDefeat(plAtt)) {
+                        notifyPlayeKill(plAtt);
+                    }
                     PlayerService.gI().changeAndSendTypePK(plAtt, ConstPlayer.NON_PK);
                     die();
                 }

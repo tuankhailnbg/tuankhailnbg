@@ -49,6 +49,8 @@ import java.util.logging.Logger;
  */
 public class RewardService {
 
+    public static final int BOSS_COMMON_DROP_RATE = 15;
+
     // 0,5% = 5 / 1000 quái.
     public static final int SKH_DROP_RATE = 5;
     public static final int SKH_DROP_RATE_BASE = 1000;
@@ -213,48 +215,45 @@ public class RewardService {
             return;
         }
 
-        int mapId = boss.zone.map.mapId;
-        boolean eligibleHardBoss = isFutureBoss(boss) || isColdMap(mapId);
-        if (!eligibleHardBoss) {
-            return;
-        }
-
         int x = boss.location.x;
         int y = boss.zone.map.yPhysicInTop(x, boss.location.y - 24);
-        long maxHp = Math.max(1L, (long) boss.nPoint.hpMax);
 
-        // Boss khó ở Tương Lai/Cold: mỗi phần thưởng quay tỷ lệ độc lập.
-        // Ngọc Rồng 3 Sao: 25%
-        if (Util.isTrue(25, 100)) {
+        // Mọi boss bị hạ: ba lượt quay độc lập, mỗi loại có tỷ lệ 15%.
+        if (Util.isTrue(BOSS_COMMON_DROP_RATE, 100)) {
             ItemMap nr3s = new ItemMap(boss.zone, ConstItem.NGOC_RONG_3_SAO, 1, x, y, killer.id);
             Service.getInstance().dropItemMap(boss.zone, nr3s);
         }
 
-        // 10 Hồng Ngọc: 20%
-        if (Util.isTrue(20, 100)) {
+        // Hồng Ngọc: 1-10 viên khi trúng lượt quay.
+        if (Util.isTrue(BOSS_COMMON_DROP_RATE, 100)) {
             ItemMap hongNgoc = new ItemMap(
                     boss.zone,
                     ConstItem.HONG_NGOC,
-                    10,
+                    Util.nextInt(1, 10),
                     x + Util.nextInt(-20, 20),
                     y,
                     killer.id);
             Service.getInstance().dropItemMap(boss.zone, hongNgoc);
         }
 
-        // 5 Thỏi Vàng: 20%. Dùng item Thỏi Vàng đang hoạt động của server (ID 457).
-        if (Util.isTrue(20, 100)) {
+        // Thỏi Vàng đang hoạt động (ID 457): 1-10 thỏi khi trúng lượt quay.
+        if (Util.isTrue(BOSS_COMMON_DROP_RATE, 100)) {
             ItemMap thoiVang = new ItemMap(
                     boss.zone,
                     ConstItem.THOI_VANG,
-                    5,
+                    Util.nextInt(1, 10),
                     x + Util.nextInt(-20, 20),
                     y,
                     killer.id);
             Service.getInstance().dropItemMap(boss.zone, thoiVang);
         }
 
-        // Đồ Thần chỉ xét boss khó Tương Lai/Cold, không còn cơ chế áp dụng cho mọi boss.
+        // Giữ điều kiện đồ Thần riêng cho boss Tương Lai/Cold.
+        int mapId = boss.zone.map.mapId;
+        if (!isFutureBoss(boss) && !isColdMap(mapId)) {
+            return;
+        }
+        long maxHp = Math.max(1L, (long) boss.nPoint.hpMax);
         // > 1 tỷ và < 2 tỷ HP: 10%
         // >= 2 tỷ HP: 20%
         int thanLinhRate = 0;
@@ -339,6 +338,8 @@ public class RewardService {
     public List<ItemMap> getRewardItems(Player player, Mob mob, int x, int yEnd) {
         int mapid = player.zone.map.mapId;
         List<ItemMap> list = new ArrayList<>();
+
+        NovemberEventService.gI().addMobDrops(player,mob,list,x,yEnd);
 
         // Rơi Set Kích Hoạt (SKH) chính xác 0,5% độc lập cho quái thường tại 4 map đầu mỗi hành tinh
         int mobMapId = (mob != null && mob.zone != null && mob.zone.map != null) ? mob.zone.map.mapId : mapid;
@@ -590,6 +591,12 @@ public class RewardService {
         // Hàng rào cuối: ngoài đúng 4 map đầu của mỗi hành tinh, tuyệt đối
         // không cho bất kỳ vật phẩm mang option Set Kích Hoạt đi ra từ luồng drop quái.
         // Điều này chặn cả dữ liệu reward cũ hoặc event nếu vô tình tạo SKH ở map khác.
+        Player goldOwner=player.isPet?((Pet)player).master:player;
+        if (goldOwner!=null && goldOwner.nPoint.tlGold>0) {
+            for(ItemMap item:list) if(item.itemTemplate.type==9) {
+                item.quantity=nro.event.november.NovemberRules.goldWithBonus(item.quantity,goldOwner.nPoint.tlGold);
+            }
+        }
         removeActivationSetOutsideAllowedMap(mobMapId, list);
 
         return list;

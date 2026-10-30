@@ -24,9 +24,9 @@ def static_contract():
     check("private static final int MAX_MILESTONE = 20" in source, "exactly 20 referral milestones")
     check("100+(milestone-1)*25" in source and "100+(n-1)*25" in source, "gold reward formula is 100 + 25*(n-1)")
     check(sum(100+25*i for i in range(20)) == 6750, "total 20-milestone payout is 6750 bars")
-    check('case ConstNpc.EVENT ->' in npc and '"Đua top"' not in npc
-          and '"NPC SỰ KIỆN\\nChọn sự kiện muốn tham gia"' not in npc,
-          "event NPC opens the referral menu directly without extra event text")
+    check('case ConstNpc.EVENT ->' in npc and 'openReferralMenu(player)' in npc
+          and 'openTopRaceMenu(player)' in npc,
+          "event hub routes to separate referral and top race menus")
     check('"|1|GIỚI THIỆU BẠN BÈ\\n"' in npc and '"Điểm của bạn: " + points' in source,
           "referral panel body only shows title and player points")
     check('sendLeaderboard(player)' in npc and 'sendRewardPanel(player)' in npc,
@@ -41,8 +41,12 @@ def static_contract():
           and 'public String register(' not in source and 'INSERT INTO referral_invites' not in source,
           "server cannot accept or store referral codes")
     event_npc = npc.split('case ConstNpc.EVENT ->', 1)[1].split('case ConstNpc.OBITO ->', 1)[0]
-    check('case 2 ->' in event_npc and 'case 3 ->' not in event_npc
-          and 'if (player.isAdmin()) Input.gI().createFormAdminReferralPoints(player);' in event_npc,
+    referral_menu = event_npc.split('if (menu == REFERRAL_MENU)', 1)[1].split('if (menu == TOP_RACE_MENU)', 1)[0]
+    admin_menu, player_menu = referral_menu.split('} else {', 1)
+    check('if (player.isAdmin())' in admin_menu and 'case 2 ->' in admin_menu
+          and 'case 3 ->' not in referral_menu
+          and 'Input.gI().createFormAdminReferralPoints(player);' in admin_menu
+          and 'createFormAdminReferralPoints' not in player_menu,
           "admin grant remains submenu index 2 with server permission check")
     check('"-----Nro Yanii-----"' not in user_input,
           "runtime input forms no longer show Nro Yanii branding")

@@ -29,8 +29,9 @@ public class Brolykhoinguyen extends FutureBoss {
             }
             this.nPoint.subHP(damage);
             if (isDie()) {
-                rewards(plAtt);
-                notifyPlayeKill(plAtt);
+                if (rewardOnDefeat(plAtt)) {
+                    notifyPlayeKill(plAtt);
+                }
                 die();
             }
             return damage;

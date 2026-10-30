@@ -26,8 +26,9 @@ public class Kogu extends FutureBoss {
             damage = 1;
             this.nPoint.subHP(damage);
             if (isDie()) {
-                rewards(plAtt);
-                notifyPlayeKill(plAtt);
+                if (rewardOnDefeat(plAtt)) {
+                    notifyPlayeKill(plAtt);
+                }
                 die();
             }
             return damage;

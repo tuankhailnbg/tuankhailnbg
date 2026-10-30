@@ -183,8 +183,9 @@ public class Boss_Whis extends FutureBoss {
                     }
                     dame = super.injured(plAtt, damage, piercing, isMobAttack);
                     if (this.isDie()) {
-                        rewards(plAtt);
-                        notifyPlayeKill(plAtt);
+                        if (rewardOnDefeat(plAtt)) {
+                            notifyPlayeKill(plAtt);
+                        }
                         plAtt.levelKillWhis++;
 
                         plAtt.lastTimeKillWhis = System.currentTimeMillis();

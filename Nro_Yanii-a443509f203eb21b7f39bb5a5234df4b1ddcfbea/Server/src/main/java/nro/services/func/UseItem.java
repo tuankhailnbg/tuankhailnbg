@@ -275,6 +275,14 @@ public class UseItem {
             Service.getInstance().sendThongBao(pl, "Chức năng bảo vệ đã được bật. Bạn vui lòng kiểm tra lại");
             return;
         }
+        if (item.template.id==nro.event.november.NovemberRules.BOX
+                || item.template.id==nro.event.november.NovemberRules.DAILY_BOX) {
+            String result=nro.services.NovemberEventService.gI().openBox(pl,
+                    item.template.id==nro.event.november.NovemberRules.DAILY_BOX);
+            InventoryService.gI().sendItemBags(pl);
+            Service.getInstance().sendThongBaoOK(pl,result);
+            return;
+        }
         if (Event.isEvent() && Event.getInstance().useItem(pl, item)) {
             return;
         }

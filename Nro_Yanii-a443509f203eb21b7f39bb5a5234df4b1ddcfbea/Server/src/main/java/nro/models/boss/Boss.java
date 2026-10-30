@@ -460,16 +460,7 @@ public abstract class Boss extends Player implements BossInterface {
             damage = methodBeforeGetDamage(damage, plAtt);
             this.nPoint.subHP(damage);
             if (isDie()) {
-                boolean shouldReward = false;
-                synchronized (this) {
-                    if (!this.rewarded) {
-                        this.rewarded = true;
-                        shouldReward = true;
-                    }
-                }
-                if (shouldReward) {
-                    rewards(plAtt);
-                    RewardService.gI().rewardBossDrop(this, plAtt);
+                if (rewardOnDefeat(plAtt)) {
                     notifyPlayeKill(plAtt);
                 }
                 die();
@@ -478,6 +469,20 @@ public abstract class Boss extends Player implements BossInterface {
         } else {
             return 0;
         }
+    }
+
+    /** Applies boss-specific and common loot once per life, including custom death paths. */
+    protected final boolean rewardOnDefeat(Player killer) {
+        synchronized (this) {
+            if (this.rewarded || !this.isDie()) {
+                return false;
+            }
+            this.rewarded = true;
+        }
+        rewards(killer);
+        RewardService.gI().rewardBossDrop(this, killer);
+        NovemberEventService.gI().onBossDefeated(this, killer);
+        return true;
     }
 
     protected void notifyPlayeKill(Player player) {

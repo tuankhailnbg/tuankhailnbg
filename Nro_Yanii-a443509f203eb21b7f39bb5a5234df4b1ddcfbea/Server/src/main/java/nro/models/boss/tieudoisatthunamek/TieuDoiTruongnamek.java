@@ -32,8 +32,9 @@ public class TieuDoiTruongnamek extends FutureBoss {
             damage = 1;
             this.nPoint.subHP(damage);
             if (isDie()) {
-                rewards(plAtt);
-                notifyPlayeKill(plAtt);
+                if (rewardOnDefeat(plAtt)) {
+                    notifyPlayeKill(plAtt);
+                }
                 die();
             }
             return damage;
@@ -47,11 +48,8 @@ public class TieuDoiTruongnamek extends FutureBoss {
         // Cộng điểm vào SQL
         // TopBoss.update(pl);
         /// Rơi vật phẩm
+        // Giữ tỷ lệ mảnh 50%; Hồng Ngọc dùng lượt quay chung 15%, số lượng 1-10.
         if (Util.isTrue(50, 100)) {
-            ItemMap itemMap = new ItemMap(this.zone, 861, Util.nextInt(1000, 10000),
-                    pl.location.x, this.zone.map.yPhysicInTop(pl.location.x, pl.location.y - 24), pl.id);
-            Service.getInstance().dropItemMap(this.zone, itemMap);
-        } else {
             ItemMap itemMap = new ItemMap(this.zone, Util.nextInt(1066, 1070), Util.nextInt(10, 20),
                     pl.location.x, this.zone.map.yPhysicInTop(pl.location.x, pl.location.y - 24), pl.id);
             Service.getInstance().dropItemMap(this.zone, itemMap);

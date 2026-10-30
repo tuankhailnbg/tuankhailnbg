@@ -173,8 +173,9 @@ public class Boss_ThuongDe extends FutureBoss {
                 }
                 dame = super.injured(plAtt, damage, piercing, isMobAttack);
                 if (this.isDie()) {
-                    rewards(plAtt);
-                    notifyPlayeKill(plAtt);
+                    if (rewardOnDefeat(plAtt)) {
+                        notifyPlayeKill(plAtt);
+                    }
                     PlayerService.gI().changeAndSendTypePK(plAtt, ConstPlayer.NON_PK);
                     die();
                 }

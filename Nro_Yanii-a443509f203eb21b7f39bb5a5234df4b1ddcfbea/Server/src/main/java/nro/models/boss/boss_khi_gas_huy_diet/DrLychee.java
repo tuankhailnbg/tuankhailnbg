@@ -107,7 +107,7 @@ public class DrLychee extends BossKhiGasHuyDiet {
                     break;
                 case DO_NOTHING:
                     if (Util.canDoWithTime(lastTimeStartLeaveMap, 5000)) {
-                        rewards(plAttack);
+                        rewardOnDefeat(plAttack);
                         leaveMap();
                         this.changeStatus(RESPAWN);
                     }
@@ -130,8 +130,9 @@ public class DrLychee extends BossKhiGasHuyDiet {
                 dame = (int) (this.nPoint.hp - ptHPMax);
             }
             if (this.isDie()) {
-                rewards(plAtt);
-                notifyPlayeKill(plAtt);
+                if (rewardOnDefeat(plAtt)) {
+                    notifyPlayeKill(plAtt);
+                }
                 die();
                 EffectSkillService.gI().removeMaPhongBa(this);
             }
