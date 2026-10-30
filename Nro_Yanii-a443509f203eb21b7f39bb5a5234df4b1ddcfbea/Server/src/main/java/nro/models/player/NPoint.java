@@ -138,6 +138,7 @@ public class NPoint {
      * Tỉ lệ giảm sức đánh
      */
     public short tlSubSD;
+    public short novemberTrainingPenalty;
     public List<Integer> tlSpeed;
     public int mstChuong;
     public int tlGiamst;
@@ -212,6 +213,9 @@ public class NPoint {
 
     public void setPoint(ItemOption io) {
         switch (io.optionTemplate.id) {
+            case nro.event.november.NovemberRules.PENALTY_OPTION:
+                this.novemberTrainingPenalty += io.param;
+                break;
             case 0: // Tấn công +#
                 this.dameAdd += io.param;
                 break;
@@ -982,6 +986,7 @@ public class NPoint {
         this.tlNeDon = 0;
         this.tlSDDep.clear();
         this.tlSubSD = 0;
+        this.novemberTrainingPenalty = 0;
         this.tlHpGiamODo = 0;
         this.teleport = false;
         this.tlSpeed.clear();
@@ -1551,6 +1556,13 @@ public class NPoint {
         setHpMax();
         setMpMax();
         setDame();
+        if (novemberTrainingPenalty>0) {
+            this.hpMax=nro.event.november.NovemberRules.penalize(this.hpMax,novemberTrainingPenalty);
+            this.mpMax=nro.event.november.NovemberRules.penalize(this.mpMax,novemberTrainingPenalty);
+            this.dame=nro.event.november.NovemberRules.penalize(this.dame,novemberTrainingPenalty);
+            this.hp=Math.min(this.hp,this.hpMax);
+            this.mp=Math.min(this.mp,this.mpMax);
+        }
         setDef();
         setCrit();
         setHpHoi();

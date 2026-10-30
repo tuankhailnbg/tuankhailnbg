@@ -96,6 +96,8 @@ public class NpcFactory {
         Npc npc = null;
         try {
             npc = switch (tempId) {
+                case nro.event.november.NovemberRules.NPC ->
+                    new NovemberEventNpc(mapId,status,cx,cy,tempId,avartar);
                 case ConstNpc.EVENT ->
                     new Npc(mapId, status, cx, cy, tempId, avartar) {
                         private static final int EVENT_MAIN_MENU = 20261029;
