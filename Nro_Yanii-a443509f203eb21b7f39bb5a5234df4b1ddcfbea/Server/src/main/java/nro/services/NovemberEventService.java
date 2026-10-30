@@ -99,6 +99,34 @@ public final class NovemberEventService {
         else if (!result.isEmpty()) error("Không lưu được tiến độ hạ quái/boss: "+result);
     }
 
+    /** Admin test inventory; uses the same atomic persistence as event exchanges. */
+    public String redeemTestGift(Player p) {
+        if (p==null || p.getSession()==null || !p.isAdmin())
+            return "Giftcode thử sự kiện chỉ dành cho tài khoản Admin.";
+        return transaction(p,true,(s,c)->{
+            if (s.testGiftClaimed) throw new IllegalArgumentException("Nhân vật đã nhận giftcode thử sự kiện này.");
+            if (InventoryService.gI().getCountEmptyBag(p)<NovemberRules.TEST_GIFT_SLOTS)
+                throw new IllegalArgumentException("Cần ít nhất 17 ô trống hành trang để nhận đủ bộ quà thử.");
+            give(p,NovemberCatalog.item(NovemberRules.PEN,10000));
+            give(p,NovemberCatalog.item(NovemberRules.PAPER,5000));
+            give(p,NovemberCatalog.item(NovemberRules.BADGE,1000));
+            give(p,NovemberCatalog.item(NovemberRules.CARD,1000));
+            give(p,NovemberCatalog.item(NovemberRules.BOX,100));
+            give(p,NovemberCatalog.item(NovemberRules.DAILY_BOX,100));
+            for (int model=0;model<5;model++) {
+                give(p,NovemberCatalog.costume(model,0,false));
+                give(p,NovemberCatalog.costume(model,0,true));
+            }
+            give(p,NovemberCatalog.item(NovemberRules.TITLE,1));
+            s.testGiftClaimed=true;
+            return "Đã nhận bộ test Tri Ân: 10.000 Bút, 5.000 Thiệp trắng, 1.000 Huy hiệu, "
+                    +"1.000 Thiệp tri ân, 100 hộp tự ghép, 100 hộp thưởng ngày, "
+                    +"5 cải trang thường + 5 Vinh Danh vĩnh viễn và thẻ danh hiệu. "
+                    +"Nhận code chưa cộng xu/điểm. Tặng thiệp hoặc mở hộp tự ghép trong tháng 11 vẫn tính điểm đua top; "
+                    +"hãy dùng nhân vật Admin chuyên test.";
+        });
+    }
+
     public String craftCards(Player p,int count) {
         return transaction(p,true,(s,c)->{ active(); NovemberRules.checkQuantity(count);
             take(p,NovemberRules.PEN,10*count); take(p,NovemberRules.PAPER,5*count);

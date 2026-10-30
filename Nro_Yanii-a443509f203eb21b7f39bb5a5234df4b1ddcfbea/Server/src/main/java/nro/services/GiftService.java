@@ -1,6 +1,7 @@
 package nro.services;
 
 import nro.jdbc.DBService;
+import nro.event.november.NovemberRules;
 import nro.models.item.Item;
 import nro.models.item.ItemOption;
 import nro.models.player.Player;
@@ -37,6 +38,14 @@ public class GiftService {
     }
 
     public void use(Player player, String code) {
+        if (code != null && NovemberRules.TEST_GIFT_CODE.equalsIgnoreCase(code.trim())) {
+            String result = NovemberEventService.gI().redeemTestGift(player);
+            if (player != null) {
+                InventoryService.gI().sendItemBags(player);
+                Service.getInstance().sendThongBaoOK(player, result);
+            }
+            return;
+        }
         // Mã thử 4 cải trang sự kiện chỉ dành cho Admin để tránh phát tán đồ mạnh.
         if (code != null && code.trim().equalsIgnoreCase("nrotest4ct2026")
                 && (player == null || player.getSession() == null || !player.isAdmin())) {
