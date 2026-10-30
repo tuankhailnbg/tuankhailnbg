@@ -33,8 +33,9 @@ public class TrungUyTrang extends BossDoanhTrai {
         int x = this.location.x;
         int y = this.zone.map.yPhysicInTop(x, this.location.y - 24);
         /// Rơi nro
-        if (Util.isTrue(100, 100)) {
-            int[] vatpham = {16, 17, 18};
+        // Giữ mỗi loại 4/5 sao ở 1/3; ngọc 3 sao dùng lượt quay chung 15%.
+        if (Util.isTrue(2, 3)) {
+            int[] vatpham = {17, 18};
             int vatphamChon = vatpham[Util.nextInt(0, vatpham.length - 1)];
             ItemMap itemMap = new ItemMap(this.zone, vatphamChon, 1, x, y, pl.id);
             Service.getInstance().dropItemMap(this.zone, itemMap);

@@ -51,7 +51,7 @@ public class BuiBui_Tang3 extends BossMabuWar {
             }
             int dame = super.injured(plAtt, damage, piercing, isMobAttack);
             if (this.isDie()) {
-                rewards(plAtt);
+                rewardOnDefeat(plAtt);
             }
             return dame;
         }
@@ -59,10 +59,7 @@ public class BuiBui_Tang3 extends BossMabuWar {
 
     @Override
     public void rewards(Player pl) {
-        if (Util.isTrue(1, 15)) {
-            ItemMap itemMap = new ItemMap(this.zone, 861, 1, this.location.x, this.zone.map.yPhysicInTop(this.location.x, 100), -1);
-            Service.getInstance().dropItemMap(this.zone, itemMap);
-        }
+        // Hồng Ngọc được quay một lần trong phần thưởng chung của mọi boss.
 
         TaskService.gI().checkDoneTaskKillBoss(pl, this);
         generalRewards(pl);

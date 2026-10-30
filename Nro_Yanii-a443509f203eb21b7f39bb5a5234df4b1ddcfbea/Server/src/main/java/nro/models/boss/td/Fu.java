@@ -55,8 +55,9 @@ public class Fu extends FutureBoss {
             this.nPoint.subHP(damage);
             // Kiểm tra nếu chết
             if (isDie()) {
-                rewards(plAtt);
-                notifyPlayeKill(plAtt);
+                if (rewardOnDefeat(plAtt)) {
+                    notifyPlayeKill(plAtt);
+                }
                 die();
             }
             return damage;

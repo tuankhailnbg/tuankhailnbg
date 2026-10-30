@@ -95,10 +95,13 @@ public abstract class BossDoanhTrai extends Boss {
 
     @Override
     public void rewards(Player pl) {
-        int[] nro = { 16, 17, 18 };
-        ItemMap itemMap = new ItemMap(this.zone, nro[Util.nextInt(0, nro.length - 1)], 1,
-                this.location.x, this.zone.map.yPhysicInTop(this.location.x, 100), -1);
-        Service.getInstance().dropItemMap(this.zone, itemMap);
+        // Giữ mỗi loại 4/5 sao ở 1/3; ngọc 3 sao dùng lượt quay chung 15%.
+        if (Util.isTrue(2, 3)) {
+            int[] nro = {17, 18};
+            ItemMap itemMap = new ItemMap(this.zone, nro[Util.nextInt(0, nro.length - 1)], 1,
+                    this.location.x, this.zone.map.yPhysicInTop(this.location.x, 100), -1);
+            Service.getInstance().dropItemMap(this.zone, itemMap);
+        }
         TaskService.gI().checkDoneTaskKillBoss(pl, this);
     }
 

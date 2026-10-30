@@ -235,8 +235,9 @@ public class Boss_Tau77 extends FutureBoss {
             if (plAtt.playerTask.taskMain.id == 10 && plAtt.playerTask.taskMain.index == 1) {
                 int dame = 0;
                 if (this.isDie()) {
-                    rewards(plAtt);
-                    notifyPlayeKill(plAtt);
+                    if (rewardOnDefeat(plAtt)) {
+                        notifyPlayeKill(plAtt);
+                    }
                     PlayerService.gI().changeAndSendTypePK(plAtt, ConstPlayer.NON_PK);
                     PlayerService.gI().changeAndSendTypePK(this, ConstPlayer.NON_PK);
                     die();
