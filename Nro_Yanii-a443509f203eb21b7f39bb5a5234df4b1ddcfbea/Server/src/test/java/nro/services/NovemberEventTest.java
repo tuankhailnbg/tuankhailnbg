@@ -78,6 +78,69 @@ public class NovemberEventTest {
             st.setString(1,s.json());st.setLong(2,s.score);st.setLong(3,s.reachedAt);st.setLong(4,p.id);st.executeUpdate();
         }
     }
+    private void makeAdmin(Player p) {
+        nro.server.io.Session session=new nro.server.io.Session();session.isAdmin=true;p.setSession(session);
+    }
+    @Test public void testGiftRejectsNonAdminsBeforeConnectingToDatabase() throws Exception {
+        NovemberEventService disconnected=new NovemberEventService(()->{throw new AssertionError("Must not open DB");},clock);
+        assertTrue(disconnected.redeemTestGift(null).contains("Admin"));
+        assertTrue(disconnected.redeemTestGift(player).contains("Admin"));
+        player.setSession(new nro.server.io.Session());
+        assertTrue(disconnected.redeemTestGift(player).contains("Admin"));
+        // Actual form routing must reserve the test code, including case and whitespace variants.
+        GiftService.gI().use(player,"  TRIAN11TEST2026  ");
+        assertEquals(30,InventoryService.gI().getCountEmptyBag(player));
+        try(Connection c=connection();Statement st=c.createStatement();ResultSet r=st.executeQuery("SELECT COUNT(*) FROM november2026_players")) {
+            r.next();assertEquals(0,r.getInt(1));
+        }
+    }
+    @Test public void testGiftGrantsEveryEventItemBeforeStartWithProductionCostumeStats() throws Exception {
+        makeAdmin(player);clock.instant=NovemberRules.START.minusSeconds(1);
+        assertTrue(event.redeemTestGift(player).startsWith("Đã nhận bộ test"));
+        int[][] materials={{2400,10000},{2401,5000},{2402,1000},{2403,1000},{2404,100},{2405,100},{2420,1}};
+        for(int[] material:materials)assertEquals(material[1],NovemberEventService.count(player,material[0]));
+        assertEquals(13,InventoryService.gI().getCountEmptyBag(player));
+        for(int model=0;model<5;model++)for(int base:new int[]{2410,2415}) {
+            final int id=base+model;
+            Item item=player.inventory.itemsBag.stream().filter(i->i.isNotNullItem()&&i.template.id==id).findFirst().orElseThrow();
+            assertEquals(1,item.quantity);
+            for(int[] option:NovemberRules.OPTIONS[model])
+                assertTrue(item.itemOptions.stream().anyMatch(o->o.optionTemplate.id==option[0]&&o.param==option[1]));
+            assertTrue(item.itemOptions.stream().anyMatch(o->o.optionTemplate.id==30));
+            assertFalse(item.itemOptions.stream().anyMatch(o->o.optionTemplate.id==93));
+        }
+        NovemberState s=state(player);assertTrue(s.testGiftClaimed);assertEquals(0,s.coins);assertEquals(0,s.score);
+        assertFalse(s.topClaimed);assertFalse(s.participation);
+        try(Connection c=connection();Statement st=c.createStatement();ResultSet r=st.executeQuery("SELECT items_bag FROM player WHERE id=1")) {
+            r.next();assertEquals(InventoryService.gI().itemsBagToString(player),r.getString(1));
+        }
+        NovemberEventService restarted=new NovemberEventService(()->connection(),clock);
+        clock.instant=clock.instant.plus(Duration.ofDays(1));
+        assertTrue(restarted.redeemTestGift(player).contains("đã nhận"));
+        assertEquals(10000,NovemberEventService.count(player,2400));assertTrue(state(player).testGiftClaimed);
+    }
+    @Test public void testGiftFullBagOrFailedSaveNeverConsumesClaimOrLeavesPartialItems() throws Exception {
+        makeAdmin(player);
+        for(int i=0;i<14;i++)player.inventory.itemsBag.set(i,NovemberCatalog.item(220,99999));
+        assertTrue(event.redeemTestGift(player).contains("17 ô trống"));
+        assertEquals(0,NovemberEventService.count(player,2400));assertFalse(state(player).testGiftClaimed);
+        for(int i=0;i<14;i++)player.inventory.itemsBag.set(i,ItemService.gI().createItemNull());
+        try(Connection c=connection();Statement st=c.createStatement()){st.executeUpdate("DELETE FROM player WHERE id=1");}
+        assertTrue(event.redeemTestGift(player).contains("hoàn lại"));
+        assertEquals(30,InventoryService.gI().getCountEmptyBag(player));assertFalse(state(player).testGiftClaimed);
+        try(Connection c=connection();Statement st=c.createStatement()){st.executeUpdate("INSERT INTO player VALUES(1,'[]')");}
+        assertTrue(event.redeemTestGift(player).startsWith("Đã nhận bộ test"));
+    }
+    @Test public void simultaneousTestGiftRequestsGrantOnlyOneBundle() throws Exception {
+        makeAdmin(player);ExecutorService pool=Executors.newFixedThreadPool(2);
+        try {
+            Future<String> a=pool.submit(()->event.redeemTestGift(player));
+            Future<String> b=pool.submit(()->event.redeemTestGift(player));
+            a.get(5,TimeUnit.SECONDS);b.get(5,TimeUnit.SECONDS);
+        } finally {pool.shutdownNow();}
+        assertEquals(10000,NovemberEventService.count(player,2400));assertEquals(1,NovemberEventService.count(player,2410));
+        assertTrue(state(player).testGiftClaimed);
+    }
     @Test public void eventBoundariesUseVietnameseTime() {
         assertEquals(NovemberRules.Phase.BEFORE,NovemberRules.phase(Instant.parse("2026-10-31T16:59:59Z")));
         assertEquals(NovemberRules.Phase.ACTIVE,NovemberRules.phase(Instant.parse("2026-10-31T17:00:00Z")));

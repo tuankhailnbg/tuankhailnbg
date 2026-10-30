@@ -8,7 +8,7 @@ public final class NovemberState {
     public long coins, score, reachedAt;
     public String date = "";
     public int kills, bosses, gifts, claims;
-    public boolean participation, topClaimed;
+    public boolean participation, topClaimed, testGiftClaimed;
 
     public void day(LocalDate today) {
         if (!today.toString().equals(date)) {
@@ -23,6 +23,7 @@ public final class NovemberState {
         o.put("coins",coins); o.put("score",score); o.put("reachedAt",reachedAt); o.put("date",date);
         o.put("kills",kills); o.put("bosses",bosses); o.put("gifts",gifts); o.put("claims",claims);
         o.put("participation",participation); o.put("topClaimed",topClaimed);
+        o.put("testGiftClaimed",testGiftClaimed);
         return o.toJSONString();
     }
     public static NovemberState parse(String text) {
@@ -33,7 +34,8 @@ public final class NovemberState {
         s.date=String.valueOf(o.getOrDefault("date","")); s.kills=(int)num(o,"kills");
         s.bosses=(int)num(o,"bosses"); s.gifts=(int)num(o,"gifts"); s.claims=(int)num(o,"claims");
         s.participation=Boolean.TRUE.equals(o.get("participation"));
-        s.topClaimed=Boolean.TRUE.equals(o.get("topClaimed")); return s;
+        s.topClaimed=Boolean.TRUE.equals(o.get("topClaimed"));
+        s.testGiftClaimed=Boolean.TRUE.equals(o.get("testGiftClaimed")); return s;
     }
     private static long num(JSONObject o, String key) {
         Object v=o.get(key); return v instanceof Number n ? n.longValue() : 0L;

@@ -14,7 +14,26 @@ JAR đăng ký template sự kiện bằng dữ liệu hình có sẵn và tạo
 
 Version dữ liệu client tăng: `vsMap=6`, `vsItem=9`. Client tải lại template NPC/vật phẩm khi kết nối. Hình NPC, icon và sprite cải trang được tái sử dụng từ nguồn hiện có; không cần phân phối sprite mới. Chưa kiểm chứng hình ảnh bằng client Unity đang chạy trên VPS.
 
-## Thời gian (Asia/Ho_Chi_Minh)
+## Giftcode test cho Admin
+
+Sau khi pull bản có giftcode và build/khởi động lại, dùng tài khoản **Admin**, mở **Mã quà tặng** rồi nhập `trian11test2026`. Cần **17 ô trống** hành trang. Mã được xử lý trực tiếp trong Java, không cần thêm bản ghi vào `gift_codes` hoặc chạy SQL riêng.
+
+| Vật phẩm | Số lượng |
+|---|---:|
+| Bút tri ân | 10.000 |
+| Thiệp trắng | 5.000 |
+| Huy hiệu sư phụ | 1.000 |
+| Thiệp tri ân | 1.000 |
+| Hộp tự ghép / hộp thưởng ngày | 100 mỗi loại |
+| 5 mẫu cải trang thường, ID 2410–2414 | 1 mỗi mẫu, vĩnh viễn |
+| 5 mẫu cải trang Vinh Danh, ID 2415–2419 | 1 mỗi mẫu, vĩnh viễn |
+| Thẻ danh hiệu Đệ Tử Xuất Sắc, ID 2420 | 1 |
+
+Mỗi nhân vật nhận **một lần**, kể cả khi thoát game, đổi ngày hoặc restart server. Cờ nhận và túi được lưu trong cùng transaction; túi thiếu chỗ/lỗi lưu không mất lượt nhận. Vật phẩm giữ nguyên option chuẩn và không giao dịch. Mã có thể nhận trước 01/11 để thử tên, hình và chỉ số; chức năng ghép/tặng/mở hộp tại NPC vẫn theo lịch sự kiện. Nhận code không tự cộng xu/điểm và không đánh dấu đã nhận nhiệm vụ/quà top.
+
+**Dùng nhân vật Admin chuyên test:** nếu tặng thiệp hoặc mở hộp tự ghép trong tháng 11, nhân vật vẫn được cộng điểm vào bảng top theo luật thường. 1.000 thiệp có sẵn có thể tặng lấy 10.000 xu để thử cửa hàng. Các phần thưởng hỗ trợ/đá/mảnh từ hộp vẫn nhận bằng cách mở hộp theo bảng tỷ lệ bên dưới.
+
+## Lịch sự kiện (Asia/Ho_Chi_Minh)
 
 | Giai đoạn | Khoảng thời gian |
 |---|---|

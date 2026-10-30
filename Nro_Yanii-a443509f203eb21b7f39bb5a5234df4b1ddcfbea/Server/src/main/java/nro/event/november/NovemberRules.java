@@ -12,6 +12,8 @@ public final class NovemberRules {
     public static final int PEN = 2400, PAPER = 2401, BADGE = 2402, CARD = 2403;
     public static final int BOX = 2404, DAILY_BOX = 2405, COSTUME = 2410, TOP_COSTUME = 2415;
     public static final int TITLE = 2420, PENALTY_OPTION = 251, NPC = 80;
+    public static final String TEST_GIFT_CODE = "trian11test2026";
+    public static final int TEST_GIFT_SLOTS = 17;
     public static final int MATERIAL_RATE = 4, BADGE_RATE = 30;
     public static final int[] DAYS = {3, 7, 30, 0};
     public static final int[] PRICES = {50, 150, 500, 1500};
