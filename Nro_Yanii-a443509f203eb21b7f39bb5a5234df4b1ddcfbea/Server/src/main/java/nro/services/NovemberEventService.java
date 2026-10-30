@@ -37,15 +37,21 @@ public final class NovemberEventService {
     public synchronized void initialize() throws Exception {
         if (initialized) return;
         try (Connection c=connections.open(); Statement st=c.createStatement()) {
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS november2026_players (player_id BIGINT PRIMARY KEY,"
+            ensureTable(c,"november2026_players","CREATE TABLE IF NOT EXISTS november2026_players (player_id BIGINT PRIMARY KEY,"
                     +"player_name VARCHAR(100) NOT NULL,score BIGINT NOT NULL DEFAULT 0,"
                     +"reached_at BIGINT NOT NULL DEFAULT 0,data LONGTEXT NOT NULL) ENGINE=InnoDB");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS november2026_meta (id INT PRIMARY KEY,settled INT NOT NULL) ENGINE=InnoDB");
+            ensureTable(c,"november2026_meta","CREATE TABLE IF NOT EXISTS november2026_meta (id INT PRIMARY KEY,settled INT NOT NULL) ENGINE=InnoDB");
             st.executeUpdate("INSERT IGNORE INTO november2026_meta(id,settled) VALUES(1,0)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS november2026_winners (player_id BIGINT PRIMARY KEY,"
+            ensureTable(c,"november2026_winners","CREATE TABLE IF NOT EXISTS november2026_winners (player_id BIGINT PRIMARY KEY,"
                     +"rank_no INT NOT NULL,score BIGINT NOT NULL,player_name VARCHAR(100) NOT NULL) ENGINE=InnoDB");
         }
         initialized=true;
+    }
+    private void ensureTable(Connection c,String table,String ddl) throws SQLException {
+        try(ResultSet tables=c.getMetaData().getTables(c.getCatalog(),null,table,null)) {
+            while(tables.next())if(table.equalsIgnoreCase(tables.getString("TABLE_NAME")))return;
+        }
+        try(Statement st=c.createStatement()) {st.executeUpdate(ddl);}
     }
     public NovemberRules.Phase phase() { return NovemberRules.phase(clock.instant()); }
     private void active() { if (phase()!=NovemberRules.Phase.ACTIVE) throw new IllegalArgumentException("Chỉ cày và tính điểm từ 01 đến hết 30/11/2026."); }

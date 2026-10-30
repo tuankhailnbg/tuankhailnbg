@@ -232,6 +232,26 @@ public class NovemberEventTest {
             try(ResultSet r=st.executeQuery("SELECT NAME FROM npc_template WHERE id=80")){r.next();assertEquals("Sứ Giả Tri Ân",r.getString(1));}
         }
     }
+    @Test public void existingSchemaBootstrapsWithoutCreatePrivilege() throws Exception {
+        NovemberEventService restricted=new NovemberEventService(()->{
+            Connection connection=connection();
+            return (Connection)java.lang.reflect.Proxy.newProxyInstance(Connection.class.getClassLoader(),new Class<?>[]{Connection.class},(proxy,method,args)->{
+                try {
+                    Object value=method.invoke(connection,args);
+                    if(method.getName().equals("createStatement")) {
+                        Statement statement=(Statement)value;
+                        return java.lang.reflect.Proxy.newProxyInstance(Statement.class.getClassLoader(),new Class<?>[]{Statement.class},(p,m,a)->{
+                            if(a!=null&&a.length>0&&a[0] instanceof String sql&&sql.startsWith("CREATE "))throw new SQLException("CREATE denied","42000");
+                            try{return m.invoke(statement,a);}catch(java.lang.reflect.InvocationTargetException e){throw e.getCause();}
+                        });
+                    }
+                    return value;
+                } catch(java.lang.reflect.InvocationTargetException e){throw e.getCause();}
+            });
+        },clock);
+        restricted.initialize();
+        assertTrue(restricted.status(player).contains("TRI ÂN SƯ PHỤ"));
+    }
     private Zone zone() {
         nro.models.map.Map m=new nro.models.map.Map(2,"Test",(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,
                 new int[2][2],new int[2],0,false,10,new ArrayList<>(),new ArrayList<>()) {

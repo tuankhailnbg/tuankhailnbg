@@ -10,6 +10,7 @@ on:
       - ".github/workflows/nro-referral-ci.yml"
       - "scripts/test_nro_referral_contract.py"
       - "scripts/test_referral_costume_migration.py"
+      - "scripts/test_november_event_migration.py"
 
 jobs:
   build-server:
@@ -25,11 +26,12 @@ jobs:
           cache-dependency-path: Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea/Server/pom.xml
       - name: Maven package including Java compilation
         working-directory: Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea/Server
-        run: mvn -B -ntp -DskipTests package
+        run: mvn -B -ntp clean package
       - name: Contract tests
         run: |
           python3 scripts/test_nro_referral_contract.py
           python3 scripts/test_referral_costume_migration.py
+          python3 scripts/test_november_event_migration.py
 
   sql-migration:
     name: MariaDB 10.11 migration smoke
@@ -61,3 +63,4 @@ jobs:
         run: |
           python3 scripts/test_nro_referral_contract.py --db
           python3 scripts/test_referral_costume_migration.py --db
+          python3 scripts/test_november_event_migration.py --db
