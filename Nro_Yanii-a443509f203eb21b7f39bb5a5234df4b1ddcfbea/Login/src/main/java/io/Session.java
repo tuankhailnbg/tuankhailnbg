@@ -102,7 +102,10 @@ public class Session {
             this.dos.write(data);
             this.dos.flush();
         } catch (Exception exception) {
-            // empty catch block
+            System.err.println("[LOGIN] Packet send failed for game-session " + this.id
+                    + ", command=" + m.command + ": " + exception);
+            // A broken transport must not look like a successful auth response.
+            disconnect();
         }
     }
 
