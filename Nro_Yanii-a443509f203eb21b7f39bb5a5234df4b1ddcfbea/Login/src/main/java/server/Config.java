@@ -29,7 +29,14 @@ public class Config {
             Properties props = new Properties();
             props.load(new InputStreamReader((InputStream) input, StandardCharsets.UTF_8));
             props.forEach((BiConsumer<? super Object, ? super Object>) ((BiConsumer<Object, Object>) (t,
-                    u) -> System.out.println(String.format("Config - %s: %s", t, u))));
+                    u) -> {
+                String key = String.valueOf(t);
+                String low = key.toLowerCase(java.util.Locale.ROOT);
+                String value = (low.contains("password") || low.contains("secret") || low.contains("token")
+                        || low.contains("apikey") || low.endsWith(".key"))
+                        ? "[REDACTED]" : String.valueOf(u);
+                System.out.println(String.format("Config - %s: %s", key, value));
+            }));
             this.listen = Short.parseShort(props.getProperty("server.port"));
             this.driver = props.getProperty("db.driver");
             this.username = props.getProperty("db.user");

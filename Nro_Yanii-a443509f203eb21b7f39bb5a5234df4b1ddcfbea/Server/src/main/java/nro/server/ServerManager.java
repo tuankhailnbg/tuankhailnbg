@@ -16,6 +16,7 @@ import nro.models.map.phoban.BanDoKhoBau;
 import nro.models.map.phoban.DoanhTrai;
 import nro.models.player.Player;
 import nro.server.io.Session;
+import nro.server.security.ConnectionGuard;
 import nro.services.ClanService;
 import nro.utils.Log;
 import nro.utils.TimeUtil;
@@ -45,7 +46,9 @@ public class ServerManager {
 
     public static String timeStart;
 
+    // Legacy connection-count mirror retained for compatibility with older modules.
     public static final Map CLIENTS = new HashMap();
+    private static final ConnectionGuard CONNECTION_GUARD = new ConnectionGuard();
 
     public static String NAME = "";
     public static int PORT = 14445;
@@ -123,13 +126,27 @@ public class ServerManager {
                     Socket sc = listenSocket.accept();
                     String ip = (((InetSocketAddress) sc.getRemoteSocketAddress()).getAddress()).toString().replace("/", "");
                     if (canConnectWithIp(ip)) {
-                        Session session = new Session(sc, controller, ip);
-                        session.ipAddress = ip;
+                        try {
+                            new Session(sc, controller, ip);
+                        } catch (Exception e) {
+                            // Constructor failures must not leak a reserved IP slot.
+                            releaseConnection(ip);
+                            try {
+                                sc.close();
+                            } catch (IOException ignored) {
+                            }
+                            Log.error(ServerManager.class, e, "[ANTI_DOS] Session initialization failed");
+                        }
                     } else {
                         sc.close();
+                        long blocked = CONNECTION_GUARD.takeRejectionsForLog();
+                        if (blocked > 0) {
+                            Log.warning("[ANTI_DOS] Dropped " + blocked
+                                    + " recent TCP connection attempts, active=" + CONNECTION_GUARD.getActiveGlobal());
+                        }
                     }
                 } catch (Exception e) {
-
+                    Log.error(ServerManager.class, e, "[ANTI_DOS] Socket accept error");
                 }
             }
             listenSocket.close();
@@ -140,31 +157,40 @@ public class ServerManager {
     }
 
     private boolean canConnectWithIp(String ipAddress) {
+        boolean accepted = CONNECTION_GUARD.tryAcquire(ipAddress, Math.max(1, Manager.MAX_PER_IP));
+        if (accepted) {
+            synchronized (CLIENTS) {
+                CLIENTS.put(ipAddress, CONNECTION_GUARD.getActiveForIp(ipAddress));
+            }
+        }
+        return accepted;
+    }
+
+    private void releaseConnection(String ipAddress) {
+        if (ipAddress == null) {
+            return;
+        }
+        CONNECTION_GUARD.release(ipAddress);
         synchronized (CLIENTS) {
-            Object o = CLIENTS.get(ipAddress);
-            if (o == null) {
-                CLIENTS.put(ipAddress, 1);
-                return true;
+            int active = CONNECTION_GUARD.getActiveForIp(ipAddress);
+            if (active == 0) {
+                CLIENTS.remove(ipAddress);
+            } else {
+                CLIENTS.put(ipAddress, active);
             }
-            int n = Integer.parseInt(String.valueOf(o));
-            if (n < Manager.MAX_PER_IP) {
-                CLIENTS.put(ipAddress, n + 1);
-                return true;
-            }
-            Log.warning("[NET] Tu choi ket noi do vuot gioi han IP=" + ipAddress
-                    + " max=" + Manager.MAX_PER_IP);
-            return false;
         }
     }
 
+    public int getActiveConnectionsFromIp(String ipAddress) {
+        return CONNECTION_GUARD.getActiveForIp(ipAddress);
+    }
+
+    public boolean canAuthenticateFromIp(String ipAddress) {
+        return CONNECTION_GUARD.allowAuthentication(ipAddress);
+    }
+
     public void disconnect(Session session) {
-        synchronized (CLIENTS) {
-            Object o = CLIENTS.get(session.ipAddress);
-            if (o != null) {
-                int n = Integer.parseInt(String.valueOf(o));
-                CLIENTS.put(session.ipAddress, Math.max(0, n - 1));
-            }
-        }
+        releaseConnection(session.ipAddress);
     }
 
     private void activeCommandLine() {

@@ -20,7 +20,8 @@ import nro.services.TaskService;
 
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -28,7 +29,14 @@ import static nro.server.Manager.KEY_SERVER;
 
 public class Session {
 
-    private static final Map<String, AntiLogin> ANTILOGIN = new HashMap<>();
+    // Bounded LRU cache: arbitrary Internet IPs must not grow this map forever.
+    private static final Map<String, AntiLogin> ANTILOGIN = Collections.synchronizedMap(
+            new LinkedHashMap<String, AntiLogin>(128, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, AntiLogin> eldest) {
+                    return size() > 20_000;
+                }
+            });
 
     private static final int TIME_WAIT_READ_MESSAGE = 180000;
 
@@ -44,6 +52,11 @@ public class Session {
 
     public volatile boolean connected;
     private final AtomicBoolean cleanupStarted = new AtomicBoolean(false);
+    private static final int MAX_PACKETS_PER_SECOND = Math.max(1,
+            Integer.getInteger("nro.guard.maxPacketsPerSecond", 180));
+    private long packetWindowStart;
+    private int packetWindowCount;
+    private long lastAuthRateNotice;
 
     static final byte[] KEYS = {0};
     byte curR, curW;
@@ -146,6 +159,16 @@ public class Session {
                 + " cmd=" + command + " joined=" + joinedGame);
     }
 
+    /** Reject sustained packet floods before dispatching expensive game handlers. */
+    public synchronized boolean allowInboundPacket() {
+        long now = System.currentTimeMillis();
+        if (now < packetWindowStart || now - packetWindowStart >= 1_000L) {
+            packetWindowStart = now;
+            packetWindowCount = 0;
+        }
+        return ++packetWindowCount <= MAX_PACKETS_PER_SECOND;
+    }
+
     public void update() {
         if (logging && loginRequestedAt > 0
                 && System.currentTimeMillis() - loginRequestedAt > 20000) {
@@ -204,18 +227,22 @@ public class Session {
 
     public Session(Socket socket, Controller controller, String ip) {
         try {
-            socket.setTcpNoDelay(true);
-            this.id = baseId++;
             this.socket = socket;
+            this.ipAddress = ip; // Receiver may disconnect before accept() returns.
+            socket.setTcpNoDelay(true);
+            socket.setSoTimeout(15_000); // Unfinished initial handshake cannot hold a thread forever.
+            this.id = baseId++;
             this.controller = controller;
             this.sendThread = new Thread((this.sender = new MessageSender(this, socket)), "Send " + ip);
             this.receiveThread = new Thread((this.collector = new MessageCollector(this, socket)), "Receive " + ip);
 //            this.doControllerThread = new Thread((this.doController = new MessageDoController(this)), "Do controller " + ip);
 //            this.doControllerThread.start();
+            Client.gI().put(this); // Register before receiver can race with disconnect.
             this.receiveThread.start();
-            Client.gI().put(this);
         } catch (Exception e) {
             Log.error(Session.class, e);
+            // Cleanup also releases the reserved per-IP/global connection slot.
+            Client.gI().kickSession(this);
         }
     }
 
@@ -234,6 +261,10 @@ public class Session {
     /** Only one thread may remove and account for this network session. */
     public boolean beginCleanup() {
         return cleanupStarted.compareAndSet(false, true);
+    }
+
+    public boolean isCleanupStarted() {
+        return cleanupStarted.get();
     }
 
     public void disconnect() {
@@ -335,21 +366,10 @@ public class Session {
         this.sender.sendSessionKey();
     }
 
+    /** Compatibility helper; connection accounting is owned by ServerManager. */
     public boolean canConnectWithIp() {
-        Object o = ServerManager.CLIENTS.get(ipAddress);
-        if (o == null) {
-            ServerManager.CLIENTS.put(ipAddress, 1);
-            return true;
-        } else {
-            int n = Integer.parseInt(String.valueOf(o));
-            if (n < Manager.MAX_PER_IP) {
-                n++;
-                ServerManager.CLIENTS.put(ipAddress, n);
-                return true;
-            } else {
-                return false;
-            }
-        }
+        return ipAddress != null
+                && ServerManager.gI().getActiveConnectionsFromIp(ipAddress) < Math.max(1, Manager.MAX_PER_IP);
     }
 
     public void login(String username, String password) {
@@ -361,11 +381,16 @@ public class Session {
         if (!isSetClientType || logging || loginSuccess) {
             return;
         }
-        AntiLogin al = ANTILOGIN.get(this.ipAddress);
-        if (al == null) {
-            al = new AntiLogin();
-            ANTILOGIN.put(this.ipAddress, al);
+        if (!ServerManager.gI().canAuthenticateFromIp(this.ipAddress)) {
+            long now = System.currentTimeMillis();
+            if (now - lastAuthRateNotice > 5_000L) {
+                lastAuthRateNotice = now;
+                Service.getInstance().sendThongBaoOK(this,
+                        "Bạn thao tác đăng nhập quá nhanh. Vui lòng thử lại sau.");
+            }
+            return;
         }
+        AntiLogin al = ANTILOGIN.computeIfAbsent(this.ipAddress, key -> new AntiLogin());
         if (!al.canLogin()) {
             Service.getInstance().sendThongBaoOK(this, al.getNotifyCannotLogin());
             return;

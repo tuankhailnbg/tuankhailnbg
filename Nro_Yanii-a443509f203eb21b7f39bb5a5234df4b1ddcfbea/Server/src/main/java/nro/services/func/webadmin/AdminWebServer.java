@@ -42,7 +42,9 @@ public class AdminWebServer {
     private HttpServer server;
     private boolean isRunning = false;
     private int port = 8888;
-    private String host = "0.0.0.0";
+    // Admin authentication/API must not be exposed to the game player network.
+    // Access from the VPS desktop or a private VPN; override only intentionally.
+    private String host = System.getProperty("nro.admin.bindAddress", "127.0.0.1");
 
     private AdminWebServer() {
     }
@@ -612,6 +614,9 @@ public class AdminWebServer {
         byte[] buffer = new byte[2048];
         int read;
         while ((read = is.read(buffer)) != -1) {
+            if (baos.size() + read > 256 * 1024) {
+                throw new IOException("Admin request too large");
+            }
             baos.write(buffer, 0, read);
         }
         return baos.toString(StandardCharsets.UTF_8);

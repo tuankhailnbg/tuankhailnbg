@@ -5,6 +5,7 @@ import db.DbManager;
 import io.Session;
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.net.InetAddress;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,8 +28,11 @@ public class Server {
         DbManager.getInstance().start();
         this.running = true;
         try {
-            this.listen = new ServerSocket(this.config.getListen());
-            System.out.println("listening port: " + this.config.getListen());
+            // Game and Login are on the same VPS: do not expose port 3105.
+            // Override only when intentionally using a separate protected Login host.
+            String bindAddress = System.getProperty("nro.login.bindAddress", "127.0.0.1");
+            this.listen = new ServerSocket(this.config.getListen(), 64, InetAddress.getByName(bindAddress));
+            System.out.println("Login listening at " + bindAddress + ":" + this.config.getListen());
             int i = 0;
             while (this.running) {
                 Session session = new Session(this.listen.accept(), i++);
