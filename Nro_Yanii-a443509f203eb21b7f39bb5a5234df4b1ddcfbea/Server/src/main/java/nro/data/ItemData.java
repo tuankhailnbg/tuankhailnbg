@@ -3,6 +3,8 @@ package nro.data;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import nro.models.item.ItemOptionTemplate;
 import nro.models.item.ItemTemplate;
 import nro.server.Manager;
@@ -10,90 +12,76 @@ import nro.server.io.Message;
 import nro.server.io.Session;
 import nro.utils.Log;
 
-/**
- * Item catalog wire format used by the PC 2.4.x client.
- *
- * The client handles command -28 / subcommand 8 with two item subtypes:
- *   type 0: item option templates
- *   type 1: item templates
- *
- * For a large type-1 catalog, that same client expects command 12, subcommand 0,
- * whose payload then contains the normal [vsItem][type=1] item stream. Command
- * 12 uses the 3-byte frame length in Session_ME, so the whole catalog can be
- * delivered atomically without inventing unsupported type=2 continuation
- * packets.
- */
 public class ItemData {
+    // Command -28 uses a two-byte length. Stay below the signed-short limit too,
+    // for older clients. Split by encoded bytes: descriptions and UTF-8 vary.
+    static final int MAX_TEMPLATE_PACKET_BYTES = 30000;
 
     public static void updateItem(Session session) {
         session.traceLogin("ITEM_SYNC_START");
-        Message options = null;
-        Message templates = null;
         try {
-            options = createOptionPacket();
-            templates = createTemplatePacket();
-
-            // The client stores NRitem0 first, then command 12/type 1 stores the
-            // complete NRitem1 catalog and only then calls readOk().
-            session.doSendMessage(options);
-            session.doSendMessage(templates);
+            // Finish serialization before sending so malformed records cannot
+            // leave the client with only half of a new catalog.
+            List<Message> packets = createUpdatePackets();
+            for (Message packet : packets) {
+                session.doSendMessage(packet);
+                packet.cleanup();
+            }
             session.traceLogin("ITEM_SYNC_SENT");
         } catch (IOException | RuntimeException e) {
             Log.error(ItemData.class, e, "Lỗi gửi dữ liệu vật phẩm cho client");
-        } finally {
-            if (options != null) {
-                options.cleanup();
-            }
-            if (templates != null) {
-                templates.cleanup();
-            }
         }
     }
 
-    static Message createOptionPacket() throws IOException {
-        if (Manager.ITEM_OPTION_TEMPLATES.size() > Short.MAX_VALUE) {
+    static List<Message> createUpdatePackets() throws IOException {
+        List<Message> packets = new ArrayList<>();
+        if (Manager.ITEM_OPTION_TEMPLATES.size() > 255)
             throw new IOException("Item option count exceeds client protocol");
-        }
+        if (Manager.ITEM_TEMPLATES.size() > Short.MAX_VALUE)
+            throw new IOException("Item count exceeds client protocol");
 
+        Message options = header(0);
+        options.writer().writeByte(Manager.ITEM_OPTION_TEMPLATES.size());
+        for (ItemOptionTemplate option : Manager.ITEM_OPTION_TEMPLATES) {
+            options.writer().writeUTF(option.name);
+            options.writer().writeByte(option.type);
+        }
+        if (options.getData().length > MAX_TEMPLATE_PACKET_BYTES)
+            throw new IOException("Item option packet exceeds client protocol");
+        packets.add(options);
+
+        int start = 0;
+        do {
+            boolean first = start == 0;
+            int end = start;
+            ByteArrayOutputStream records = new ByteArrayOutputStream();
+            int headerSize = first ? 5 : 7;
+            while (end < Manager.ITEM_TEMPLATES.size()) {
+                byte[] record = encodeTemplate(Manager.ITEM_TEMPLATES.get(end));
+                if (record.length + headerSize > MAX_TEMPLATE_PACKET_BYTES)
+                    throw new IOException("Item template too large: " + end);
+                if (records.size() + record.length + headerSize > MAX_TEMPLATE_PACKET_BYTES) break;
+                records.write(record);
+                end++;
+            }
+            Message packet = header(first ? 1 : 2);
+            if (first) packet.writer().writeShort(end);
+            else {
+                packet.writer().writeShort(start);
+                packet.writer().writeShort(end);
+            }
+            packet.writer().write(records.toByteArray());
+            packets.add(packet);
+            start = end;
+        } while (start < Manager.ITEM_TEMPLATES.size());
+        return packets;
+    }
+
+    private static Message header(int mode) throws IOException {
         Message packet = new Message(-28);
         packet.writer().writeByte(8);
         packet.writer().writeByte(DataGame.vsItem);
-        packet.writer().writeByte(0);
-
-        // MOD_DP / NRO PC loadItemNew(type 0) calls readShort(), not readByte().
-        packet.writer().writeShort(Manager.ITEM_OPTION_TEMPLATES.size());
-        for (ItemOptionTemplate option : Manager.ITEM_OPTION_TEMPLATES) {
-            packet.writer().writeUTF(option.name == null ? "" : option.name);
-            packet.writer().writeByte(option.type);
-        }
-        return packet;
-    }
-
-    static Message createTemplatePacket() throws IOException {
-        if (Manager.ITEM_TEMPLATES.size() > Short.MAX_VALUE) {
-            throw new IOException("Item count exceeds client protocol");
-        }
-
-        ByteArrayOutputStream records = new ByteArrayOutputStream();
-        for (int index = 0; index < Manager.ITEM_TEMPLATES.size(); index++) {
-            ItemTemplate item = Manager.ITEM_TEMPLATES.get(index);
-            if (item == null) {
-                throw new IOException("Null item template at catalog index " + index);
-            }
-            if (item.id != index) {
-                // The PC client reconstructs IDs from loop index k; sending a
-                // sparse/non-contiguous catalog would make every later ID wrong.
-                throw new IOException("Non-contiguous item catalog: index=" + index + ", id=" + item.id);
-            }
-            records.write(encodeTemplate(item));
-        }
-
-        Message packet = new Message(12);
-        packet.writer().writeByte(0); // read_cmdExtraBig subcommand
-        packet.writer().writeByte(DataGame.vsItem);
-        packet.writer().writeByte(1); // loadItemNew type 1
-        packet.writer().writeShort(Manager.ITEM_TEMPLATES.size());
-        packet.writer().write(records.toByteArray());
+        packet.writer().writeByte(mode);
         return packet;
     }
 
@@ -102,14 +90,13 @@ public class ItemData {
         DataOutputStream out = new DataOutputStream(bytes);
         out.writeByte(item.type);
         out.writeByte(item.gender);
-        out.writeUTF(item.name == null ? "" : item.name);
-        out.writeUTF(item.description == null ? "" : item.description);
+        out.writeUTF(item.name);
+        out.writeUTF(item.description);
         out.writeByte(item.level);
         out.writeInt(item.strRequire);
         out.writeShort(item.iconID);
         out.writeShort(item.part);
         out.writeBoolean(item.isUpToUp);
-        out.flush();
         return bytes.toByteArray();
     }
 }
