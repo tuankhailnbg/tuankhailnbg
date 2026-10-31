@@ -353,7 +353,8 @@ public class Session {
     }
 
     public void login(String username, String password) {
-        if (Maintenance.isRuning || !ServerManager.gI().getLogin().isConnected()) {
+        if (Maintenance.isRuning || ServerManager.gI().getLogin() == null
+                || !ServerManager.gI().getLogin().isReady()) {
             Service.getInstance().sendThongBaoOK(this, "Máy chủ đang tiến hành bảo trì, vui lòng thử lại sau!");
             return;
         }
