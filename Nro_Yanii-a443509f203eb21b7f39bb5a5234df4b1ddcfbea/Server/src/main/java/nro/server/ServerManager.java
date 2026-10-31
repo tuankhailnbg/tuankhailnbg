@@ -140,31 +140,30 @@ public class ServerManager {
     }
 
     private boolean canConnectWithIp(String ipAddress) {
-        Object o = CLIENTS.get(ipAddress);
-        if (o == null) {
-            CLIENTS.put(ipAddress, 1);
-            return true;
-        } else {
+        synchronized (CLIENTS) {
+            Object o = CLIENTS.get(ipAddress);
+            if (o == null) {
+                CLIENTS.put(ipAddress, 1);
+                return true;
+            }
             int n = Integer.parseInt(String.valueOf(o));
             if (n < Manager.MAX_PER_IP) {
-                n++;
-                CLIENTS.put(ipAddress, n);
+                CLIENTS.put(ipAddress, n + 1);
                 return true;
-            } else {
-                return false;
             }
+            Log.warning("[NET] Tu choi ket noi do vuot gioi han IP=" + ipAddress
+                    + " max=" + Manager.MAX_PER_IP);
+            return false;
         }
     }
 
     public void disconnect(Session session) {
-        Object o = CLIENTS.get(session.ipAddress);
-        if (o != null) {
-            int n = Integer.parseInt(String.valueOf(o));
-            n--;
-            if (n < 0) {
-                n = 0;
+        synchronized (CLIENTS) {
+            Object o = CLIENTS.get(session.ipAddress);
+            if (o != null) {
+                int n = Integer.parseInt(String.valueOf(o));
+                CLIENTS.put(session.ipAddress, Math.max(0, n - 1));
             }
-            CLIENTS.put(session.ipAddress, n);
         }
     }
 
