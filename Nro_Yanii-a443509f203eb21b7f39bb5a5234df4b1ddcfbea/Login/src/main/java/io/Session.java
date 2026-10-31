@@ -6,7 +6,8 @@ import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayList;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import model.User;
 import model.UserManager;
 import server.Server;
@@ -258,25 +259,24 @@ public class Session {
     private class Sender
             implements Runnable {
 
-        private final ArrayList<Message> sendingMessage = new ArrayList();
+        private final Queue<Message> sendingMessage = new ConcurrentLinkedQueue<>();
 
         public void addMessage(Message message) {
-            this.sendingMessage.add(message);
+            this.sendingMessage.offer(message);
         }
 
         @Override
         public void run() {
             while (Session.this.connected) {
                 if (Session.this.sendKeyComplete) {
-                    while (this.sendingMessage != null && this.sendingMessage.size() > 0) {
+                    Message m;
+                    while ((m = this.sendingMessage.poll()) != null) {
                         try {
-                            Message m = this.sendingMessage.get(0);
-                            if (m != null) {
-                                Session.this.doSendMessage(m);
-                            }
-                            this.sendingMessage.remove(0);
+                            Session.this.doSendMessage(m);
                         } catch (Exception e) {
+                            System.err.println("[LOGIN] Sender stopped after packet failure: " + e);
                             Session.this.disconnect();
+                            break;
                         }
                     }
                 }
