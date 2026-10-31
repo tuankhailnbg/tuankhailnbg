@@ -113,6 +113,54 @@ def read_utf(reader):
     return data.decode("utf-8")
 
 
+
+def verify_player_ui_packet(data, player_id):
+    """Parse the shared ME_LOAD_ALL prefix exactly like a modern 2.4.x PC client."""
+    reader = io.BytesIO(data)
+    assert reader.read(1) == b"\x00"
+    assert struct.unpack(">i", reader.read(4))[0] == player_id
+    reader.read(1)  # task
+    reader.read(1)  # gender
+    reader.read(2)  # head
+    read_utf(reader)  # name
+    reader.read(1)  # cPk
+    reader.read(1)  # typePk
+    reader.read(8)  # power
+    reader.read(2)  # hp buff
+    reader.read(2)  # mp buff
+    reader.read(1)  # class
+
+    skill_count = reader.read(1)[0]
+    assert len(reader.read(skill_count * 2)) == skill_count * 2
+    reader.read(8)  # gold for version >= 214
+    reader.read(4)  # ruby
+    reader.read(4)  # gem
+
+    def read_items(label):
+        raw = reader.read(1)
+        assert raw, f"missing {label} count"
+        count = raw[0]
+        for slot in range(count):
+            template_id = struct.unpack(">h", reader.read(2))[0]
+            if template_id == -1:
+                continue
+            assert 0 <= template_id < 2421, f"{label}[{slot}] invalid item {template_id}"
+            assert len(reader.read(4)) == 4
+            read_utf(reader)
+            read_utf(reader)
+            option_count = reader.read(1)[0]
+            for _ in range(option_count):
+                option_id = struct.unpack(">h", reader.read(2))[0]
+                assert option_id >= 0
+                assert len(reader.read(4)) == 4
+
+    read_items("body")
+    read_items("bag")
+    read_items("box")
+    assert reader.tell() < len(data), "ME_LOAD_ALL ended inside inventory payload"
+    return reader.tell()
+
+
 def read_menu(data, npc_id):
     reader = io.BytesIO(data)
     assert struct.unpack(">H", reader.read(2))[0] == npc_id
@@ -128,7 +176,7 @@ def verify_gameplay(sock, player_id):
     request(sock, -39)
     request(sock, -28, b"\x0d")
     data = until(sock, lambda c, d: c == -30 and d[:1] == b"\x00")
-    assert struct.unpack(">i", data[1:5])[0] == player_id
+    verify_player_ui_packet(data, player_id)
 
     request(sock, 33, struct.pack(">H", 80))
     data = until(sock, lambda c, d: c == 32)
@@ -240,7 +288,7 @@ def run():
                 sizes, legacy_bytes = verify_catalog(sock)
                 request(sock, -38)
                 data = until(sock, lambda c, d: c == -30 and d[:1] == b"\x00")
-                assert struct.unpack(">i", data[1:5])[0] == player_id
+                verify_player_ui_packet(data, player_id)
                 # Keep reading until the actual server enter pipeline completes.
                 deadline = time.monotonic() + 5
                 while time.monotonic() < deadline:
