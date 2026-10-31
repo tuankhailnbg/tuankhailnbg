@@ -535,6 +535,8 @@ public class TopRaceManager {
                 // Existing NPoint training-armor logic uses option 9 after
                 // unequipping, and option 30 prevents player-to-player trade.
                 armor.itemOptions.add(new ItemOption(9, 1));
+                // Bonus 10% maximum HP while the armor is equipped.
+                armor.itemOptions.add(new ItemOption(77, 10));
                 armor.itemOptions.add(new ItemOption(30, 1));
                 ok = addBagOrBox(player, armor);
             }
