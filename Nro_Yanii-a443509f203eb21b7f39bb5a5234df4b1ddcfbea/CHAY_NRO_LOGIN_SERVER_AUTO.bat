@@ -20,8 +20,8 @@ set "MAVEN=C:\Tools\maven\bin\mvn.cmd"
 if not exist "%MAVEN%" set "MAVEN=D:\Tools\maven\bin\mvn.cmd"
 
 REM ===== CONG NRO =====
-set "LOGIN_PORT=14445"
-set "SERVER_PORT=3105"
+set "LOGIN_PORT=3105"
+set "SERVER_PORT=14445"
 
 echo.
 echo ========================================================
@@ -96,7 +96,25 @@ call "%MAVEN%" -version
 if errorlevel 1 goto :FAIL
 
 REM =========================================================
-REM TAT DUNG LOGIN CU THEO CONG 14445
+REM BUILD LOGIN TRUOC KHI DUNG CAC TIEN TRINH DANG CHAY
+REM =========================================================
+echo.
+echo [2B/7] Build Login moi nhat bang Maven...
+pushd "%LOGIN_DIR%"
+call "%MAVEN%" clean package -DskipTests
+set "LOGIN_BUILD_RESULT=!ERRORLEVEL!"
+popd
+if not "!LOGIN_BUILD_RESULT!"=="0" (
+    echo [BUILD FAILURE] Login - khong dung server dang chay.
+    goto :FAIL
+)
+if not exist "%LOGIN_DIR%\target\ServerLogin-1.0-RELEASE-jar-with-dependencies.jar" (
+    echo [BUILD FAILURE] Missing Login target JAR - khong dung server dang chay.
+    goto :FAIL
+)
+
+REM =========================================================
+REM TAT DUNG LOGIN CU THEO CONG 3105
 REM Chi Stop neu process la java.exe/javaw.exe
 REM =========================================================
 echo.
@@ -115,7 +133,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "}; Start-Sleep -Seconds 1"
 
 REM =========================================================
-REM TAT DUNG SERVER CU THEO CONG 3105 + TeaMobi JAR
+REM TAT DUNG SERVER CU THEO CONG 14445 + TeaMobi JAR
 REM =========================================================
 echo.
 echo [4/7] Tat Server cu tren port %SERVER_PORT%...
