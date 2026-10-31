@@ -6,7 +6,8 @@ import nro.utils.Log;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayList;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  *
@@ -17,7 +18,7 @@ import java.util.ArrayList;
 public class MessageSender implements Runnable {
 
     private Session session;
-    private ArrayList<Message> sendingMessage;
+    private final Queue<Message> sendingMessage;
     DataOutputStream dos;
 
     public int getNumMessage() {
@@ -25,7 +26,7 @@ public class MessageSender implements Runnable {
     }
 
     public MessageSender(Session session, Socket socket) {
-        sendingMessage = new ArrayList<>();
+        sendingMessage = new ConcurrentLinkedQueue<>();
         try {
             this.session = session;
             this.dos = new DataOutputStream(socket.getOutputStream());
@@ -46,7 +47,7 @@ public class MessageSender implements Runnable {
         Message message;
         while (session != null && session.connected) {
             try {
-                while ((message = sendingMessage.remove(0)) != null) {
+                while ((message = sendingMessage.poll()) != null) {
                     doSendMessage(message);
                 }
             } catch (Exception e) {
@@ -58,9 +59,18 @@ public class MessageSender implements Runnable {
         }
     }
 
-    public void doSendMessage(Message msg) {
+    public synchronized void doSendMessage(Message msg) {
         try {
             byte[] data = msg.getData();
+            boolean largeFrame = msg.command == -32 || msg.command == -66 || msg.command == -74
+                    || msg.command == 11 || msg.command == -67 || msg.command == -87 || msg.command == 66;
+            int maxSize = largeFrame ? 0xFFFFFF : 0xFFFF;
+            if (data != null && data.length > maxSize) {
+                // Validate before writing even the command byte. A wrapped length
+                // corrupts every subsequent packet on the connection.
+                Log.error("Refused oversized packet: command=" + msg.command + ", bytes=" + data.length);
+                return;
+            }
             if (session.connected) {
                 byte b = writeKey(msg.command);
                 dos.writeByte(b);
@@ -69,8 +79,7 @@ public class MessageSender implements Runnable {
             }
             if (data != null) {
                 int size = data.length;
-                if (msg.command == -32 || msg.command == -66 || msg.command == -74 || msg.command == 11
-                        || msg.command == -67 || msg.command == -87 || msg.command == 66) {
+                if (largeFrame) {
                     byte b = writeKey((byte) (size));
                     dos.writeByte(b - 128);
                     byte b2 = writeKey((byte) (size >> 8));
@@ -97,7 +106,7 @@ public class MessageSender implements Runnable {
             dos.flush();
             msg.cleanup();
         } catch (Exception e) {
-            // Client.gI().kickSession(session);
+            Log.error(MessageSender.class, e, "Lỗi gửi gói tin cmd=" + msg.command);
         }
     }
 
@@ -137,6 +146,5 @@ public class MessageSender implements Runnable {
         if (this.sendingMessage != null) {
             this.sendingMessage.clear();
         }
-        this.sendingMessage = null;
     }
 }

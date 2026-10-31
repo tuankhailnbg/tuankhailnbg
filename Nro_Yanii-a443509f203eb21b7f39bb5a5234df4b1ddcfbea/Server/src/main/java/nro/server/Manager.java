@@ -795,6 +795,9 @@ public class Manager {
             ps.close();
             Log.success("Load npc template thành công (" + NPC_TEMPLATES.size() + ")");
 
+            nro.event.november.NovemberCatalog.install();
+            nro.services.NovemberEventService.gI().initialize();
+
             initMap();
 
             ps = con.prepareStatement("select name, n_frame from img_by_name");

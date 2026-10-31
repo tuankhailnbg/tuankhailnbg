@@ -21,4 +21,4 @@ jobs:
           cache-dependency-path: Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea/Server/pom.xml
       - name: Compile NRO Server
         working-directory: Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea/Server
-        run: mvn -B -ntp -DskipTests clean package
+        run: mvn -B -ntp clean package
