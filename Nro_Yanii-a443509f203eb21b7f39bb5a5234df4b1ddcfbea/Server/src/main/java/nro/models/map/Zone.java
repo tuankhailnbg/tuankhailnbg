@@ -751,11 +751,27 @@ public class Zone {
             // } catch (Exception e) {
             // msg.writer().writeShort(0);
             // }
+            // XUNGLORDLOCAL renders background effect 11 incorrectly: the
+            // white streak particles keep accumulating until FPS/UI rendering
+            // collapses. This effect is present on most normal maps, so filter
+            // only beff=11 while preserving every other map effect.
             List<EffectMap> em = this.map.effMap;
-            msg.writer().writeShort(em.size());
-            for (EffectMap e : em) {
-                msg.writer().writeUTF(e.getKey());
-                msg.writer().writeUTF(e.getValue());
+            int effectCount = 0;
+            if (em != null) {
+                for (EffectMap e : em) {
+                    if (isClientCompatibleMapEffect(e)) {
+                        effectCount++;
+                    }
+                }
+            }
+            msg.writer().writeShort(effectCount);
+            if (em != null) {
+                for (EffectMap e : em) {
+                    if (isClientCompatibleMapEffect(e)) {
+                        msg.writer().writeUTF(e.getKey());
+                        msg.writer().writeUTF(e.getValue());
+                    }
+                }
             }
 
             msg.writer().writeByte(this.map.bgType);
@@ -769,6 +785,14 @@ public class Zone {
             Log.error(Service.class,
                     e);
         }
+    }
+
+    private boolean isClientCompatibleMapEffect(EffectMap effect) {
+        if (effect == null || effect.getKey() == null || effect.getValue() == null) {
+            return false;
+        }
+        return !("beff".equalsIgnoreCase(effect.getKey().trim())
+                && "11".equals(effect.getValue().trim()));
     }
 
     public TrapMap isInTrap(Player player) {
