@@ -54,7 +54,7 @@ public final class ConnectionGuard {
 
     public ConnectionGuard() {
         this(System::currentTimeMillis,
-                setting("nro.guard.connectionsPer10SecPerIp", 20),
+                setting("nro.guard.connectionsPer10SecPerIp", 10),
                 setting("nro.guard.connectionsPerMinutePerIp", 60),
                 setting("nro.guard.newConnectionsPerSecondGlobal", 150),
                 setting("nro.guard.maxActiveConnectionsGlobal", 1400));

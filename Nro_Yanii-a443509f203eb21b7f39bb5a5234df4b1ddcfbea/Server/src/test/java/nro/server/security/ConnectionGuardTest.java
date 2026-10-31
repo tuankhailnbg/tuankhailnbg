@@ -22,6 +22,22 @@ public class ConnectionGuardTest {
     }
 
     @Test
+    public void tenNewConnectionsInTenSecondsPerIp() {
+        AtomicLong time = new AtomicLong(100_000);
+        ConnectionGuard guard = new ConnectionGuard(time::get, 10, 60, 150, 1400);
+        for (int i = 0; i < 10; ++i) {
+            assertTrue("connection " + i, guard.tryAcquire("203.0.113.10", 5));
+            guard.release("203.0.113.10");
+        }
+        assertFalse("eleventh connection must be rejected", guard.tryAcquire("203.0.113.10", 5));
+        // A different IP remains independently eligible, but both still use
+        // the same global acceptance budget.
+        assertTrue(guard.tryAcquire("203.0.113.11", 5));
+        time.addAndGet(10_001);
+        assertTrue(guard.tryAcquire("203.0.113.10", 5));
+    }
+
+    @Test
     public void perIpWindowRejectsConnectChurnAndRecovers() {
         AtomicLong time = new AtomicLong(100_000);
         ConnectionGuard guard = new ConnectionGuard(time::get, 2, 60, 150, 100);

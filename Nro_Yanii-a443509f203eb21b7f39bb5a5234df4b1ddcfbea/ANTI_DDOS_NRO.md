@@ -8,7 +8,7 @@
 | Mức bảo vệ | Mặc định | Ý nghĩa |
 | --- | --- | --- |
 | Số phiên TCP đồng thời/IP | `server.maxperip` (mặc định 5) | Người chơi cùng NAT dùng chung giới hạn |
-| TCP kết nối mới/IP/10 giây | 20 | Chặn reconnect flood |
+| TCP kết nối mới/IP/10 giây | 10 | Chặn reconnect flood |
 | TCP kết nối mới/IP/phút | 60 | Giảm churn kéo dài |
 | TCP kết nối mới/toàn server/giây | 150 | Giới hạn tăng số lượng phiên |
 | Tổng kết nối đang hoạt động | 1400 | Chặn kiệt tài nguyên JVM |
@@ -24,7 +24,7 @@ Các giới hạn mặc định được chọn tương đối rộng để trá
 **Tùy chỉnh**: khai báo các cờ JVM khi chạy `Server`:
 
 ```cmd
-java -Dnro.guard.connectionsPer10SecPerIp=20 -Dnro.guard.connectionsPerMinutePerIp=60 -Dnro.guard.newConnectionsPerSecondGlobal=150 -Dnro.guard.maxActiveConnectionsGlobal=1400 -Dnro.guard.maxPacketsPerSecond=180 -jar "target\TeaMobi-1.0-RELEASE-jar-with-dependencies.jar"
+java -Dnro.guard.connectionsPer10SecPerIp=10 -Dnro.guard.connectionsPerMinutePerIp=60 -Dnro.guard.newConnectionsPerSecondGlobal=150 -Dnro.guard.maxActiveConnectionsGlobal=1400 -Dnro.guard.maxPacketsPerSecond=180 -jar "target\TeaMobi-1.0-RELEASE-jar-with-dependencies.jar"
 ```
 
 Số phiên đồng thời/IP thay đổi qua `server.maxperip` trong cấu hình server (không phải cờ JVM).
