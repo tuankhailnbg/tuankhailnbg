@@ -37,6 +37,22 @@ Top Nạp tính bằng:
 
 Top 1 Nạp cần tối thiểu 50.000 VNĐ trong mùa. Top 2 trở xuống không có mốc tối thiểu nhưng phải có phát sinh nạp (>0) để xuất hiện trong Top Nạp.
 
+## Giáp tập luyện cấp 4 – thưởng Top 1, 2, 3
+
+**Tất cả bốn bảng đua Top (POWER/TASK/PET/NAP)**: Top 1, Top 2 và Top 3 của **mỗi** bảng được nhận thêm **1 Giáp tập luyện cấp 4** khi đến Trọng Tài nhận thưởng sau khi mùa đã chốt.
+
+- Giữ nguyên Thỏi Vàng, Hồng Ngọc, cải trang và danh hiệu sẵn có.
+- Giáp loại trang bị `type=32`, dùng ô giáp tập luyện (slot 6), mặc vào giảm **40%** sức đánh, khi tháo ra tăng thêm **40%** theo luồng xử lý giáp luyện tập hiện hữu.
+- Giáp không thể giao dịch (option 30); có option 9 để kích hoạt hiệu ứng sau khi tháo theo logic của `NPoint`.
+- Mốc yêu cầu sức mạnh: **150 triệu**. Đây là mốc nối tiếp quy luật từ cấp 2 (1,5 triệu), cấp 3 (15 triệu) trong dữ liệu hiện tại; **chưa có xác minh độc lập cho mốc cấp 4 bản NRO chính**.
+- Tự cài đặt một bản ghi `item_template` khi Game Server khởi động lần đầu (nếu trước đó chưa tồn tại item này), tự cấp ID mới và không sửa item cũ. Không cần import thêm SQL cho giáp, nhưng **hãy sao lưu database trước khi chạy bản mới**.
+- **Icon:** dùng icon của Giáp tập luyện cấp 3 hiện có làm hình tương thích tạm thời; icon gốc của cấp 4 chưa được xác minh trong bộ tài nguyên client này.
+- Thưởng thêm **không áp dụng Top 4 trở xuống**, và không trao trước khi chốt mùa.
+- Người chơi phải có đủ ô trống để nhận cả gói, nếu không hệ thống yêu cầu dọn túi/rương trước khi nhận.
+- Người chơi đứng Top 1–3 ở nhiều bảng có thể nhận giáp riêng cho mỗi bảng, cùng phần thưởng riêng của bảng đó.
+
+**Kiểm tra:** sau khi khởi động, xem log `[ITEM] Created Giáp tập luyện cấp 4 ID=...` nếu tạo lần đầu, sau đó thử với mùa đua Top trong môi trường test: chốt bảng, nhận 1 lần, kiểm tra chỉ số khi mặc/tháo, đăng xuất/đăng nhập, không nhân đôi vật phẩm khi bấm nhận lại.
+
 ## Sửa phần thưởng
 Chỉnh trực tiếp bảng `top_race_reward_config`. Không cần build Java lại nếu chỉ đổi:
 - Thỏi Vàng
