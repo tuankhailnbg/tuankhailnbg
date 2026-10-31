@@ -1,5 +1,7 @@
 package nro.services;
 
+import java.io.IOException;
+
 import nro.consts.ConstItem;
 import nro.manager.PetFollowManager;
 import nro.models.item.Item;
@@ -11,6 +13,7 @@ import nro.models.player.Inventory;
 import nro.models.player.Pet;
 import nro.models.player.PetFollow;
 import nro.models.player.Player;
+import nro.server.Manager;
 import nro.server.io.Message;
 import nro.utils.Util;
 import nro.models.item.ItemTemplate;
@@ -1170,29 +1173,61 @@ public class InventoryService {
     }
 
     // --------------------------------------------------------------------------
-    private boolean isClientSafeItem(Item item) {
-        return item != null && item.isNotNullItem() && item.template != null;
+    private boolean usesExtendedItemOptionProtocol(Player player) {
+        return player != null && player.getSession() != null && player.getSession().isVersionAbove(243);
     }
 
-    private List<ItemOption> getClientSafeOptions(Item item) {
+    private boolean isClientSafeItem(Item item) {
+        if (item == null || !item.isNotNullItem() || item.template == null) {
+            return false;
+        }
+        int id = item.template.id;
+        return id >= 0 && id < Manager.ITEM_TEMPLATES.size() && Manager.ITEM_TEMPLATES.get(id) != null;
+    }
+
+    private List<ItemOption> getClientSafeOptions(Item item, boolean extendedProtocol) {
         List<ItemOption> result = new ArrayList<>();
         if (item == null) {
             return result;
         }
-        List<ItemOption> displayOptions = item.getDisplayOptions();
-        if (displayOptions == null) {
+
+        List<ItemOption> source = extendedProtocol ? item.itemOptions : item.getDisplayOptions();
+        if (source == null) {
             return result;
         }
-        for (ItemOption option : displayOptions) {
-            if (option != null && option.optionTemplate != null
-                    && option.optionTemplate.id >= 0 && option.optionTemplate.id <= 255) {
-                result.add(option);
+
+        int maxOptionId = extendedProtocol ? Short.MAX_VALUE : 255;
+        for (ItemOption option : source) {
+            if (option == null || option.optionTemplate == null) {
+                continue;
+            }
+            ItemOption wireOption = extendedProtocol ? option : option.format();
+            if (wireOption == null || wireOption.optionTemplate == null) {
+                continue;
+            }
+            int optionId = wireOption.optionTemplate.id;
+            if (optionId >= 0 && optionId <= maxOptionId) {
+                result.add(wireOption);
                 if (result.size() == 255) {
                     break;
                 }
             }
         }
         return result;
+    }
+
+    private void writeClientItemOptions(Message msg, List<ItemOption> options,
+            boolean extendedProtocol) throws IOException {
+        msg.writer().writeByte(options.size());
+        for (ItemOption option : options) {
+            if (extendedProtocol) {
+                msg.writer().writeShort(option.optionTemplate.id);
+                msg.writer().writeInt(option.param);
+            } else {
+                msg.writer().writeByte(option.optionTemplate.id);
+                msg.writer().writeShort(option.param);
+            }
+        }
     }
 
     public void sendItemBags(Player player) {
@@ -1202,6 +1237,7 @@ public class InventoryService {
 
         Message msg = null;
         try {
+            final boolean extendedItemOptions = usesExtendedItemOptionProtocol(player);
             synchronized (player.inventory) {
                 arrangeItems(player.inventory.itemsBag);
                 msg = new Message(-36);
@@ -1223,7 +1259,7 @@ public class InventoryService {
                         // throws here, the packet stays aligned and only that slot is hidden.
                         info = item.getInfo();
                         content = item.getContent();
-                        itemOptions = getClientSafeOptions(item);
+                        itemOptions = getClientSafeOptions(item, extendedItemOptions);
                     } catch (Exception itemError) {
                         System.err.println("[INVENTORY] Skip broken bag item player="
                                 + player.name + " slot=" + i
@@ -1237,11 +1273,7 @@ public class InventoryService {
                     msg.writer().writeInt(item.quantity);
                     msg.writer().writeUTF(info == null ? "" : info);
                     msg.writer().writeUTF(content == null ? "" : content);
-                    msg.writer().writeByte(itemOptions.size());
-                    for (ItemOption option : itemOptions) {
-                        msg.writer().writeByte(option.optionTemplate.id);
-                        msg.writer().writeShort(option.param);
-                    }
+                    writeClientItemOptions(msg, itemOptions, extendedItemOptions);
                 }
             }
 
@@ -1264,6 +1296,7 @@ public class InventoryService {
 
         Message msg = null;
         try {
+            final boolean extendedItemOptions = usesExtendedItemOptionProtocol(player);
             msg = new Message(-37);
             msg.writer().writeByte(0);
             msg.writer().writeShort(player.getHead());
@@ -1282,7 +1315,7 @@ public class InventoryService {
                 try {
                     info = item.getInfo();
                     content = item.getContent();
-                    itemOptions = getClientSafeOptions(item);
+                    itemOptions = getClientSafeOptions(item, extendedItemOptions);
                 } catch (Exception itemError) {
                     System.err.println("[INVENTORY] Skip broken body item player="
                             + player.name + " slot=" + i
@@ -1296,11 +1329,7 @@ public class InventoryService {
                 msg.writer().writeInt(item.quantity);
                 msg.writer().writeUTF(info == null ? "" : info);
                 msg.writer().writeUTF(content == null ? "" : content);
-                msg.writer().writeByte(itemOptions.size());
-                for (ItemOption option : itemOptions) {
-                    msg.writer().writeByte(option.optionTemplate.id);
-                    msg.writer().writeShort(option.param);
-                }
+                writeClientItemOptions(msg, itemOptions, extendedItemOptions);
             }
 
             player.sendMessage(msg);
@@ -1323,6 +1352,7 @@ public class InventoryService {
 
         Message msg = null;
         try {
+            final boolean extendedItemOptions = usesExtendedItemOptionProtocol(player);
             msg = new Message(-35);
             msg.writer().writeByte(0);
             msg.writer().writeByte(player.inventory.itemsBox.size());
@@ -1340,7 +1370,7 @@ public class InventoryService {
                 try {
                     info = item.getInfo();
                     content = item.getContent();
-                    itemOptions = getClientSafeOptions(item);
+                    itemOptions = getClientSafeOptions(item, extendedItemOptions);
                 } catch (Exception itemError) {
                     System.err.println("[INVENTORY] Skip broken box item player="
                             + player.name + " slot=" + i
@@ -1354,11 +1384,7 @@ public class InventoryService {
                 msg.writer().writeInt(item.quantity);
                 msg.writer().writeUTF(info == null ? "" : info);
                 msg.writer().writeUTF(content == null ? "" : content);
-                msg.writer().writeByte(itemOptions.size());
-                for (ItemOption option : itemOptions) {
-                    msg.writer().writeByte(option.optionTemplate.id);
-                    msg.writer().writeShort(option.param);
-                }
+                writeClientItemOptions(msg, itemOptions, extendedItemOptions);
             }
 
             player.sendMessage(msg);
