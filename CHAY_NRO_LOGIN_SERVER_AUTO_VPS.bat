@@ -148,7 +148,7 @@ echo.
 echo ========================================================
 echo THANH CONG
 echo Login noi bo : 127.0.0.1:%LOGIN_PORT%
-echo Game public  : 118.68.174.34:%SERVER_PORT%
+echo Game public  : 103.74.102.34:%SERVER_PORT%
 echo ========================================================
 pause
 exit /b 0
