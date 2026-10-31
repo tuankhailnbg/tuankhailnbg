@@ -20,7 +20,8 @@ import nro.services.TaskService;
 
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.LinkedHashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -28,7 +29,14 @@ import static nro.server.Manager.KEY_SERVER;
 
 public class Session {
 
-    private static final Map<String, AntiLogin> ANTILOGIN = new ConcurrentHashMap<>();
+    // Bounded LRU cache: arbitrary Internet IPs must not grow this map forever.
+    private static final Map<String, AntiLogin> ANTILOGIN = Collections.synchronizedMap(
+            new LinkedHashMap<String, AntiLogin>(128, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, AntiLogin> eldest) {
+                    return size() > 20_000;
+                }
+            });
 
     private static final int TIME_WAIT_READ_MESSAGE = 180000;
 
@@ -253,6 +261,10 @@ public class Session {
     /** Only one thread may remove and account for this network session. */
     public boolean beginCleanup() {
         return cleanupStarted.compareAndSet(false, true);
+    }
+
+    public boolean isCleanupStarted() {
+        return cleanupStarted.get();
     }
 
     public void disconnect() {
