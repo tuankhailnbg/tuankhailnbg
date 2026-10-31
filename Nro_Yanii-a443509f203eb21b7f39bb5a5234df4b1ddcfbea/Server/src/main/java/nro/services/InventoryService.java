@@ -622,19 +622,23 @@ public class InventoryService {
     }
 
     public void arrangeItems(List<Item> list) {
+        if (list == null || list.isEmpty()) {
+            return;
+        }
         for (int i = 0; i < list.size() - 1; i++) {
-            if (!list.get(i).isNotNullItem()) {
+            Item current = list.get(i);
+            if (current == null || !current.isNotNullItem()) {
                 int indexSwap = -1;
                 for (int j = i + 1; j < list.size(); j++) {
-                    if (list.get(j).isNotNullItem()) {
+                    Item candidate = list.get(j);
+                    if (candidate != null && candidate.isNotNullItem()) {
                         indexSwap = j;
                         break;
                     }
                 }
                 if (indexSwap != -1) {
-                    Item sItem = ItemService.gI().createItemNull();
                     list.set(i, list.get(indexSwap));
-                    list.set(indexSwap, sItem);
+                    list.set(indexSwap, ItemService.gI().createItemNull());
                 } else {
                     break;
                 }
@@ -1166,91 +1170,206 @@ public class InventoryService {
     }
 
     // --------------------------------------------------------------------------
-    public void sendItemBags(Player player) {
-        arrangeItems(player.inventory.itemsBag);
-        Message msg;
-        try {
-            msg = new Message(-36);
-            msg.writer().writeByte(0);
-            msg.writer().writeByte(player.inventory.itemsBag.size());
-            for (int i = 0; i < player.inventory.itemsBag.size(); i++) {
-                Item item = player.inventory.itemsBag.get(i);
-                if (item == null || !item.isNotNullItem()) {
-                    // Client expects exactly one item ID per inventory slot.
-                    msg.writer().writeShort(-1);
-                    continue;
+    private boolean isClientSafeItem(Item item) {
+        return item != null && item.isNotNullItem() && item.template != null;
+    }
+
+    private List<ItemOption> getClientSafeOptions(Item item) {
+        List<ItemOption> result = new ArrayList<>();
+        if (item == null) {
+            return result;
+        }
+        List<ItemOption> displayOptions = item.getDisplayOptions();
+        if (displayOptions == null) {
+            return result;
+        }
+        for (ItemOption option : displayOptions) {
+            if (option != null && option.optionTemplate != null
+                    && option.optionTemplate.id >= 0 && option.optionTemplate.id <= 255) {
+                result.add(option);
+                if (result.size() == 255) {
+                    break;
                 }
-                msg.writer().writeShort(item.template.id);
-                msg.writer().writeInt(item.quantity);
-                msg.writer().writeUTF(item.getInfo());
-                msg.writer().writeUTF(item.getContent());
-                List<ItemOption> itemOptions = item.getDisplayOptions();
-                msg.writer().writeByte(itemOptions.size()); // options
-                for (ItemOption o : itemOptions) {
-                    msg.writer().writeByte(o.optionTemplate.id);
-                    msg.writer().writeShort(o.param);
+            }
+        }
+        return result;
+    }
+
+    public void sendItemBags(Player player) {
+        if (player == null || player.inventory == null || player.inventory.itemsBag == null) {
+            return;
+        }
+
+        Message msg = null;
+        try {
+            synchronized (player.inventory) {
+                arrangeItems(player.inventory.itemsBag);
+                msg = new Message(-36);
+                msg.writer().writeByte(0);
+                msg.writer().writeByte(player.inventory.itemsBag.size());
+
+                for (int i = 0; i < player.inventory.itemsBag.size(); i++) {
+                    Item item = player.inventory.itemsBag.get(i);
+                    if (!isClientSafeItem(item)) {
+                        msg.writer().writeShort(-1);
+                        continue;
+                    }
+
+                    String info;
+                    String content;
+                    List<ItemOption> itemOptions;
+                    try {
+                        // Build every variable before writing this slot. If one bad item
+                        // throws here, the packet stays aligned and only that slot is hidden.
+                        info = item.getInfo();
+                        content = item.getContent();
+                        itemOptions = getClientSafeOptions(item);
+                    } catch (Exception itemError) {
+                        System.err.println("[INVENTORY] Skip broken bag item player="
+                                + player.name + " slot=" + i
+                                + " template=" + (item.template != null ? item.template.id : -1)
+                                + " error=" + itemError.getMessage());
+                        msg.writer().writeShort(-1);
+                        continue;
+                    }
+
+                    msg.writer().writeShort(item.template.id);
+                    msg.writer().writeInt(item.quantity);
+                    msg.writer().writeUTF(info == null ? "" : info);
+                    msg.writer().writeUTF(content == null ? "" : content);
+                    msg.writer().writeByte(itemOptions.size());
+                    for (ItemOption option : itemOptions) {
+                        msg.writer().writeByte(option.optionTemplate.id);
+                        msg.writer().writeShort(option.param);
+                    }
                 }
             }
 
             player.sendMessage(msg);
-            msg.cleanup();
         } catch (Exception e) {
+            System.err.println("[INVENTORY] Failed to send bag for player="
+                    + (player != null ? player.name : "null") + " error=" + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (msg != null) {
+                msg.cleanup();
+            }
         }
     }
 
     public void sendItemBody(Player player) {
-        Message msg;
+        if (player == null || player.inventory == null || player.inventory.itemsBody == null) {
+            return;
+        }
+
+        Message msg = null;
         try {
             msg = new Message(-37);
             msg.writer().writeByte(0);
             msg.writer().writeShort(player.getHead());
             msg.writer().writeByte(player.inventory.itemsBody.size());
-            for (Item item : player.inventory.itemsBody) {
-                if (!item.isNotNullItem()) {
+
+            for (int i = 0; i < player.inventory.itemsBody.size(); i++) {
+                Item item = player.inventory.itemsBody.get(i);
+                if (!isClientSafeItem(item)) {
                     msg.writer().writeShort(-1);
-                } else {
-                    msg.writer().writeShort(item.template.id);
-                    msg.writer().writeInt(item.quantity);
-                    msg.writer().writeUTF(item.getInfo());
-                    msg.writer().writeUTF(item.getContent());
-                    List<ItemOption> itemOptions = item.getDisplayOptions();
-                    msg.writer().writeByte(itemOptions.size());
-                    for (ItemOption itemOption : itemOptions) {
-                        msg.writer().writeByte(itemOption.optionTemplate.id);
-                        msg.writer().writeShort(itemOption.param);
-                    }
+                    continue;
+                }
+
+                String info;
+                String content;
+                List<ItemOption> itemOptions;
+                try {
+                    info = item.getInfo();
+                    content = item.getContent();
+                    itemOptions = getClientSafeOptions(item);
+                } catch (Exception itemError) {
+                    System.err.println("[INVENTORY] Skip broken body item player="
+                            + player.name + " slot=" + i
+                            + " template=" + (item.template != null ? item.template.id : -1)
+                            + " error=" + itemError.getMessage());
+                    msg.writer().writeShort(-1);
+                    continue;
+                }
+
+                msg.writer().writeShort(item.template.id);
+                msg.writer().writeInt(item.quantity);
+                msg.writer().writeUTF(info == null ? "" : info);
+                msg.writer().writeUTF(content == null ? "" : content);
+                msg.writer().writeByte(itemOptions.size());
+                for (ItemOption option : itemOptions) {
+                    msg.writer().writeByte(option.optionTemplate.id);
+                    msg.writer().writeShort(option.param);
                 }
             }
+
             player.sendMessage(msg);
-            msg.cleanup();
         } catch (Exception e) {
+            System.err.println("[INVENTORY] Failed to send body for player="
+                    + (player != null ? player.name : "null") + " error=" + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (msg != null) {
+                msg.cleanup();
+            }
         }
         Service.getInstance().Send_Caitrang(player);
     }
 
     public void sendItemBox(Player player) {
-        Message msg;
+        if (player == null || player.inventory == null || player.inventory.itemsBox == null) {
+            return;
+        }
+
+        Message msg = null;
         try {
             msg = new Message(-35);
             msg.writer().writeByte(0);
             msg.writer().writeByte(player.inventory.itemsBox.size());
-            for (Item it : player.inventory.itemsBox) {
-                msg.writer().writeShort(it.isNotNullItem() ? it.template.id : -1);
-                if (it.isNotNullItem()) {
-                    msg.writer().writeInt(it.quantity);
-                    msg.writer().writeUTF(it.getInfo());
-                    msg.writer().writeUTF(it.getContent());
-                    List<ItemOption> itemOptions = it.getDisplayOptions();
-                    msg.writer().writeByte(itemOptions.size());
-                    for (ItemOption io : itemOptions) {
-                        msg.writer().writeByte(io.optionTemplate.id);
-                        msg.writer().writeShort(io.param);
-                    }
+
+            for (int i = 0; i < player.inventory.itemsBox.size(); i++) {
+                Item item = player.inventory.itemsBox.get(i);
+                if (!isClientSafeItem(item)) {
+                    msg.writer().writeShort(-1);
+                    continue;
+                }
+
+                String info;
+                String content;
+                List<ItemOption> itemOptions;
+                try {
+                    info = item.getInfo();
+                    content = item.getContent();
+                    itemOptions = getClientSafeOptions(item);
+                } catch (Exception itemError) {
+                    System.err.println("[INVENTORY] Skip broken box item player="
+                            + player.name + " slot=" + i
+                            + " template=" + (item.template != null ? item.template.id : -1)
+                            + " error=" + itemError.getMessage());
+                    msg.writer().writeShort(-1);
+                    continue;
+                }
+
+                msg.writer().writeShort(item.template.id);
+                msg.writer().writeInt(item.quantity);
+                msg.writer().writeUTF(info == null ? "" : info);
+                msg.writer().writeUTF(content == null ? "" : content);
+                msg.writer().writeByte(itemOptions.size());
+                for (ItemOption option : itemOptions) {
+                    msg.writer().writeByte(option.optionTemplate.id);
+                    msg.writer().writeShort(option.param);
                 }
             }
+
             player.sendMessage(msg);
-            msg.cleanup();
         } catch (Exception e) {
+            System.err.println("[INVENTORY] Failed to send box for player="
+                    + (player != null ? player.name : "null") + " error=" + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (msg != null) {
+                msg.cleanup();
+            }
         }
     }
 
