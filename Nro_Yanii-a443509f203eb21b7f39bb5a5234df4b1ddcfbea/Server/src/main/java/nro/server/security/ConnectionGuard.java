@@ -43,6 +43,8 @@ public final class ConnectionGuard {
         int accepted10;
         int accepted60;
         int rejected10;
+        int auth10;
+        int auth60;
         int active;
     }
 
@@ -95,10 +97,12 @@ public final class ConnectionGuard {
             state.window10 = now;
             state.accepted10 = 0;
             state.rejected10 = 0;
+            state.auth10 = 0;
         }
         if (now < state.window60 || now - state.window60 >= ONE_MINUTE) {
             state.window60 = now;
             state.accepted60 = 0;
+            state.auth60 = 0;
         }
 
         if (now < state.bannedUntil || state.active >= Math.max(1, perIpActiveLimit)
@@ -119,6 +123,33 @@ public final class ConnectionGuard {
             state.bannedUntil = now + BLOCK_DURATION;
         }
         return false;
+    }
+
+    /** Bounds repeated login attempts on already-connected sockets. */
+    public synchronized boolean allowAuthentication(String ip) {
+        long now = clock.getAsLong();
+        IpState state = ipStates.get(ip);
+        if (state == null || state.active <= 0) {
+            return reject(null, now);
+        }
+        state.lastSeen = now;
+        if (now < state.window10 || now - state.window10 >= TEN_SECONDS) {
+            state.window10 = now;
+            state.accepted10 = 0;
+            state.rejected10 = 0;
+            state.auth10 = 0;
+        }
+        if (now < state.window60 || now - state.window60 >= ONE_MINUTE) {
+            state.window60 = now;
+            state.accepted60 = 0;
+            state.auth60 = 0;
+        }
+        if (now < state.bannedUntil || state.auth10 >= 15 || state.auth60 >= 45) {
+            return reject(state, now);
+        }
+        state.auth10++;
+        state.auth60++;
+        return true;
     }
 
     public synchronized void release(String ip) {
