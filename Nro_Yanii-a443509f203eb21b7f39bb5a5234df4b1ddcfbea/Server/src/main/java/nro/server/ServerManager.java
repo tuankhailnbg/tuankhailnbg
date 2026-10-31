@@ -185,6 +185,10 @@ public class ServerManager {
         return CONNECTION_GUARD.getActiveForIp(ipAddress);
     }
 
+    public boolean canAuthenticateFromIp(String ipAddress) {
+        return CONNECTION_GUARD.allowAuthentication(ipAddress);
+    }
+
     public void disconnect(Session session) {
         releaseConnection(session.ipAddress);
     }
