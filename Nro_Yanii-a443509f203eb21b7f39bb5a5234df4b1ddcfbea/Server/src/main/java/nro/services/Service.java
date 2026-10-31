@@ -1789,72 +1789,126 @@ public class Service {
         }
     }
 
+    private boolean isValidFlagIndex(int index) {
+        return index >= 0 && index < flagTempId.length && index < flagIconId.length;
+    }
+
     public void changeFlag(Player pl, int index) {
-        Message msg;
+        if (pl == null || !isValidFlagIndex(index)) {
+            if (pl != null) {
+                sendThongBao(pl, "Cờ không hợp lệ, vui lòng mở lại bảng chọn cờ");
+            }
+            System.err.println("[FLAG] Invalid flag index=" + index
+                    + " player=" + (pl != null ? pl.name : "null"));
+            return;
+        }
+
         try {
             pl.cFlag = (byte) index;
-            msg = new Message(-103);
-            msg.writer().writeByte(1);
-            msg.writer().writeInt((int) pl.id);
-            msg.writer().writeByte(index);
-            Service.getInstance().sendMessAllPlayerInMap(pl, msg);
-            msg.cleanup();
 
-            msg = new Message(-103);
-            msg.writer().writeByte(2);
-            msg.writer().writeByte(index);
-            msg.writer().writeShort(flagIconId[index]);
-            Service.getInstance().sendMessAllPlayerInMap(pl, msg);
-            msg.cleanup();
+            // Send to the owner explicitly first. Some client builds are not
+            // reliably present in zone.getPlayers() at the exact moment the flag is changed.
+            Message selfState = new Message(-103);
+            selfState.writer().writeByte(1);
+            selfState.writer().writeInt((int) pl.id);
+            selfState.writer().writeByte(index);
+            pl.sendMessage(selfState);
+            selfState.cleanup();
+
+            Message selfIcon = new Message(-103);
+            selfIcon.writer().writeByte(2);
+            selfIcon.writer().writeByte(index);
+            selfIcon.writer().writeShort(flagIconId[index]);
+            pl.sendMessage(selfIcon);
+            selfIcon.cleanup();
+
+            // Broadcast fresh copies to other players in the map.
+            if (pl.zone != null) {
+                Message state = new Message(-103);
+                state.writer().writeByte(1);
+                state.writer().writeInt((int) pl.id);
+                state.writer().writeByte(index);
+                sendMessAnotherNotMeInMap(pl, state);
+
+                Message icon = new Message(-103);
+                icon.writer().writeByte(2);
+                icon.writer().writeByte(index);
+                icon.writer().writeShort(flagIconId[index]);
+                sendMessAnotherNotMeInMap(pl, icon);
+            }
 
             if (pl.pet != null) {
                 pl.pet.cFlag = (byte) index;
-                msg = new Message(-103);
-                msg.writer().writeByte(1);
-                msg.writer().writeInt((int) pl.pet.id);
-                // System.out.println("pl.pet.id: " + pl.pet.id);
-                msg.writer().writeByte(index);
-                Service.getInstance().sendMessAllPlayerInMap(pl.pet, msg);
-                msg.cleanup();
 
-                msg = new Message(-103);
-                msg.writer().writeByte(2);
-                msg.writer().writeByte(index);
-                msg.writer().writeShort(flagIconId[index]);
-                Service.getInstance().sendMessAllPlayerInMap(pl.pet, msg);
-                msg.cleanup();
+                Message petState = new Message(-103);
+                petState.writer().writeByte(1);
+                petState.writer().writeInt((int) pl.pet.id);
+                petState.writer().writeByte(index);
+                Service.getInstance().sendMessAllPlayerInMap(pl.pet, petState);
+
+                Message petIcon = new Message(-103);
+                petIcon.writer().writeByte(2);
+                petIcon.writer().writeByte(index);
+                petIcon.writer().writeShort(flagIconId[index]);
+                Service.getInstance().sendMessAllPlayerInMap(pl.pet, petIcon);
             }
+
             pl.lastTimeChangeFlag = System.currentTimeMillis();
+            System.out.println("[FLAG] player=" + pl.name + " index=" + index
+                    + " item=" + flagTempId[index] + " icon=" + flagIconId[index]);
         } catch (Exception e) {
             Log.error(Service.class, e);
+            sendThongBao(pl, "Không bật được cờ, vui lòng thử lại");
         }
     }
 
     public void sendFlagPlayerToMe(Player me, Player pl) {
-        Message msg;
+        if (me == null || pl == null) {
+            return;
+        }
+        int index = pl.cFlag;
+        if (!isValidFlagIndex(index)) {
+            index = 0;
+            pl.cFlag = 0;
+        }
+        Message msg = null;
         try {
             msg = new Message(-103);
             msg.writer().writeByte(2);
-            msg.writer().writeByte(pl.cFlag);
-            msg.writer().writeShort(flagIconId[pl.cFlag]);
+            msg.writer().writeByte(index);
+            msg.writer().writeShort(flagIconId[index]);
             me.sendMessage(msg);
-            msg.cleanup();
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.error(Service.class, e);
+        } finally {
+            if (msg != null) {
+                msg.cleanup();
+            }
         }
     }
 
     public void chooseFlag(Player pl, int index) {
-        if (Util.canDoWithTime(pl.lastTimeChangeFlag, 60000)) {
-            if (!MapService.gI().isMapBlackBallWar(pl.zone.map.mapId)
-                    && !MapService.gI().isMapMabuWar(pl.zone.map.mapId) && !pl.isHoldBlackBall) {
+        if (pl == null || pl.zone == null || pl.zone.map == null) {
+            return;
+        }
+        if (!isValidFlagIndex(index)) {
+            sendThongBao(pl, "Cờ không hợp lệ, vui lòng mở lại bảng chọn cờ");
+            System.err.println("[FLAG] Client sent invalid index=" + index
+                    + " player=" + pl.name);
+            return;
+        }
+
+        if (!MapService.gI().isMapBlackBallWar(pl.zone.map.mapId)
+                && !MapService.gI().isMapMabuWar(pl.zone.map.mapId)
+                && !pl.isHoldBlackBall) {
+            if (Util.canDoWithTime(pl.lastTimeChangeFlag, 60000)) {
                 changeFlag(pl, index);
             } else {
-                sendThongBao(pl, "Không thể đổi cờ ở khu vực này");
+                sendThongBao(pl, "Không thể đổi cờ lúc này! Vui lòng đợi "
+                        + TimeUtil.getTimeLeft(pl.lastTimeChangeFlag, 60) + " nữa!");
             }
         } else {
-            sendThongBao(pl, "Không thể đổi cờ lúc này! Vui lòng đợi " + TimeUtil.getTimeLeft(pl.lastTimeChangeFlag, 60)
-                    + " nữa!");
+            sendThongBao(pl, "Không thể đổi cờ ở khu vực này");
         }
     }
 
