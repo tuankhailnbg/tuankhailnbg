@@ -164,9 +164,12 @@ public class Client implements Runnable {
             } catch (Exception e) {
                 Log.error(Client.class, e);
             } finally {
-                // Avoid per-IP slot leaks when player persistence or cleanup throws.
-                ServerManager.gI().disconnect(session);
-                session.disconnect();
+                // Socket closure must run even if connection accounting fails.
+                try {
+                    ServerManager.gI().disconnect(session);
+                } finally {
+                    session.disconnect();
+                }
             }
         }
     }
