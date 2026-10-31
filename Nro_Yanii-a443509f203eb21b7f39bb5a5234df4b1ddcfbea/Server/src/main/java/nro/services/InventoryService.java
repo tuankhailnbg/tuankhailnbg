@@ -1187,6 +1187,9 @@ public class InventoryService {
             if (option != null && option.optionTemplate != null
                     && option.optionTemplate.id >= 0 && option.optionTemplate.id <= 255) {
                 result.add(option);
+                if (result.size() == 255) {
+                    break;
+                }
             }
         }
         return result;
