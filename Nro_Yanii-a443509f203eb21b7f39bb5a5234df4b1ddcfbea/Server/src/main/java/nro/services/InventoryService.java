@@ -13,6 +13,7 @@ import nro.models.player.Inventory;
 import nro.models.player.Pet;
 import nro.models.player.PetFollow;
 import nro.models.player.Player;
+import nro.server.Manager;
 import nro.server.io.Message;
 import nro.utils.Util;
 import nro.models.item.ItemTemplate;
