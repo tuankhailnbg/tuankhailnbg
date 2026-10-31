@@ -46,6 +46,7 @@ public class Controller {
         try {
             Player player = _session.player;
             byte cmd = _msg.command;
+            _session.traceGameplay(true, cmd, _msg.reader().available());
             if (Manager.debug) {
                 System.out.println("CMD receive: " + cmd);
             }
@@ -444,6 +445,7 @@ public class Controller {
                     if (player != null) {
                         //finishLoadMap
                         ChangeMapService.gI().finishLoadMap(player);
+                        _session.traceLogin("MAP_READY_ACK");
                         if (player.zone.map.mapId == (21 + player.gender)) {
                             if (player.mabuEgg != null) {
                                 player.mabuEgg.sendMabuEgg();
@@ -471,7 +473,8 @@ public class Controller {
                         MenuController.getInstance().doSelectMenu(player, npcId, select);
                     }
                 } catch (Exception e) {
-                    ///VMN
+                    _session.reportPacketError(_msg.command, e);
+                    if (player != null) Service.getInstance().hideWaitDialog(player);
                 }
                 break;
 
@@ -554,7 +557,10 @@ public class Controller {
 //                System.out.println("Time do controller (" + cmd + "): " + (System.currentTimeMillis() - st) + " ms");
             }
         } catch (Exception e) {
-            logger.error("Err controller message command: " + _msg.command, e);
+            _session.reportPacketError(_msg.command, e);
+            if (_session.player != null && (_msg.command == 32 || _msg.command == 33 || _msg.command == -43)) {
+                Service.getInstance().hideWaitDialog(_session.player);
+            }
 //            Log.logException(Controller.class, e);
 //            Log.warning("Lỗi controller message command: " + _msg.command);
         }
@@ -677,6 +683,7 @@ public class Controller {
                     case 13:
                         //client ok
                         if (player != null) {
+                            _session.traceLogin("CLIENT_READY_ACK");
                             Service.getInstance().player(player);
                             Service.getInstance().Send_Caitrang(player);
                             player.zone.loadAnotherToMe(player);

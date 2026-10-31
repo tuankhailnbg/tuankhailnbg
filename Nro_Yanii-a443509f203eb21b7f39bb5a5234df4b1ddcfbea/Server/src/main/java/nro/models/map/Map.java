@@ -14,6 +14,7 @@ import nro.models.player.Player;
 import nro.server.Manager;
 import nro.services.Service;
 import nro.utils.Util;
+import nro.utils.Log;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,6 +55,7 @@ public class Map implements Runnable {
     public List<WayPoint> wayPoints;
     public List<Npc> npcs;
     public List<EffectMap> effMap;
+    private long lastUpdateErrorAt;
 
     public Map(int mapId, String mapName, byte planetId,
             byte tileId, byte bgId, byte bgType, byte type, int[][] tileMap,
@@ -158,17 +160,37 @@ public class Map implements Runnable {
 
     @Override
     public void run() {
-        while (true) {
+        while (!Thread.currentThread().isInterrupted()) {
+            long started = System.nanoTime();
             try {
-                long st = System.currentTimeMillis();
                 for (Zone zone : this.zones) {
-                    zone.update();
+                    try {
+                        zone.update();
+                    } catch (Exception e) {
+                        reportUpdateError(zone, e);
+                    }
                 }
-                long timeDo = System.currentTimeMillis() - st;
-                Thread.sleep(1000 - timeDo);
             } catch (Exception e) {
-                // Logger.logException(Map.class, e, "Lỗi update map " + this.mapName);
+                reportUpdateError(null, e);
             }
+            // A failed update must still yield. Previously an exception skipped
+            // sleep entirely; slow updates also passed a negative sleep value.
+            long elapsed = (System.nanoTime() - started) / 1_000_000L;
+            try {
+                Thread.sleep(Math.max(10L, 1000L - elapsed));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+    }
+
+    private void reportUpdateError(Zone zone, Exception error) {
+        long now = System.currentTimeMillis();
+        if (lastUpdateErrorAt == 0 || now - lastUpdateErrorAt >= 30000) {
+            lastUpdateErrorAt = now;
+            Log.error(Map.class, error, "Lỗi cập nhật map=" + mapId
+                    + " zone=" + (zone == null ? -1 : zone.zoneId));
         }
     }
 

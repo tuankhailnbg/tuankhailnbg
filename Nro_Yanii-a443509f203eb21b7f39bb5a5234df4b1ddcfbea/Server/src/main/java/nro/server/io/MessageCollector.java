@@ -2,9 +2,11 @@ package nro.server.io;
 
 import nro.consts.Cmd;
 import nro.server.Client;
+import nro.utils.Log;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.EOFException;
 import java.net.Socket;
 
 /**
@@ -17,6 +19,8 @@ public class MessageCollector implements Runnable {
 
     private DataInputStream dis;
     private Session session;
+    private byte lastCommand;
+    private int pendingPayloadBytes;
 
     public MessageCollector(Session session, Socket socket) {
         try {
@@ -38,12 +42,18 @@ public class MessageCollector implements Runnable {
                 try {
                     session.controller.onMessage(session, msg);
                 } catch (Exception e) {
-                    /// VMN
+                    session.reportPacketError(msg.command, e);
                 }
 
                 msg.cleanup();
             }
+        } catch (EOFException ex) {
+            if (pendingPayloadBytes > 0) {
+                Log.warning("[NET] session=" + session.id + " truncated cmd=" + lastCommand
+                        + " expectedBytes=" + pendingPayloadBytes);
+            }
         } catch (Exception ex) {
+            session.reportPacketError(lastCommand, ex);
         }
         Client.gI().kickSession(session);
     }
@@ -54,6 +64,7 @@ public class MessageCollector implements Runnable {
         if (session.connected) {
             cmd = readKey(cmd);
         }
+        lastCommand = cmd;
         int size;
         if (session.connected) {
             byte b1 = dis.readByte();
@@ -63,17 +74,12 @@ public class MessageCollector implements Runnable {
             size = dis.readUnsignedShort();
         }
         if (size > 1024) {
-            throw new IOException("Data too big");
+            throw new IOException("Inbound frame too large: cmd=" + cmd + ", bytes=" + size);
         }
         byte data[] = new byte[size];
-        int len = 0;
-        int byteRead = 0;
-        while (len != -1 && byteRead < size) {
-            len = dis.read(data, byteRead, size - byteRead);
-            if (len > 0) {
-                byteRead += len;
-            }
-        }
+        pendingPayloadBytes = size;
+        dis.readFully(data);
+        pendingPayloadBytes = 0;
         if (session.connected) {
             for (int i = 0; i < data.length; i++) {
                 data[i] = readKey(data[i]);
