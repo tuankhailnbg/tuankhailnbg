@@ -19,11 +19,13 @@ public class MessageCollector implements Runnable {
 
     private DataInputStream dis;
     private final Session session;
+    private final Socket socket;
     private byte lastCommand;
     private int pendingPayloadBytes;
 
     public MessageCollector(Session session, Socket socket) {
         this.session = session;
+        this.socket = socket;
         try {
             this.dis = new DataInputStream(socket.getInputStream());
         } catch (IOException e) {
@@ -36,17 +38,28 @@ public class MessageCollector implements Runnable {
         try {
             while (true) {
                 Message msg = readMessage();
-                session.lastTimeReadMessage = System.currentTimeMillis();
-                if (!session.connected && msg.command != Cmd.GET_SESSION_ID) {
-                    break;
-                }
                 try {
-                    session.controller.onMessage(session, msg);
-                } catch (Exception e) {
-                    session.reportPacketError(msg.command, e);
+                    session.lastTimeReadMessage = System.currentTimeMillis();
+                    if (!session.allowInboundPacket()) {
+                        Log.warning("[ANTI_DOS] Packet rate exceeded; disconnecting session=" + session.id);
+                        break;
+                    }
+                    if (!session.connected && msg.command != Cmd.GET_SESSION_ID) {
+                        break;
+                    }
+                    try {
+                        session.controller.onMessage(session, msg);
+                        // Once the initial handshake is complete, allow ordinary
+                        // long-lived player sessions without a read timeout.
+                        if (msg.command == Cmd.GET_SESSION_ID && session.connected) {
+                            socket.setSoTimeout(0);
+                        }
+                    } catch (Exception e) {
+                        session.reportPacketError(msg.command, e);
+                    }
+                } finally {
+                    msg.cleanup();
                 }
-
-                msg.cleanup();
             }
         } catch (EOFException ex) {
             if (pendingPayloadBytes > 0) {
