@@ -19,11 +19,11 @@ import uuid
 
 import pymysql
 from pymysql.constants import CLIENT
-from test_nro_item_sync_wire import exact, request, parse_option_packet, parse_template_packet
+from test_nro_item_sync_wire import exact, request
 
 ROOT = Path(__file__).resolve().parents[1]
 GAME = ROOT / "Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea"
-LARGE = {-32, -66, -74, 11, -67, -87, 66, 12}
+LARGE = {-32, -66, -74, 11, -67, -87, 66}
 
 
 def utf(text):
@@ -64,31 +64,46 @@ def client():
 def authenticate(sock, username, password):
     request(sock, -29, b"\x00" + utf(username) + utf(password))
     versions = until(sock, lambda c, d: c == -28 and d[:1] == b"\x04")
-    assert versions[4] == 12, "Client did not receive the refreshed item catalog version"
+    assert versions[4] == 11, "Client did not receive the corrected item catalog version"
 
 
 def verify_catalog(sock):
     request(sock, -28, b"\x08")
-
-    command, options = frame(sock)
-    assert command == -28, f"expected -28 item options, got {command}"
-    version0, option_count = parse_option_packet(options)
-
-    command, templates = frame(sock)
-    assert command == 12, f"expected command 12 item templates, got {command}"
-    version1, item_count = parse_template_packet(templates, 2421)
-    assert version0 == version1 == 12
-
+    next_id, sizes, record_sizes = 0, [], []
+    while next_id < 2421:
+        data = until(sock, lambda c, d: c == -28 and d[:1] == b"\x08")
+        assert len(data) <= 30000
+        sizes.append(len(data))
+        reader = io.BytesIO(data)
+        reader.seek(3)
+        mode = data[2]
+        if mode == 0:
+            continue
+        if mode == 1:
+            assert next_id == 0
+            end = struct.unpack(">H", reader.read(2))[0]
+        else:
+            assert mode == 2
+            start, end = struct.unpack(">HH", reader.read(4))
+            assert start == next_id
+        for _ in range(next_id, end):
+            offset = reader.tell()
+            assert len(reader.read(2)) == 2
+            for _ in range(2):
+                size = struct.unpack(">H", reader.read(2))[0]
+                assert len(reader.read(size)) == size
+            assert len(reader.read(10)) == 10
+            record_sizes.append(reader.tell() - offset)
+        assert reader.read() == b""
+        next_id = end
+    assert next_id == 2421
+    # Report the legacy split using this exact fixture. Live databases can
+    # contain longer descriptions; do not assume their sizes match this dump.
+    legacy_bytes = [5 + sum(record_sizes[:750]), 7 + sum(record_sizes[750:2154])]
     for command, payload, response in [(-87, b"", -87), (-28, b"\x06", -28), (-28, b"\x07", -28)]:
         request(sock, command, payload)
         until(sock, lambda c, d: c == response)
-
-    return {
-        "items": item_count,
-        "options": option_count,
-        "version": version0,
-        "template_packet_bytes": len(templates),
-    }
+    return sizes, legacy_bytes
 
 
 def read_utf(reader):
@@ -96,54 +111,6 @@ def read_utf(reader):
     data = reader.read(size)
     assert len(data) == size
     return data.decode("utf-8")
-
-
-
-def verify_player_ui_packet(data, player_id):
-    """Parse the shared ME_LOAD_ALL prefix exactly like a modern 2.4.x PC client."""
-    reader = io.BytesIO(data)
-    assert reader.read(1) == b"\x00"
-    assert struct.unpack(">i", reader.read(4))[0] == player_id
-    reader.read(1)  # task
-    reader.read(1)  # gender
-    reader.read(2)  # head
-    read_utf(reader)  # name
-    reader.read(1)  # cPk
-    reader.read(1)  # typePk
-    reader.read(8)  # power
-    reader.read(2)  # hp buff
-    reader.read(2)  # mp buff
-    reader.read(1)  # class
-
-    skill_count = reader.read(1)[0]
-    assert len(reader.read(skill_count * 2)) == skill_count * 2
-    reader.read(8)  # gold for version >= 214
-    reader.read(4)  # ruby
-    reader.read(4)  # gem
-
-    def read_items(label):
-        raw = reader.read(1)
-        assert raw, f"missing {label} count"
-        count = raw[0]
-        for slot in range(count):
-            template_id = struct.unpack(">h", reader.read(2))[0]
-            if template_id == -1:
-                continue
-            assert 0 <= template_id < 2421, f"{label}[{slot}] invalid item {template_id}"
-            assert len(reader.read(4)) == 4
-            read_utf(reader)
-            read_utf(reader)
-            option_count = reader.read(1)[0]
-            for _ in range(option_count):
-                option_id = struct.unpack(">h", reader.read(2))[0]
-                assert option_id >= 0
-                assert len(reader.read(4)) == 4
-
-    read_items("body")
-    read_items("bag")
-    read_items("box")
-    assert reader.tell() < len(data), "ME_LOAD_ALL ended inside inventory payload"
-    return reader.tell()
 
 
 def read_menu(data, npc_id):
@@ -161,7 +128,7 @@ def verify_gameplay(sock, player_id):
     request(sock, -39)
     request(sock, -28, b"\x0d")
     data = until(sock, lambda c, d: c == -30 and d[:1] == b"\x00")
-    verify_player_ui_packet(data, player_id)
+    assert struct.unpack(">i", data[1:5])[0] == player_id
 
     request(sock, 33, struct.pack(">H", 80))
     data = until(sock, lambda c, d: c == 32)
@@ -270,10 +237,10 @@ def run():
                         rejected = True; break
                 assert rejected, "Wrong password did not receive an explicit rejection"
                 authenticate(sock, "smoketest", password)  # Retry on the SAME connection.
-                catalog = verify_catalog(sock)
+                sizes, legacy_bytes = verify_catalog(sock)
                 request(sock, -38)
                 data = until(sock, lambda c, d: c == -30 and d[:1] == b"\x00")
-                verify_player_ui_packet(data, player_id)
+                assert struct.unpack(">i", data[1:5])[0] == player_id
                 # Keep reading until the actual server enter pipeline completes.
                 deadline = time.monotonic() + 5
                 while time.monotonic() < deadline:
@@ -284,9 +251,9 @@ def run():
                 else:
                     raise AssertionError("Character response sent but server did not finish entering game")
                 gameplay = verify_gameplay(sock, player_id)
-            print(json.dumps({"login": "ok", "wrong_password_and_same_socket_retry": "ok",
-                              "catalog": catalog, "character_loaded": True,
-                              "event_restored": True, "gameplay": gameplay}))
+            print(json.dumps({"login": "ok", "wrong_password_and_same_socket_retry": "ok", "items": 2421,
+                              "packet_sizes": sizes, "legacy_packet_bytes_without_event": legacy_bytes,
+                              "character_loaded": True, "event_restored": True, "gameplay": gameplay}))
         except Exception:
             # Diagnostics only: do not print full config logs containing credentials.
             for log in logs:

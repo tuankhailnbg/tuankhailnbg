@@ -64,8 +64,7 @@ public class MessageSender implements Runnable {
         try {
             byte[] data = msg.getData();
             boolean largeFrame = msg.command == -32 || msg.command == -66 || msg.command == -74
-                    || msg.command == 11 || msg.command == -67 || msg.command == -87 || msg.command == 66
-                    || msg.command == 12;
+                    || msg.command == 11 || msg.command == -67 || msg.command == -87 || msg.command == 66;
             int maxSize = largeFrame ? 0xFFFFFF : 0xFFFF;
             if (data != null && data.length > maxSize) {
                 // Validate before writing even the command byte. A wrapped length
