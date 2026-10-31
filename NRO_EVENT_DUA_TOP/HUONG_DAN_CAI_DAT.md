@@ -44,6 +44,7 @@ Top 1 Nạp cần tối thiểu 50.000 VNĐ trong mùa. Top 2 trở xuống khô
 - Giữ nguyên Thỏi Vàng, Hồng Ngọc, cải trang và danh hiệu sẵn có.
 - Giáp loại trang bị `type=32`, dùng ô giáp tập luyện (slot 6), mặc vào giảm **40%** sức đánh, khi tháo ra tăng thêm **40%** theo luồng xử lý giáp luyện tập hiện hữu.
 - Giáp không thể giao dịch (option 30); có option 9 để kích hoạt hiệu ứng sau khi tháo theo logic của `NPoint`.
+- Giáp nhận từ phần thưởng Top 1–3 được bổ sung **HP +10%** (option 77, param 10) và chỉ số được tính khi trang bị theo `NPoint`. Giáp đã nhận trước cập nhật không tự động có chỉ số mới.
 - Mốc yêu cầu sức mạnh: **150 triệu**. Đây là mốc nối tiếp quy luật từ cấp 2 (1,5 triệu), cấp 3 (15 triệu) trong dữ liệu hiện tại; **chưa có xác minh độc lập cho mốc cấp 4 bản NRO chính**.
 - Tự cài đặt một bản ghi `item_template` khi Game Server khởi động lần đầu (nếu trước đó chưa tồn tại item này), tự cấp ID mới và không sửa item cũ. Không cần import thêm SQL cho giáp, nhưng **hãy sao lưu database trước khi chạy bản mới**.
 - **Icon:** dùng icon của Giáp tập luyện cấp 3 hiện có làm hình tương thích tạm thời; icon gốc của cấp 4 chưa được xác minh trong bộ tài nguyên client này.
