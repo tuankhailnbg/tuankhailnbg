@@ -103,7 +103,6 @@ public class Client implements Runnable {
                 session.joinedGame = false;
                 // AccountDAO.updateAccoutLogout(session);
             }
-            ServerManager.gI().disconnect(session);
         }
     }
 
@@ -159,9 +158,16 @@ public class Client implements Runnable {
     }
 
     public void kickSession(Session session) {
-        if (session != null) {
-            this.remove(session);
-            session.disconnect();
+        if (session != null && session.beginCleanup()) {
+            try {
+                this.remove(session);
+            } catch (Exception e) {
+                Log.error(Client.class, e);
+            } finally {
+                // Avoid per-IP slot leaks when player persistence or cleanup throws.
+                ServerManager.gI().disconnect(session);
+                session.disconnect();
+            }
         }
     }
 
