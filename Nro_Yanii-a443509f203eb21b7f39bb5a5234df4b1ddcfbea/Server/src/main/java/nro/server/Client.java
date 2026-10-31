@@ -91,7 +91,7 @@ public class Client implements Runnable {
             this.sessions_id.remove(session.id);
             this.sessions.remove(session);
             LoginSession login = ServerManager.gI().getLogin();
-            if (login != null && login.isConnected()) {
+            if (session.userId > 0 && login != null && login.isConnected()) {
                 login.getService().logout(session.userId);
             }
             if (session.player != null) {
@@ -212,14 +212,21 @@ public class Client implements Runnable {
     }
 
     private void update() {
+        // Iterating a snapshot avoids ConcurrentModificationException when a
+        // session times out and kickSession() removes it from the live list.
+        List<Session> snapshot;
         synchronized (sessions) {
-            for (Session session : sessions) {
-                session.update();
-                if (session.timeWait > 0) {
-                    session.timeWait--;
-                    if (session.timeWait == 0) {
-                        kickSession(session);
-                    }
+            snapshot = new ArrayList<>(sessions);
+        }
+        for (Session session : snapshot) {
+            if (!sessions.contains(session)) {
+                continue;
+            }
+            session.update();
+            if (session.timeWait > 0) {
+                session.timeWait--;
+                if (session.timeWait == 0) {
+                    kickSession(session);
                 }
             }
         }
@@ -231,7 +238,7 @@ public class Client implements Runnable {
             try {
                 long st = System.currentTimeMillis();
                 update();
-                Thread.sleep(800 - (System.currentTimeMillis() - st));
+                Thread.sleep(Math.max(1, 800 - (System.currentTimeMillis() - st)));
             } catch (Exception e) {
             }
         }
