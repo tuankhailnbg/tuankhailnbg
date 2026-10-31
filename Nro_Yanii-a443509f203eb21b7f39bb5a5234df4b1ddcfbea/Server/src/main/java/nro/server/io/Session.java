@@ -94,6 +94,9 @@ public class Session {
     private volatile boolean logging;
     private volatile long loginRequestedAt;
     private volatile String loginStage = "CONNECTED";
+    private final boolean[] tracedIncoming = new boolean[256];
+    private final boolean[] tracedOutgoing = new boolean[256];
+    private final boolean[] tracedErrors = new boolean[256];
 
     public void setLogging(boolean value) {
         logging = value;
@@ -104,7 +107,41 @@ public class Session {
     // authentication, template sync, or character loading needs investigation.
     public void traceLogin(String stage) {
         loginStage = stage;
-        System.out.println("[LOGIN] session=" + id + " userId=" + userId + " stage=" + stage);
+        System.out.println("[LOGIN] session=" + id + " userId=" + userId + " stage=" + stage
+                + " version=" + version + " client=" + typeClient + " zoom=" + zoomLevel);
+    }
+
+    /** One line per action/response after authentication, never payloads or credentials. */
+    public void traceGameplay(boolean incoming, byte command, int bytes) {
+        if (userId <= 0) return;
+        switch (command) {
+            case -39: case -7: case 29: case 33: case 32: case 34:
+            case 54: case -60: case -43: case 44: case -26: case -25:
+            case -24: case -30: case -42:
+                break;
+            default: return;
+        }
+        synchronized (this) {
+            boolean[] seen = incoming ? tracedIncoming : tracedOutgoing;
+            int index = command & 255;
+            if (seen[index] && !Manager.debug) return;
+            seen[index] = true;
+        }
+        System.out.println("[PLAY] session=" + id + " userId=" + userId
+                + " dir=" + (incoming ? "IN" : "OUT") + " cmd=" + command
+                + " bytes=" + bytes + " joined=" + joinedGame
+                + " loaded=" + (player != null && player.loaded)
+                + " queued=" + (sender == null ? 0 : sender.getNumMessage()));
+    }
+
+    public void reportPacketError(byte command, Exception error) {
+        synchronized (this) {
+            int index = command & 255;
+            if (tracedErrors[index] && !Manager.debug) return;
+            tracedErrors[index] = true;
+        }
+        Log.error(Session.class, error, "[PLAY] session=" + id + " userId=" + userId
+                + " cmd=" + command + " joined=" + joinedGame);
     }
 
     public void update() {

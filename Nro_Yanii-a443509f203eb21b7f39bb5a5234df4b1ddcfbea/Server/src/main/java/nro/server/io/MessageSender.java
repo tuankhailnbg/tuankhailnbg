@@ -104,6 +104,7 @@ public class MessageSender implements Runnable {
                 dos.writeShort(0);
             }
             dos.flush();
+            session.traceGameplay(false, msg.command, data == null ? 0 : data.length);
             msg.cleanup();
         } catch (Exception e) {
             Log.error(MessageSender.class, e, "Lỗi gửi gói tin cmd=" + msg.command);

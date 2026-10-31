@@ -106,6 +106,63 @@ def verify_catalog(sock):
     return sizes, legacy_bytes
 
 
+def read_utf(reader):
+    size = struct.unpack(">H", reader.read(2))[0]
+    data = reader.read(size)
+    assert len(data) == size
+    return data.decode("utf-8")
+
+
+def read_menu(data, npc_id):
+    reader = io.BytesIO(data)
+    assert struct.unpack(">H", reader.read(2))[0] == npc_id
+    text = read_utf(reader)
+    count = reader.read(1)[0]
+    choices = [read_utf(reader) for _ in range(count)]
+    assert reader.read() == b"", "Malformed NPC menu payload"
+    return text, choices
+
+
+def verify_gameplay(sock, player_id):
+    # The actual client acknowledges map load and requests its character again.
+    request(sock, -39)
+    request(sock, -28, b"\x0d")
+    data = until(sock, lambda c, d: c == -30 and d[:1] == b"\x00")
+    assert struct.unpack(">i", data[1:5])[0] == player_id
+
+    request(sock, 33, struct.pack(">H", 80))
+    data = until(sock, lambda c, d: c == 32)
+    _, choices = read_menu(data, 80)
+    assert len(choices) == 8
+    request(sock, 32, struct.pack(">HB", 80, 6))
+    data = until(sock, lambda c, d: c == 32)
+    guide, _ = read_menu(data, 80)
+    assert "10 Bút + 5 Thiệp trắng" in guide
+
+    # Selecting a skill must not stop later commands, even if there is no target.
+    request(sock, 34, struct.pack(">H", 0))
+    request(sock, -7, struct.pack(">Bhh", 0, 610, 408))
+    request(sock, 29)
+    zones = until(sock, lambda c, d: c == 29)
+    assert zones[0] >= 2 and len(zones) == 1 + zones[0] * 5
+    request(sock, 21, b"\x01")
+    data = until(sock, lambda c, d: c == -24)
+    reader = io.BytesIO(data)
+    assert reader.read(1) == b"\x05", "Zone change left Kame map"
+    reader.read(4)
+    read_utf(reader)
+    assert reader.read(1) == b"\x01", "Zone change was not processed"
+    assert struct.unpack(">hh", reader.read(4)) == (610, 408), "Movement did not reach server"
+    request(sock, -39)
+
+    request(sock, 44, utf("wire-gameplay-smoke"))
+    data = until(sock, lambda c, d: c == 44)
+    reader = io.BytesIO(data)
+    assert struct.unpack(">i", reader.read(4))[0] == player_id
+    assert read_utf(reader) == "wire-gameplay-smoke"
+    return {"npc_open": "ok", "npc_selection": "ok", "move_then_change_zone": "ok", "chat_roundtrip": "ok"}
+
+
 def wait_port(port, process):
     deadline = time.monotonic() + 90
     while time.monotonic() < deadline:
@@ -140,7 +197,7 @@ def run():
                 cursor.execute("SELECT account_id,id FROM player ORDER BY id LIMIT 1")
                 account_id, player_id = cursor.fetchone()
                 cursor.execute("UPDATE account SET username='smoketest',password=%s,is_admin=0,active=1,ban=0,server_login=1,last_time_logout='2002-05-07 07:00:00' WHERE id=%s", (password, account_id))
-                cursor.execute("UPDATE player SET name='smoketest',clan_id_sv1=-1,clan_id_sv2=-1,data_location='[300,336,21]' WHERE id=%s", (player_id,))
+                cursor.execute("UPDATE player SET name='smoketest',clan_id_sv1=-1,clan_id_sv2=-1,data_location='[600,408,5]' WHERE id=%s", (player_id,))
             login_dir, server_dir = temp / "Login", temp / "Server"
             login_dir.mkdir(); server_dir.mkdir()
             resources = server_dir / "resources"
@@ -193,15 +250,16 @@ def run():
                     time.sleep(0.05)
                 else:
                     raise AssertionError("Character response sent but server did not finish entering game")
+                gameplay = verify_gameplay(sock, player_id)
             print(json.dumps({"login": "ok", "wrong_password_and_same_socket_retry": "ok", "items": 2421,
                               "packet_sizes": sizes, "legacy_packet_bytes_without_event": legacy_bytes,
-                              "character_loaded": True, "event_restored": True}))
+                              "character_loaded": True, "event_restored": True, "gameplay": gameplay}))
         except Exception:
             # Diagnostics only: do not print full config logs containing credentials.
             for log in logs:
                 log.flush()
                 for line in Path(log.name).read_text(errors="replace").splitlines():
-                    if "[LOGIN]" in line or "Exception" in line or line.lstrip().startswith("at ") or "ERROR" in line:
+                    if "[LOGIN]" in line or "[PLAY]" in line or "Exception" in line or line.lstrip().startswith("at ") or "ERROR" in line:
                         print(line)
             raise
         finally:
