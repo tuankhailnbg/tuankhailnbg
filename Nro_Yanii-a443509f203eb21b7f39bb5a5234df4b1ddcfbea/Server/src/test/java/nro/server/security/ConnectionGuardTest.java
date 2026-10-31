@@ -62,6 +62,19 @@ public class ConnectionGuardTest {
     }
 
     @Test
+    public void repeatedAuthenticationCannotFloodTheLoginDatabase() {
+        AtomicLong time = new AtomicLong(100_000);
+        ConnectionGuard guard = new ConnectionGuard(time::get, 100, 100, 200, 100);
+        assertTrue(guard.tryAcquire("203.0.113.10", 5));
+        for (int i = 0; i < 15; ++i) {
+            assertTrue(guard.allowAuthentication("203.0.113.10"));
+        }
+        assertFalse(guard.allowAuthentication("203.0.113.10"));
+        time.addAndGet(10_001);
+        assertTrue(guard.allowAuthentication("203.0.113.10"));
+    }
+
+    @Test
     public void repeatedRejectionsTriggerTemporaryCooldown() {
         AtomicLong time = new AtomicLong(100_000);
         ConnectionGuard guard = new ConnectionGuard(time::get, 100, 100, 200, 100);
