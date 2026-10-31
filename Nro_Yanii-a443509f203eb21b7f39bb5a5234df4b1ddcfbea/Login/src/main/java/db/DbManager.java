@@ -41,8 +41,12 @@ public class DbManager {
             config.setDriverClassName(serverConfig.getDriver());
             config.setUsername(serverConfig.getUsername());
             config.setPassword(serverConfig.getPassword());
-            config.addDataSourceProperty("minimumIdle", 10);
-            config.addDataSourceProperty("maximumPoolSize", 50);
+            // These settings belong to HikariConfig, not JDBC driver properties.
+            config.setMinimumIdle(2);
+            config.setMaximumPoolSize(10);
+            // Fail fast enough to respond before the game's 20s auth timeout.
+            config.setConnectionTimeout(8000);
+            config.setValidationTimeout(3000);
             config.addDataSourceProperty("cachePrepStmts", "true");
             config.addDataSourceProperty("prepStmtCacheSize", "250");
             config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
@@ -50,7 +54,8 @@ public class DbManager {
             System.out.println("DB Connection Pool has created.");
             return true;
         } catch (Exception e) {
-            System.out.println("DB Connection Pool Creation has failed.");
+            System.err.println("DB Connection Pool Creation has failed.");
+            e.printStackTrace();
             return false;
         }
     }

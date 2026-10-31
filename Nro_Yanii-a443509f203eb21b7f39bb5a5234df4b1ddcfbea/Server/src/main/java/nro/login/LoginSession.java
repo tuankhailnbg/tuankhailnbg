@@ -20,7 +20,7 @@ import lombok.Getter;
 public class LoginSession {
 
     @Getter
-    private boolean connected;
+    private volatile boolean connected;
     private LoginController controller;
     @Getter
     private LoginService service;
@@ -28,13 +28,13 @@ public class LoginSession {
     private DataOutputStream dos;
     public DataInputStream dis;
     public Socket sc;
-    public boolean connecting;
+    public volatile boolean connecting;
     private final Sender sender = new Sender();
     public Thread initThread;
     public Thread collectorThread;
     public int sendByteCount;
     public int recvByteCount;
-    boolean getKeyComplete;
+    volatile boolean getKeyComplete;
     public byte[] key = null;
     private byte curR, curW;
     long timeConnected;
@@ -43,6 +43,11 @@ public class LoginSession {
     private Vector sendingMessage;
     private String host;
     private int port;
+
+    /** Authentication may only start after the login-server key exchange. */
+    public boolean isReady() {
+        return connected && getKeyComplete && sc != null && !sc.isClosed();
+    }
 
     public LoginSession() {
         this.controller = new LoginController(this);
@@ -165,7 +170,16 @@ public class LoginSession {
             }
             dos.flush();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("[LOGIN-LINK] Failed to send packet to authentication server: " + e);
+            // Unblock the collector so its disconnect handler can reconnect.
+            Socket failedSocket = sc;
+            if (failedSocket != null) {
+                try {
+                    failedSocket.close();
+                } catch (IOException ignored) {
+                }
+            }
+            throw e;
         }
     }
 
@@ -238,6 +252,9 @@ public class LoginSession {
                     }
                 }
             } catch (Exception ex) {
+                if (connected && !isCancel) {
+                    System.err.println("[LOGIN-LINK] Authentication socket reader stopped: " + ex);
+                }
             }
             if (connected) {
                 if (controller != null) {

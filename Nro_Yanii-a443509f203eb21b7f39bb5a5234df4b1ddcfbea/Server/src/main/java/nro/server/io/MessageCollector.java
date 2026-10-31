@@ -18,15 +18,16 @@ import java.net.Socket;
 public class MessageCollector implements Runnable {
 
     private DataInputStream dis;
-    private Session session;
+    private final Session session;
     private byte lastCommand;
     private int pendingPayloadBytes;
 
     public MessageCollector(Session session, Socket socket) {
+        this.session = session;
         try {
-            this.session = session;
             this.dis = new DataInputStream(socket.getInputStream());
-        } catch (Exception e) {
+        } catch (IOException e) {
+            Log.error(MessageCollector.class, e);
         }
     }
 
@@ -53,9 +54,13 @@ public class MessageCollector implements Runnable {
                         + " expectedBytes=" + pendingPayloadBytes);
             }
         } catch (Exception ex) {
-            session.reportPacketError(lastCommand, ex);
+            // Closing the socket while the receiver is blocked is expected during logout.
+            if (session.connected) {
+                session.reportPacketError(lastCommand, ex);
+            }
+        } finally {
+            Client.gI().kickSession(session);
         }
-        Client.gI().kickSession(session);
     }
 
     private Message readMessage() throws Exception {
@@ -104,6 +109,7 @@ public class MessageCollector implements Runnable {
             this.dis.close();
         }
         this.dis = null;
-        this.session = null;
+        // Keep the Session reference until run() exits: disconnect() can run
+        // on another thread while readMessage()/the catch handler is active.
     }
 }
