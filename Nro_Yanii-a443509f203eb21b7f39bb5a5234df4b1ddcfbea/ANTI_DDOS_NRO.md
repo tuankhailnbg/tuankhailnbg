@@ -24,7 +24,7 @@ Các giới hạn mặc định được chọn tương đối rộng để trá
 **Tùy chỉnh**: khai báo các cờ JVM khi chạy `Server`:
 
 ```cmd
-java -Dnro.guard.connectionsPer10SecPerIp=20 -Dnro.guard.connectionsPerMinutePerIp=60 -Dnro.guard.newConnectionsPerSecondGlobal=150 -Dnro.guard.maxActiveConnectionsGlobal=1400 -Dnro.guard.maxPacketsPerSecond=180 -jar "target\TeaMobi-1.0-RELEASE-jar-with-dependencies.jar"
+java -Dnro.guard.connectionsPer10SecPerIp=10 -Dnro.guard.connectionsPerMinutePerIp=60 -Dnro.guard.newConnectionsPerSecondGlobal=150 -Dnro.guard.maxActiveConnectionsGlobal=1400 -Dnro.guard.maxPacketsPerSecond=180 -jar "target\TeaMobi-1.0-RELEASE-jar-with-dependencies.jar"
 ```
 
 Số phiên đồng thời/IP thay đổi qua `server.maxperip` trong cấu hình server (không phải cờ JVM).
