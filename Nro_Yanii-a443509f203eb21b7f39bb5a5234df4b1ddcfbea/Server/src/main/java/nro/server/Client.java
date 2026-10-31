@@ -219,10 +219,8 @@ public class Client implements Runnable {
             snapshot = new ArrayList<>(sessions);
         }
         for (Session session : snapshot) {
-            synchronized (sessions) {
-                if (!sessions.contains(session)) {
-                    continue;
-                }
+            if (session.isCleanupStarted()) {
+                continue;
             }
             session.update();
             if (session.timeWait > 0) {
