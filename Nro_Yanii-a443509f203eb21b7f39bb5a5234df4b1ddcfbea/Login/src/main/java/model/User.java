@@ -41,12 +41,16 @@ public class User {
 
     public boolean login() {
         System.out.println("Login username: " + this.username + " serverID: " + this.serverID);
+        Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
         try {
-            Connection conn = DbManager.getInstance().getConnectionForLogin();
+            // Borrow a pooled connection per request instead of reusing one
+            // shared JDBC Connection across login sessions.
+            conn = DbManager.getInstance().getConnection();
             String query = "select * from account where username = ? and password = ? limit 1";
             ps = conn.prepareStatement(query);
+            ps.setQueryTimeout(8);
             ps.setString(1, this.username);
             ps.setString(2, this.password);
             rs = ps.executeQuery();
@@ -121,6 +125,13 @@ public class User {
                 try {
                     ps.close();
                 } catch (SQLException sQLException) {
+                }
+            }
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException sqlException) {
+                    sqlException.printStackTrace();
                 }
             }
         }
