@@ -105,7 +105,10 @@ public class User {
             this.session.getService().loginFailed(this.clientID, "Thông tin tài khoản hoặc mật khẩu không chính xác");
             return false;
         } catch (Exception e) {
+            // Always respond to the game server so its session can clear logging state.
             e.printStackTrace();
+            this.session.getService().loginFailed(this.clientID,
+                    "Hệ thống đăng nhập đang gặp lỗi. Vui lòng thử lại sau.");
             return false;
         } finally {
             if (rs != null) {

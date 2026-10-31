@@ -205,6 +205,7 @@ public class Client implements Runnable {
     private void update() {
         synchronized (sessions) {
             for (Session session : sessions) {
+                session.update();
                 if (session.timeWait > 0) {
                     session.timeWait--;
                     if (session.timeWait == 0) {

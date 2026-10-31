@@ -481,6 +481,7 @@ public abstract class Boss extends Player implements BossInterface {
         }
         rewards(killer);
         RewardService.gI().rewardBossDrop(this, killer);
+        NovemberEventService.gI().onBossDefeated(this, killer);
         return true;
     }
 

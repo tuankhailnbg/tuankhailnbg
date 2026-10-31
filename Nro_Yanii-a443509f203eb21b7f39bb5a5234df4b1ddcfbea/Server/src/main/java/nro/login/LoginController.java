@@ -162,10 +162,12 @@ public class LoginController {
                         Resources.getInstance().sendBGVersion(session);
                         session.timeWait = 0;
                         session.loginSuccess = true;
+                        session.traceLogin("AUTH_OK");
                         DataGame.sendVersionGame(session);
                     } else {
 
                         String text = ms.reader().readUTF();
+                        session.traceLogin("AUTH_REJECTED");
                         Service.getInstance().sendThongBaoOK(session, text);
                     }
                 } finally {

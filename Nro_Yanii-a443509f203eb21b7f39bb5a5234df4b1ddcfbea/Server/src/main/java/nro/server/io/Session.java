@@ -91,10 +91,30 @@ public class Session {
     public int diemTichNap;
     public int server;// server account hiện tại
     public int version;
-    @Setter
-    private boolean logging;
+    private volatile boolean logging;
+    private volatile long loginRequestedAt;
+    private volatile String loginStage = "CONNECTED";
+
+    public void setLogging(boolean value) {
+        logging = value;
+        loginRequestedAt = value ? System.currentTimeMillis() : 0;
+    }
+
+    // Keep credentials out of diagnostics. The last stage identifies whether
+    // authentication, template sync, or character loading needs investigation.
+    public void traceLogin(String stage) {
+        loginStage = stage;
+        System.out.println("[LOGIN] session=" + id + " userId=" + userId + " stage=" + stage);
+    }
 
     public void update() {
+        if (logging && loginRequestedAt > 0
+                && System.currentTimeMillis() - loginRequestedAt > 20000) {
+            setLogging(false);
+            traceLogin("AUTH_TIMEOUT");
+            Service.getInstance().sendThongBaoOK(this,
+                    "Máy chủ đăng nhập phản hồi quá lâu. Vui lòng thử lại và báo Admin.");
+        }
         if (Util.canDoWithTime(lastTimeReadMessage, TIME_WAIT_READ_MESSAGE)) {
 //            Client.gI().kickSession(this);
         }
@@ -174,6 +194,7 @@ public class Session {
 
     public void disconnect() {
         if (connected) {
+            traceLogin("DISCONNECTED_AFTER_" + loginStage);
             connected = false;
             curR = 0;
             curW = 0;
@@ -209,6 +230,7 @@ public class Session {
                 session.zoomLevel = zoomLevel;//zoom_level
                 session.version = version;
                 isSetClientType = true;
+                traceLogin("CLIENT_READY");
                 Resources.getInstance().sendResVersion(this);
             }
         } catch (Exception e) {
@@ -232,6 +254,7 @@ public class Session {
                 String[] arrPlatform = platform.split("\\|");
                 this.version = Integer.parseInt(arrPlatform[1].replaceAll("\\.", ""));
                 isSetClientType = true;
+                traceLogin("CLIENT_READY");
                 Resources.getInstance().sendResVersion(this);
             }
         } catch (Exception e) {
@@ -282,7 +305,6 @@ public class Session {
         if (!isSetClientType || logging || loginSuccess) {
             return;
         }
-        logging = true;
         AntiLogin al = ANTILOGIN.get(this.ipAddress);
         if (al == null) {
             al = new AntiLogin();
@@ -300,6 +322,9 @@ public class Session {
         if (this.player != null) {
             return;
         } else {
+            // Only mark the request pending after all rejection checks have passed.
+            setLogging(true);
+            traceLogin("AUTH_REQUEST");
             Player player = null;
             try {
                 long st = System.currentTimeMillis();
@@ -307,7 +332,12 @@ public class Session {
                 this.pp = password;
                 ServerManager.gI().getLogin().getService().login(Manager.SERVER, this.id, username, password);
             } catch (Exception e) {
+                // Do not leave the client stuck if the login request could not be sent.
+                setLogging(false);
+                traceLogin("AUTH_SEND_FAILED");
                 e.printStackTrace();
+                Service.getInstance().sendThongBaoOK(this,
+                        "Không thể gửi yêu cầu đăng nhập. Vui lòng thử lại.");
                 if (player != null) {
                     player.dispose();
                 }
@@ -317,14 +347,18 @@ public class Session {
 
     public void finishUpdate() {
         if (loginSuccess && !joinedGame) {
+            traceLogin("LOAD_CHARACTER");
+            dataLoadFailed = false;
             player = GodGK.loadPlayer(this);
             if (!dataLoadFailed) {
                 if (player != null) {
                     enter();
                 } else {
+                    traceLogin("CREATE_CHARACTER");
                     Service.getInstance().switchToCreateChar(this);
                 }
             } else {
+                traceLogin("CHARACTER_LOAD_FAILED");
                 Service.getInstance().sendThongBaoOK(this, "Lỗi tải dữ liệu vui lòng báo với admin.");
             }
         }
@@ -364,6 +398,8 @@ public class Session {
 
             // send current task
             TaskService.gI().sendInfoCurrentTask(player);
+
+            traceLogin("ENTER_GAME_OK");
 
             // Giao các vật phẩm Admin đang chờ nhận (pending grants)
             nro.services.func.AdminBuffItemService.gI().deliverPendingGrants(player);
