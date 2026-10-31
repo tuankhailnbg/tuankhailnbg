@@ -2,6 +2,7 @@ package nro.server.io;
 
 import static nro.server.io.Session.KEYS;
 import nro.utils.Log;
+import nro.server.Manager;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -127,7 +128,7 @@ public class MessageSender implements Runnable {
             for (int i = 1; i < KEYS.length; i++) {
                 msg.writer().writeByte(KEYS[i] ^ KEYS[i - 1]);
             }
-            msg.writer().writeUTF("localhost");
+            msg.writer().writeUTF(Manager.advertisedGameHost);
             msg.writer().writeInt(14445);
             msg.writer().writeBoolean(false);
             doSendMessage(msg);
