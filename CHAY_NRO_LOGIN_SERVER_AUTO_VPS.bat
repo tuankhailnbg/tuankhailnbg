@@ -31,6 +31,17 @@ if not exist "%SERVER_DIR%" (
   goto :FAIL
 )
 
+REM ===== SUA IP PUBLIC CHO CLIENT - KHONG DUNG DEN CAU HINH DB =====
+if exist "%ROOT%\scripts\NRO_VPS_FIX_PUBLIC_IP.cmd" (
+  echo.
+  echo [CONFIG] Kiem tra dia chi public client...
+  call "%ROOT%\scripts\NRO_VPS_FIX_PUBLIC_IP.cmd"
+  if errorlevel 1 (
+    echo [LOI] Khong cap nhat duoc IP public, giu nguyen server cu.
+    goto :FAIL
+  )
+)
+
 REM ===== TIM JAVA JDK =====
 set "JAVA_HOME="
 for /f "usebackq delims=" %%J in (`powershell.exe -NoProfile -Command "$j=Get-Command javac.exe -ErrorAction SilentlyContinue; if($j){Split-Path (Split-Path $j.Source -Parent) -Parent}"`) do if not defined JAVA_HOME set "JAVA_HOME=%%J"
