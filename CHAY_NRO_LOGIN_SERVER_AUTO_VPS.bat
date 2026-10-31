@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions DisableDelayedExpansion
+setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
 title NRO VPS - LOGIN + SERVER AUTO BUILD
 
@@ -88,7 +88,7 @@ if errorlevel 1 (
   echo [BUILD FAILURE] Login
   goto :FAIL
 )
-powershell.exe -NoProfile -Command "$f=Get-ChildItem '.\target\*-jar-with-dependencies.jar' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if($null -eq $f){exit 2}; Copy-Item $f.FullName '.\Login.jar' -Force; Write-Host ('Login.jar updated from '+$f.Name)"
+powershell.exe -NoProfile -Command "$f=Get-ChildItem '.\target\*-jar-with-dependencies.jar' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if(!$f){exit 2}; Copy-Item $f.FullName '.\Login.jar' -Force; Write-Host ('Login.jar <= '+$f.Name)"
 if errorlevel 1 (
   popd
   goto :FAIL
@@ -105,7 +105,7 @@ if errorlevel 1 (
   echo [BUILD FAILURE] Server
   goto :FAIL
 )
-powershell.exe -NoProfile -Command "$f=Get-ChildItem '.\target\*-jar-with-dependencies.jar' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if($null -eq $f){exit 2}; Copy-Item $f.FullName '.\Server.jar' -Force; Write-Host ('Server.jar updated from '+$f.Name)"
+powershell.exe -NoProfile -Command "$f=Get-ChildItem '.\target\*-jar-with-dependencies.jar' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if(!$f){exit 2}; Copy-Item $f.FullName '.\Server.jar' -Force; Write-Host ('Server.jar <= '+$f.Name)"
 if errorlevel 1 (
   popd
   goto :FAIL
@@ -122,7 +122,7 @@ if not exist "%LOGIN_DIR%\run.bat" (
 start "NRO LOGIN" /D "%LOGIN_DIR%" cmd /k call "%LOGIN_DIR%\run.bat"
 
 echo Cho Login mo port %LOGIN_PORT%...
-powershell.exe -NoProfile -Command "$ok=$false; 1..20 | ForEach-Object {if(Get-NetTCPConnection -LocalPort %LOGIN_PORT% -State Listen -ErrorAction SilentlyContinue){$ok=$true; break}; Start-Sleep -Seconds 1}; if($ok -eq $false){exit 1}"
+powershell.exe -NoProfile -Command "$ok=$false; 1..20 | ForEach-Object {if(Get-NetTCPConnection -LocalPort %LOGIN_PORT% -State Listen -ErrorAction SilentlyContinue){$ok=$true; break}; Start-Sleep -Seconds 1}; if(!$ok){exit 1}"
 if errorlevel 1 (
   echo [LOI] Login khong mo port %LOGIN_PORT%
   goto :FAIL
@@ -138,7 +138,7 @@ if not exist "%SERVER_DIR%\run.bat" (
 start "NRO GAME SERVER" /D "%SERVER_DIR%" cmd /k call "%SERVER_DIR%\run.bat"
 
 echo Cho Game Server mo port %SERVER_PORT%...
-powershell.exe -NoProfile -Command "$ok=$false; 1..30 | ForEach-Object {if(Get-NetTCPConnection -LocalPort %SERVER_PORT% -State Listen -ErrorAction SilentlyContinue){$ok=$true; break}; Start-Sleep -Seconds 1}; if($ok -eq $false){exit 1}"
+powershell.exe -NoProfile -Command "$ok=$false; 1..30 | ForEach-Object {if(Get-NetTCPConnection -LocalPort %SERVER_PORT% -State Listen -ErrorAction SilentlyContinue){$ok=$true; break}; Start-Sleep -Seconds 1}; if(!$ok){exit 1}"
 if errorlevel 1 (
   echo [LOI] Game Server khong mo port %SERVER_PORT%
   goto :FAIL

@@ -137,11 +137,6 @@ public class Map implements Runnable {
         }
         // Sứ Giả Sự Kiện tại Đảo Kamê. Không thêm trùng nếu đã có trong DB.
         if (this.mapId == 5) {
-            if (nro.event.november.NovemberCatalog.ready
-                    && this.npcs.stream().noneMatch(n->n!=null && n.tempId==nro.event.november.NovemberRules.NPC)) {
-                this.npcs.add(NpcFactory.createNPC(this.mapId,1,600,408,
-                        nro.event.november.NovemberRules.NPC,Manager.NPC_TEMPLATES.get(80).head));
-            }
             boolean present = false;
             for (Npc npc : this.npcs) {
                 if (npc != null && npc.tempId == nro.consts.ConstNpc.EVENT) {

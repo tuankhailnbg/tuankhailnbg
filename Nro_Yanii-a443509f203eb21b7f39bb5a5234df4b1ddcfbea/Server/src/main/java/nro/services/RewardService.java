@@ -339,8 +339,6 @@ public class RewardService {
         int mapid = player.zone.map.mapId;
         List<ItemMap> list = new ArrayList<>();
 
-        NovemberEventService.gI().addMobDrops(player,mob,list,x,yEnd);
-
         // Rơi Set Kích Hoạt (SKH) chính xác 0,5% độc lập cho quái thường tại 4 map đầu mỗi hành tinh
         int mobMapId = (mob != null && mob.zone != null && mob.zone.map != null) ? mob.zone.map.mapId : mapid;
         if (player != null && mob != null && isAllowedSKHMap(mobMapId)
@@ -591,12 +589,6 @@ public class RewardService {
         // Hàng rào cuối: ngoài đúng 4 map đầu của mỗi hành tinh, tuyệt đối
         // không cho bất kỳ vật phẩm mang option Set Kích Hoạt đi ra từ luồng drop quái.
         // Điều này chặn cả dữ liệu reward cũ hoặc event nếu vô tình tạo SKH ở map khác.
-        Player goldOwner=player.isPet?((Pet)player).master:player;
-        if (goldOwner!=null && goldOwner.nPoint.tlGold>0) {
-            for(ItemMap item:list) if(item.itemTemplate.type==9) {
-                item.quantity=nro.event.november.NovemberRules.goldWithBonus(item.quantity,goldOwner.nPoint.tlGold);
-            }
-        }
         removeActivationSetOutsideAllowedMap(mobMapId, list);
 
         return list;

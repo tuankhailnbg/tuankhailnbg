@@ -275,14 +275,6 @@ public class UseItem {
             Service.getInstance().sendThongBao(pl, "Chức năng bảo vệ đã được bật. Bạn vui lòng kiểm tra lại");
             return;
         }
-        if (item.template.id==nro.event.november.NovemberRules.BOX
-                || item.template.id==nro.event.november.NovemberRules.DAILY_BOX) {
-            String result=nro.services.NovemberEventService.gI().openBox(pl,
-                    item.template.id==nro.event.november.NovemberRules.DAILY_BOX);
-            InventoryService.gI().sendItemBags(pl);
-            Service.getInstance().sendThongBaoOK(pl,result);
-            return;
-        }
         if (Event.isEvent() && Event.getInstance().useItem(pl, item)) {
             return;
         }
@@ -456,27 +448,6 @@ public class UseItem {
                         break;
                     case 380: // cskb
                         openCSKB(pl, item);
-                        break;
-                    // NRO tùy chỉnh: kẹo TNSM, dùng cơ chế bùa trí tuệ sẵn có.
-                    // Tránh cộng dồn x2, x3, x4 gây mất cân bằng.
-                    case 2154: // Kẹo TNSM x2 (30 phút)
-                    case 2155: // Kẹo TNSM x3 (30 phút)
-                    case 2156: // Kẹo TNSM x4 (30 phút)
-                        long nowCandy = System.currentTimeMillis();
-                        if (pl.charms.tdTriTue > nowCandy
-                                || pl.charms.tdTriTue3 > nowCandy
-                                || pl.charms.tdTriTue4 > nowCandy) {
-                            Service.getInstance().sendThongBao(pl,
-                                    "Đang có bùa TNSM x2/x3/x4. Hãy đợi hết hạn trước khi ăn kẹo khác.");
-                            break;
-                        }
-                        int charmId = item.template.id == 2154 ? 213
-                                : (item.template.id == 2155 ? 671 : 672);
-                        pl.charms.addTimeCharms(charmId, 30);
-                        InventoryService.gI().subQuantityItemsBag(pl, item, 1);
-                        InventoryService.gI().sendItemBags(pl);
-                        Service.getInstance().sendThongBao(pl,
-                                "Đã dùng " + item.template.name + ": tăng TNSM trong 30 phút.");
                         break;
                     case 381: // cuồng nộ
                     case 382: // bổ huyết

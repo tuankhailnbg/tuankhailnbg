@@ -282,6 +282,7 @@ public class Session {
         if (!isSetClientType || logging || loginSuccess) {
             return;
         }
+        logging = true;
         AntiLogin al = ANTILOGIN.get(this.ipAddress);
         if (al == null) {
             al = new AntiLogin();
@@ -299,8 +300,6 @@ public class Session {
         if (this.player != null) {
             return;
         } else {
-            // Only mark the request pending after all rejection checks have passed.
-            logging = true;
             Player player = null;
             try {
                 long st = System.currentTimeMillis();
@@ -308,11 +307,7 @@ public class Session {
                 this.pp = password;
                 ServerManager.gI().getLogin().getService().login(Manager.SERVER, this.id, username, password);
             } catch (Exception e) {
-                // Do not leave the client stuck if the login request could not be sent.
-                logging = false;
                 e.printStackTrace();
-                Service.getInstance().sendThongBaoOK(this,
-                        "Không thể gửi yêu cầu đăng nhập. Vui lòng thử lại.");
                 if (player != null) {
                     player.dispose();
                 }
