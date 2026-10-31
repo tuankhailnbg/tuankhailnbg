@@ -20,6 +20,7 @@ import nro.models.clan.Clan;
 import nro.models.clan.ClanMember;
 import nro.models.intrinsic.Intrinsic;
 import nro.models.item.*;
+import nro.models.item.TrainingArmorLevel4;
 import nro.models.map.*;
 import nro.models.mob.MobReward;
 import nro.models.mob.MobTemplate;
@@ -584,6 +585,15 @@ public class Manager {
             rs.close();
             ps.close();
             Log.success("Load side task thành công (" + SIDE_TASKS_TEMPLATE.size() + ")");
+
+            // Make the new armor available in the same startup before item data
+            // is cached and sent to players. Never overwrite any existing item.
+            try {
+                TrainingArmorLevel4.ensureDatabaseTemplate(con);
+            } catch (SQLException trainingArmorError) {
+                Log.error(Manager.class, trainingArmorError,
+                        "[ITEM] Unable to install Giáp tập luyện cấp 4");
+            }
 
             // load item template
             ps = con.prepareStatement("select * from item_template ORDER BY id ASC");

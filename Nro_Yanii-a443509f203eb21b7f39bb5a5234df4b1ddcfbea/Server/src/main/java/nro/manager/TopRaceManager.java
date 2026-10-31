@@ -13,6 +13,7 @@ import nro.jdbc.DBService;
 import nro.jdbc.daos.PlayerDAO;
 import nro.models.item.Item;
 import nro.models.item.ItemOption;
+import nro.models.item.TrainingArmorLevel4;
 import nro.models.player.Player;
 import nro.services.InventoryService;
 import nro.services.ItemService;
@@ -437,6 +438,16 @@ public class TopRaceManager {
         return null;
     }
 
+    /**
+     * Top 1/2/3 of each seasonal race receives one additional training armor.
+     * The existing title/costume/currency rewards are left untouched.
+     */
+    public static boolean awardsTrainingArmorLevel4(String type, int rank) {
+        return rank >= 1 && rank <= 3
+                && (POWER.equals(type) || TASK.equals(type)
+                    || PET.equals(type) || NAP.equals(type));
+    }
+
     public synchronized String claimRewards(Player player) {
         class Pending {
             long resultId;
@@ -483,7 +494,16 @@ public class TopRaceManager {
                 continue;
             }
 
+            boolean awardTrainingArmor = awardsTrainingArmorLevel4(pending.type, pending.rank);
+            int trainingArmorId = awardTrainingArmor ? TrainingArmorLevel4.findTemplateId() : -1;
+            if (awardTrainingArmor && trainingArmorId < 0) {
+                return "Chưa tải được Giáp tập luyện cấp 4. Báo Admin kiểm tra dữ liệu vật phẩm.";
+            }
+
             int requiredSlots = 1;
+            if (awardTrainingArmor) {
+                requiredSlots++;
+            }
             if (cfg.costumeItemId > 0) {
                 requiredSlots++;
             }
@@ -510,6 +530,14 @@ public class TopRaceManager {
                 Item title = createRewardItem(cfg.titleItemId, cfg.titleOptions);
                 ok = addBagOrBox(player, title);
             }
+            if (ok && awardTrainingArmor) {
+                Item armor = ItemService.gI().createNewItem((short) trainingArmorId, 1);
+                // Existing NPoint training-armor logic uses option 9 after
+                // unequipping, and option 30 prevents player-to-player trade.
+                armor.itemOptions.add(new ItemOption(9, 1));
+                armor.itemOptions.add(new ItemOption(30, 1));
+                ok = addBagOrBox(player, armor);
+            }
             if (!ok) {
                 return "Không đủ chỗ chứa phần thưởng. Hãy dọn hành trang/rương rồi nhận lại.";
             }
@@ -533,6 +561,9 @@ public class TopRaceManager {
             detail.append(getRaceName(pending.type)).append(" Top ").append(pending.rank)
                     .append(": ").append(cfg.goldBar).append(" Thỏi Vàng + ")
                     .append(cfg.ruby).append(" Hồng Ngọc");
+            if (awardTrainingArmor) {
+                detail.append(" + Giáp tập luyện cấp 4");
+            }
         }
 
         return claimed > 0

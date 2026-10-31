@@ -5,6 +5,7 @@ import nro.models.item.ItemTemplate;
 import nro.models.kigui.KiGuiItem;
 import nro.models.item.Item;
 import nro.models.item.ItemOption;
+import nro.models.item.TrainingArmorLevel4;
 import nro.models.map.ItemMap;
 import nro.models.shop.ItemShop;
 import nro.server.Manager;
@@ -370,7 +371,10 @@ public class ItemService {
     }
 
     public int getPercentTrainArmor(Item item) {
-        if (item != null) {
+        if (item != null && TrainingArmorLevel4.matches(item.template)) {
+            return 40;
+        }
+        if (item != null && item.template != null) {
             switch (item.template.id) {
                 case 529:
                 case 534:
@@ -390,7 +394,10 @@ public class ItemService {
     }
 
     public boolean isTrainArmor(Item item) {
-        if (item != null) {
+        if (item != null && TrainingArmorLevel4.matches(item.template)) {
+            return true;
+        }
+        if (item != null && item.template != null) {
             switch (item.template.id) {
                 case 529:
                 case 534:
