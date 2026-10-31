@@ -152,7 +152,10 @@ public class Zone {
     }
 
     private void updateReferee() {
-        referee.update();
+        Player currentReferee = this.referee;
+        if (currentReferee != null) {
+            currentReferee.update();
+        }
     }
 
     private void updateItem() {
