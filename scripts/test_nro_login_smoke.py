@@ -64,7 +64,7 @@ def client():
 def authenticate(sock, username, password):
     request(sock, -29, b"\x00" + utf(username) + utf(password))
     versions = until(sock, lambda c, d: c == -28 and d[:1] == b"\x04")
-    assert versions[4] == 11, "Client did not receive the corrected item catalog version"
+    assert versions[4] == 12, "Client did not receive the refreshed item catalog version"
 
 
 def verify_catalog(sock):
@@ -77,7 +77,7 @@ def verify_catalog(sock):
     command, templates = frame(sock)
     assert command == 12, f"expected command 12 item templates, got {command}"
     version1, item_count = parse_template_packet(templates, 2421)
-    assert version0 == version1 == 11
+    assert version0 == version1 == 12
 
     for command, payload, response in [(-87, b"", -87), (-28, b"\x06", -28), (-28, b"\x07", -28)]:
         request(sock, command, payload)
