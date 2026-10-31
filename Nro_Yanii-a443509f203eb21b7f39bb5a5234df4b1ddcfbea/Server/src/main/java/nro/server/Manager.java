@@ -99,6 +99,7 @@ public class Manager {
     public static int EVENT_COUNT_THAN_VU_TRU = 0;
 
     public static String loginHost;
+    public static String advertisedGameHost = "127.0.0.1";
     public static int loginPort = 3105;
     public static int apiPort = 8080;
     public static int bossGroup = 5;
@@ -1071,6 +1072,11 @@ public class Manager {
             }
         }
         DataGame.LINK_IP_PORT = linkServer.substring(0, linkServer.length() - 1);
+        String primaryServer = properties.getProperty("server.sv1", "");
+        String[] serverParts = primaryServer.split(":", 3);
+        if (serverParts.length >= 3 && !serverParts[1].trim().isEmpty()) {
+            advertisedGameHost = serverParts[1].trim();
+        }
         if ((value = properties.get("server.waitlogin")) != null) {
             SECOND_WAIT_LOGIN = Byte.parseByte(String.valueOf(value));
         }
