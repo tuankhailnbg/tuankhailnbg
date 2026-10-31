@@ -31,7 +31,7 @@ import java.util.Map;
  */
 public class DataGame {
     public static byte vsData = 7;
-    public static byte vsMap = 6;
+    public static byte vsMap = 7;
     public static byte vsSkill = 5;
     // Tăng version khi thay đổi item template để client bỏ cache cũ và tải lại.
     public static byte vsItem = 11;

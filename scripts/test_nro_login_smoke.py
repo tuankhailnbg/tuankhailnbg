@@ -64,7 +64,7 @@ def client():
 def authenticate(sock, username, password):
     request(sock, -29, b"\x00" + utf(username) + utf(password))
     versions = until(sock, lambda c, d: c == -28 and d[:1] == b"\x04")
-    assert versions[4] == 10, "Client did not receive the corrected item catalog version"
+    assert versions[4] == 11, "Client did not receive the corrected item catalog version"
 
 
 def verify_catalog(sock):
