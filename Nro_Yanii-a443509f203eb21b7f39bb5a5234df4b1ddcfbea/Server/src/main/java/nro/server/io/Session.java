@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import static nro.server.Manager.KEY_SERVER;
 
 public class Session {
@@ -41,7 +42,8 @@ public class Session {
 
     public byte timeWait = 50;
 
-    public boolean connected;
+    public volatile boolean connected;
+    private final AtomicBoolean cleanupStarted = new AtomicBoolean(false);
 
     static final byte[] KEYS = {0};
     byte curR, curW;
@@ -229,35 +231,51 @@ public class Session {
         }
     }
 
+    /** Only one thread may remove and account for this network session. */
+    public boolean beginCleanup() {
+        return cleanupStarted.compareAndSet(false, true);
+    }
+
     public void disconnect() {
-        if (connected) {
-            traceLogin("DISCONNECTED_AFTER_" + loginStage);
-            connected = false;
-            curR = 0;
-            curW = 0;
-            this.player = null;
-            try {
-                if (this.sender != null) {
-                    this.sender.close();
-                }
-                if (this.collector != null) {
-                    this.collector.close();
-                }
-                if (socket != null) {
-                    socket.close();
-                }
-                this.socket = null;
-                this.sender = null;
-                this.collector = null;
-                this.sendThread = null;
-                this.receiveThread = null;
-                this.uu = null;
-                this.pp = null;
-                this.itemsReward = null;
-            } catch (Exception e) {
-                e.printStackTrace();
+        traceLogin("DISCONNECTED_AFTER_" + loginStage);
+        connected = false;
+        curR = 0;
+        curW = 0;
+
+        // Close even if client disconnected before finishing the handshake.
+        // Close the socket first so a stream-close error cannot leave CLOSE_WAIT.
+        Socket oldSocket = this.socket;
+        this.socket = null;
+        try {
+            if (oldSocket != null) {
+                oldSocket.close();
             }
+        } catch (Exception e) {
+            Log.error(Session.class, e);
         }
+        try {
+            if (this.sender != null) {
+                this.sender.close();
+            }
+        } catch (Exception e) {
+            Log.error(Session.class, e);
+        }
+        try {
+            if (this.collector != null) {
+                this.collector.close();
+            }
+        } catch (Exception e) {
+            Log.error(Session.class, e);
+        }
+
+        this.player = null;
+        this.sender = null;
+        this.collector = null;
+        this.sendThread = null;
+        this.receiveThread = null;
+        this.uu = null;
+        this.pp = null;
+        this.itemsReward = null;
     }
 
     public void setClientType(Session session, Message msg, int typeClient, byte zoomLevel, int version) {
