@@ -19,11 +19,11 @@ import uuid
 
 import pymysql
 from pymysql.constants import CLIENT
-from test_nro_item_sync_wire import exact, request
+from test_nro_item_sync_wire import exact, request, parse_option_packet, parse_template_packet
 
 ROOT = Path(__file__).resolve().parents[1]
 GAME = ROOT / "Nro_Yanii-a443509f203eb21b7f39bb5a5234df4b1ddcfbea"
-LARGE = {-32, -66, -74, 11, -67, -87, 66}
+LARGE = {-32, -66, -74, 11, -67, -87, 66, 12}
 
 
 def utf(text):
@@ -69,41 +69,26 @@ def authenticate(sock, username, password):
 
 def verify_catalog(sock):
     request(sock, -28, b"\x08")
-    next_id, sizes, record_sizes = 0, [], []
-    while next_id < 2421:
-        data = until(sock, lambda c, d: c == -28 and d[:1] == b"\x08")
-        assert len(data) <= 30000
-        sizes.append(len(data))
-        reader = io.BytesIO(data)
-        reader.seek(3)
-        mode = data[2]
-        if mode == 0:
-            continue
-        if mode == 1:
-            assert next_id == 0
-            end = struct.unpack(">H", reader.read(2))[0]
-        else:
-            assert mode == 2
-            start, end = struct.unpack(">HH", reader.read(4))
-            assert start == next_id
-        for _ in range(next_id, end):
-            offset = reader.tell()
-            assert len(reader.read(2)) == 2
-            for _ in range(2):
-                size = struct.unpack(">H", reader.read(2))[0]
-                assert len(reader.read(size)) == size
-            assert len(reader.read(10)) == 10
-            record_sizes.append(reader.tell() - offset)
-        assert reader.read() == b""
-        next_id = end
-    assert next_id == 2421
-    # Report the legacy split using this exact fixture. Live databases can
-    # contain longer descriptions; do not assume their sizes match this dump.
-    legacy_bytes = [5 + sum(record_sizes[:750]), 7 + sum(record_sizes[750:2154])]
+
+    command, options = frame(sock)
+    assert command == -28, f"expected -28 item options, got {command}"
+    version0, option_count = parse_option_packet(options)
+
+    command, templates = frame(sock)
+    assert command == 12, f"expected command 12 item templates, got {command}"
+    version1, item_count = parse_template_packet(templates, 2421)
+    assert version0 == version1 == 11
+
     for command, payload, response in [(-87, b"", -87), (-28, b"\x06", -28), (-28, b"\x07", -28)]:
         request(sock, command, payload)
         until(sock, lambda c, d: c == response)
-    return sizes, legacy_bytes
+
+    return {
+        "items": item_count,
+        "options": option_count,
+        "version": version0,
+        "template_packet_bytes": len(templates),
+    }
 
 
 def read_utf(reader):
@@ -285,7 +270,7 @@ def run():
                         rejected = True; break
                 assert rejected, "Wrong password did not receive an explicit rejection"
                 authenticate(sock, "smoketest", password)  # Retry on the SAME connection.
-                sizes, legacy_bytes = verify_catalog(sock)
+                catalog = verify_catalog(sock)
                 request(sock, -38)
                 data = until(sock, lambda c, d: c == -30 and d[:1] == b"\x00")
                 verify_player_ui_packet(data, player_id)
@@ -299,9 +284,9 @@ def run():
                 else:
                     raise AssertionError("Character response sent but server did not finish entering game")
                 gameplay = verify_gameplay(sock, player_id)
-            print(json.dumps({"login": "ok", "wrong_password_and_same_socket_retry": "ok", "items": 2421,
-                              "packet_sizes": sizes, "legacy_packet_bytes_without_event": legacy_bytes,
-                              "character_loaded": True, "event_restored": True, "gameplay": gameplay}))
+            print(json.dumps({"login": "ok", "wrong_password_and_same_socket_retry": "ok",
+                              "catalog": catalog, "character_loaded": True,
+                              "event_restored": True, "gameplay": gameplay}))
         except Exception:
             # Diagnostics only: do not print full config logs containing credentials.
             for log in logs:
