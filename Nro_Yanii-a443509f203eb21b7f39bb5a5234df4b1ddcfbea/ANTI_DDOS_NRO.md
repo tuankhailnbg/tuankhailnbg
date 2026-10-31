@@ -8,7 +8,7 @@
 | Mức bảo vệ | Mặc định | Ý nghĩa |
 | --- | --- | --- |
 | Số phiên TCP đồng thời/IP | `server.maxperip` (mặc định 5) | Người chơi cùng NAT dùng chung giới hạn |
-| TCP kết nối mới/IP/10 giây | 20 | Chặn reconnect flood |
+| TCP kết nối mới/IP/10 giây | 10 | Chặn reconnect flood |
 | TCP kết nối mới/IP/phút | 60 | Giảm churn kéo dài |
 | TCP kết nối mới/toàn server/giây | 150 | Giới hạn tăng số lượng phiên |
 | Tổng kết nối đang hoạt động | 1400 | Chặn kiệt tài nguyên JVM |
