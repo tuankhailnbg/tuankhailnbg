@@ -20,7 +20,7 @@ import nro.services.TaskService;
 
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -28,7 +28,7 @@ import static nro.server.Manager.KEY_SERVER;
 
 public class Session {
 
-    private static final Map<String, AntiLogin> ANTILOGIN = new HashMap<>();
+    private static final Map<String, AntiLogin> ANTILOGIN = new ConcurrentHashMap<>();
 
     private static final int TIME_WAIT_READ_MESSAGE = 180000;
 
@@ -48,6 +48,7 @@ public class Session {
             Integer.getInteger("nro.guard.maxPacketsPerSecond", 180));
     private long packetWindowStart;
     private int packetWindowCount;
+    private long lastAuthRateNotice;
 
     static final byte[] KEYS = {0};
     byte curR, curW;
@@ -368,11 +369,16 @@ public class Session {
         if (!isSetClientType || logging || loginSuccess) {
             return;
         }
-        AntiLogin al = ANTILOGIN.get(this.ipAddress);
-        if (al == null) {
-            al = new AntiLogin();
-            ANTILOGIN.put(this.ipAddress, al);
+        if (!ServerManager.gI().canAuthenticateFromIp(this.ipAddress)) {
+            long now = System.currentTimeMillis();
+            if (now - lastAuthRateNotice > 5_000L) {
+                lastAuthRateNotice = now;
+                Service.getInstance().sendThongBaoOK(this,
+                        "Bạn thao tác đăng nhập quá nhanh. Vui lòng thử lại sau.");
+            }
+            return;
         }
+        AntiLogin al = ANTILOGIN.computeIfAbsent(this.ipAddress, key -> new AntiLogin());
         if (!al.canLogin()) {
             Service.getInstance().sendThongBaoOK(this, al.getNotifyCannotLogin());
             return;
