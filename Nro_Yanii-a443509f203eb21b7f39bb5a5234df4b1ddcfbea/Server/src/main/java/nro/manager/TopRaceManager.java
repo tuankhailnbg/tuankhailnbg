@@ -276,9 +276,9 @@ public class TopRaceManager {
         switch (type) {
             case TASK:
                 sql = "SELECT p.*, "
-                        + "CAST(REPLACE(split_str(p.data_task,',',1),'[','') AS UNSIGNED) AS task_count, "
-                        + "CAST(split_str(p.data_task,',',2) AS UNSIGNED) AS task_id, "
-                        + "CAST(REPLACE(split_str(p.data_task,',',3),']','') AS UNSIGNED) AS task_index "
+                        + "CAST(REPLACE(SUBSTRING_INDEX(p.data_task, ',', 1), '[', '') AS UNSIGNED) AS task_count, "
+                        + "CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(p.data_task, ',', 2), ',', -1) AS UNSIGNED) AS task_id, "
+                        + "CAST(REPLACE(SUBSTRING_INDEX(SUBSTRING_INDEX(p.data_task, ',', 3), ',', -1), ']', '') AS UNSIGNED) AS task_index "
                         + "FROM player p JOIN account a ON a.id=p.account_id "
                         + "WHERE a.is_admin=0 AND a.ban=0 "
                         + "ORDER BY task_id DESC, task_index DESC, task_count DESC, p.power DESC LIMIT " + MAX_TOP;
