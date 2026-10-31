@@ -1048,204 +1048,128 @@ public class Service {
         }
     }
 
-    private boolean usesExtendedItemOptionProtocol(Player player) {
-        return player != null && player.getSession() != null && player.getSession().isVersionAbove(243);
-    }
-
-    private List<ItemOption> getPlayerPacketOptions(Item item, boolean extendedProtocol) {
-        List<ItemOption> result = new ArrayList<>();
-        if (item == null) {
-            return result;
-        }
-
-        List<ItemOption> source;
-        if (extendedProtocol) {
-            source = item.itemOptions;
-        } else {
-            source = item.getDisplayOptions();
-        }
-        if (source == null) {
-            return result;
-        }
-
-        int maxOptionId = extendedProtocol ? Short.MAX_VALUE : 255;
-        for (ItemOption option : source) {
-            if (option == null || option.optionTemplate == null) {
-                continue;
-            }
-            ItemOption wireOption = option;
-            if (!extendedProtocol) {
-                wireOption = option.format();
-                if (wireOption == null || wireOption.optionTemplate == null) {
-                    continue;
-                }
-            }
-            int optionId = wireOption.optionTemplate.id;
-            if (optionId < 0 || optionId > maxOptionId) {
-                continue;
-            }
-            result.add(wireOption);
-            if (result.size() == 255) {
-                break;
-            }
-        }
-        return result;
-    }
-
-    private boolean isPlayerPacketItemValid(Item item) {
-        if (item == null || !item.isNotNullItem() || item.template == null) {
-            return false;
-        }
-        int id = item.template.id;
-        return id >= 0 && id < Manager.ITEM_TEMPLATES.size() && Manager.ITEM_TEMPLATES.get(id) != null;
-    }
-
-    private void writePlayerPacketOptions(DataOutputStream out, List<ItemOption> options,
-            boolean extendedProtocol) throws IOException {
-        out.writeByte(options.size());
-        for (ItemOption option : options) {
-            if (extendedProtocol) {
-                // NRO PC 2.4.3+ / MOD_DP 2.4.x reads ItemOption as short + int.
-                out.writeShort(option.optionTemplate.id);
-                out.writeInt(option.param);
-            } else {
-                // Legacy clients use byte + short.
-                out.writeByte(option.optionTemplate.id);
-                out.writeShort(option.param);
-            }
-        }
-    }
-
-    private void writePlayerPacketItems(DataOutputStream out, List<Item> items, Player player,
-            String container, boolean extendedProtocol) throws IOException {
-        int count = items == null ? 0 : Math.min(items.size(), 255);
-        out.writeByte(count);
-
-        for (int i = 0; i < count; i++) {
-            Item item = items.get(i);
-            if (!isPlayerPacketItemValid(item)) {
-                out.writeShort(-1);
-                continue;
-            }
-
-            try {
-                String info = item.getInfo();
-                String content = item.getContent();
-                List<ItemOption> options = getPlayerPacketOptions(item, extendedProtocol);
-
-                // Build everything above before writing the slot so one malformed
-                // option cannot leave the remainder of ME_LOAD_ALL misaligned.
-                out.writeShort(item.template.id);
-                out.writeInt(item.quantity);
-                out.writeUTF(info == null ? "" : info);
-                out.writeUTF(content == null ? "" : content);
-                writePlayerPacketOptions(out, options, extendedProtocol);
-            } catch (Exception itemError) {
-                System.err.println("[UI-STATE] Skip broken " + container
-                        + " item player=" + player.name
-                        + " slot=" + i
-                        + " template=" + (item.template != null ? item.template.id : -1)
-                        + " error=" + itemError.getMessage());
-                out.writeShort(-1);
-            }
-        }
-    }
-
     public void player(Player pl) {
-        if (pl == null || pl.inventory == null || pl.playerSkill == null || pl.playerTask == null) {
+        if (pl == null) {
             return;
         }
-
-        Message msg = null;
+        Message msg;
         try {
-            final boolean extendedItemOptions = usesExtendedItemOptionProtocol(pl);
             msg = messageSubCommand((byte) 0);
-            DataOutputStream out = msg.writer();
+            msg.writer().writeInt((int) pl.id);
+            msg.writer().writeByte(pl.playerTask.taskMain.id);
+            msg.writer().writeByte(pl.gender);
+            msg.writer().writeShort(pl.head);
+            msg.writer().writeUTF(pl.name);
+            msg.writer().writeByte(0); // cPK
+            msg.writer().writeByte(pl.typePk);
+            msg.writer().writeLong(pl.nPoint.power);
+            msg.writer().writeShort(0);
+            msg.writer().writeShort(0);
+            msg.writer().writeByte(pl.gender);
+            // --------skill---------
 
-            out.writeInt((int) pl.id);
-            out.writeByte(pl.playerTask.taskMain != null ? pl.playerTask.taskMain.id : 0);
-            out.writeByte(pl.gender);
-            out.writeShort(pl.head);
-            out.writeUTF(pl.name == null ? "" : pl.name);
-            out.writeByte(0); // cPK
-            out.writeByte(pl.typePk);
-            out.writeLong(pl.nPoint.power);
-            out.writeShort(0);
-            out.writeShort(0);
-            out.writeByte(pl.gender);
+            ArrayList<Skill> skills = (ArrayList<Skill>) pl.playerSkill.skills;
 
-            List<Skill> validSkills = new ArrayList<>();
-            if (pl.playerSkill.skills != null) {
-                for (Skill skill : pl.playerSkill.skills) {
-                    if (skill != null && skill.skillId != -1) {
-                        validSkills.add(skill);
+            msg.writer().writeByte(pl.playerSkill.getSizeSkill());
+
+            for (Skill skill : skills) {
+                if (skill.skillId != -1) {
+                    msg.writer().writeShort(skill.skillId);
+                }
+            }
+
+            // ---vang---luong--luongKhoa
+            long gold = pl.inventory.getGoldDisplay();
+            if (pl.isVersionAbove(214)) {
+                msg.writer().writeLong(gold);
+            } else {
+                msg.writer().writeInt((int) gold);
+            }
+            msg.writer().writeInt(pl.inventory.ruby);
+            msg.writer().writeInt(pl.inventory.gem);
+
+            // --------itemBody---------
+            ArrayList<Item> itemsBody = (ArrayList<Item>) pl.inventory.itemsBody;
+            msg.writer().writeByte(itemsBody.size());
+            for (Item item : itemsBody) {
+                if (!item.isNotNullItem()) {
+                    msg.writer().writeShort(-1);
+                } else {
+                    msg.writer().writeShort(item.template.id);
+                    msg.writer().writeInt(item.quantity);
+                    msg.writer().writeUTF(item.getInfo());
+                    msg.writer().writeUTF(item.getContent());
+                    List<ItemOption> itemOptions = item.getDisplayOptions();
+                    msg.writer().writeByte(itemOptions.size());
+                    for (ItemOption itemOption : itemOptions) {
+                        msg.writer().writeByte(itemOption.optionTemplate.id);
+                        msg.writer().writeShort(itemOption.param);
+                    }
+                }
+
+            }
+
+            // --------itemBag---------
+            ArrayList<Item> itemsBag = (ArrayList<Item>) pl.inventory.itemsBag;
+            msg.writer().writeByte(itemsBag.size());
+            for (int i = 0; i < itemsBag.size(); i++) {
+                Item item = itemsBag.get(i);
+                if (!item.isNotNullItem()) {
+                    msg.writer().writeShort(-1);
+                } else {
+                    msg.writer().writeShort(item.template.id);
+                    msg.writer().writeInt(item.quantity);
+                    msg.writer().writeUTF(item.getInfo());
+                    msg.writer().writeUTF(item.getContent());
+                    List<ItemOption> itemOptions = item.getDisplayOptions();
+                    msg.writer().writeByte(itemOptions.size());
+                    for (ItemOption itemOption : itemOptions) {
+                        msg.writer().writeByte(itemOption.optionTemplate.id);
+                        msg.writer().writeShort(itemOption.param);
+                    }
+                }
+
+            }
+
+            // --------itemBox---------
+            ArrayList<Item> itemsBox = (ArrayList<Item>) pl.inventory.itemsBox;
+            msg.writer().writeByte(itemsBox.size());
+            for (int i = 0; i < itemsBox.size(); i++) {
+                Item item = itemsBox.get(i);
+                if (!item.isNotNullItem()) {
+                    msg.writer().writeShort(-1);
+                } else {
+                    msg.writer().writeShort(item.template.id);
+                    msg.writer().writeInt(item.quantity);
+                    msg.writer().writeUTF(item.getInfo());
+                    msg.writer().writeUTF(item.getContent());
+                    List<ItemOption> itemOptions = item.getDisplayOptions();
+                    msg.writer().writeByte(itemOptions.size());
+                    for (ItemOption itemOption : itemOptions) {
+                        msg.writer().writeByte(itemOption.optionTemplate.id);
+                        msg.writer().writeShort(itemOption.param);
                     }
                 }
             }
-            out.writeByte(Math.min(validSkills.size(), 255));
-            for (int i = 0; i < validSkills.size() && i < 255; i++) {
-                out.writeShort(validSkills.get(i).skillId);
-            }
-
-            long gold = pl.inventory.getGoldDisplay();
-            if (pl.isVersionAbove(214)) {
-                out.writeLong(gold);
-            } else {
-                out.writeInt((int) gold);
-            }
-            out.writeInt(pl.inventory.ruby);
-            out.writeInt(pl.inventory.gem);
-
-            writePlayerPacketItems(out, pl.inventory.itemsBody, pl, "body", extendedItemOptions);
-            writePlayerPacketItems(out, pl.inventory.itemsBag, pl, "bag", extendedItemOptions);
-            writePlayerPacketItems(out, pl.inventory.itemsBox, pl, "box", extendedItemOptions);
-
+            // -----------------
             DataGame.sendHeadAvatar(msg);
-            out.writeShort(514);
-            out.writeShort(515);
-            out.writeShort(537);
-            out.writeByte(pl.fusion != null && pl.fusion.typeFusion != ConstPlayer.NON_FUSION ? 1 : 0);
-            out.writeInt(333);
-            out.writeByte(pl.isNewMember ? 1 : 0);
+            // -----------------
+            msg.writer().writeShort(514); // char info id - con chim thông báo
+            msg.writer().writeShort(515); // char info id
+            msg.writer().writeShort(537); // char info id
+            msg.writer().writeByte(pl.fusion.typeFusion != ConstPlayer.NON_FUSION ? 1 : 0); // nhập thể
+            // msg.writer().writeInt(1632811835); //deltatime
+            msg.writer().writeInt(333); // deltatime
+            msg.writer().writeByte(pl.isNewMember ? 1 : 0); // is new member
 
-            short aura = -1;
-            byte effFront = -1;
-            try {
-                aura = pl.getAura();
-            } catch (Exception e) {
-                System.err.println("[UI-STATE] getAura failed player=" + pl.name + " error=" + e.getMessage());
-            }
-            try {
-                effFront = pl.getEffFront();
-            } catch (Exception e) {
-                System.err.println("[UI-STATE] getEffFront failed player=" + pl.name + " error=" + e.getMessage());
-            }
-            out.writeShort(aura);
-            out.writeByte(effFront);
-
-            // Modern PC clients (including the 2.4.x mod family) try to read idHat
-            // after aura + effFront. The server has no hat system, so send -1.
-            if (extendedItemOptions) {
-                out.writeShort(-1);
-            }
-
+            // if (pl.isAdmin()) {
+            msg.writer().writeShort(pl.getAura()); // idauraeff
+            msg.writer().writeByte(pl.getEffFront());
+            // }
             pl.sendMessage(msg);
-            if (pl.getSession() != null) {
-                System.out.println("[UI-STATE] player=" + pl.name
-                        + " version=" + pl.getSession().version
-                        + " optionProtocol=" + (extendedItemOptions ? "short+int" : "byte+short")
-                        + " body=" + (pl.inventory.itemsBody != null ? pl.inventory.itemsBody.size() : 0)
-                        + " bag=" + (pl.inventory.itemsBag != null ? pl.inventory.itemsBag.size() : 0)
-                        + " box=" + (pl.inventory.itemsBox != null ? pl.inventory.itemsBox.size() : 0));
-            }
+            msg.cleanup();
         } catch (Exception e) {
-            System.err.println("[UI-STATE] Failed ME_LOAD_ALL player="
-                    + (pl != null ? pl.name : "null") + " error=" + e.getMessage());
             Log.error(Service.class, e);
-        } finally {
-            if (msg != null) {
-                msg.cleanup();
-            }
         }
     }
 
